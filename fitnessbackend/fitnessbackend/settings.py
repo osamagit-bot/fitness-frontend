@@ -8,10 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load secret key and debug mode from environment variables for security
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-please-change')
 
-DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
+DEBUG = True
 
 # Add your Render app URL here, e.g., 'your-app.onrender.com'
-ALLOWED_HOSTS = ['fitness-frontend-0ri3.onrender.com']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
