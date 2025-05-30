@@ -26,7 +26,7 @@ function About() {
         <div className="relative group overflow-hidden rounded-lg shadow-2xl border-4 border-white transform transition-all duration-500 hover:shadow-xl">
           <img 
             src="/images/gmy.jpeg" 
-            className="w-full max-w-[500px] lg:max-w-none lg:w-[80%] xl:ml-20 object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full max-w-[500px] lg:max-w-none mr-36 lg:w-[80%] xl:ml-20 object-cover transition-transform duration-500 group-hover:scale-105"
             alt="About us"
           />
           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-all duration-500"></div>
