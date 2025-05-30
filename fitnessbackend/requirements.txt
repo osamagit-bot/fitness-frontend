@@ -5,3 +5,4 @@ djangorestframework-simplejwt
 django-cors-headers
 django-crontab
 requests
+whitenoise
