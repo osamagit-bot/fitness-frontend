@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load secret key and debug mode from environment variables for security
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-please-change')
 
-DEBUG = False  # Always False in production!
+DEBUG = True  # Always False in production!
 
 # Allow your backend Render URL and any others here
 ALLOWED_HOSTS = [

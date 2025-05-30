@@ -6,6 +6,5 @@ django-cors-headers
 django-crontab
 requests
 whitenoise
-
 django-grappelli
 
