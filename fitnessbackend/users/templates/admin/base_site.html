@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | Gym Management System{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Gym Management Dashboard</a></h1>
+{% endblock %}
+
+{% block nav-global %}
+<div class="dashboard-nav">
+    <ul>
+        <li><a href="/admin/accounts/customuser/"><i class="fa fa-users"></i> Members</a></li>
+        <li><a href="/admin/accounts/member/"><i class="fa fa-id-card"></i> Member Details</a></li>
+        <li><a href="/admin/auth/group/"><i class="fa fa-shield"></i> Groups</a></li>
+        <li><a href="/admin/"><i class="fa fa-cog"></i> Admin Home</a></li>
+    </ul>
+</div>
+{% endblock %}
