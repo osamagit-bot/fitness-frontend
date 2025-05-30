@@ -2,21 +2,18 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
-# Base directory of the project
+# Use Pathlib for BASE_DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load secret key from environment for production
+# Load secret key and debug mode from environment variables for security
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-please-change')
 
-DEBUG = False  # Set to False for production on Render
+DEBUG = False  # Always False in production!
 
+# Allow your backend Render URL and any others here
 ALLOWED_HOSTS = [
-    'fitness-frontend-0ri3.onrender.com',  # Replace with your actual Render domain
-]
-
-# CSRF Trusted Origins
-CSRF_TRUSTED_ORIGINS = [
-    "https://fitness-frontend-0ri3.onrender.com",  # Must start with https
+    'fitness-frontend-0ri3.onrender.com',
+    'your-backend-domain.onrender.com',  # Replace with your actual backend domain on Render
 ]
 
 # Application definition
@@ -36,11 +33,13 @@ INSTALLED_APPS = [
 ]
 
 CRONJOBS = [
-    ('0 1 * * *', 'yourapp.cron.archive_attendance'),  # Adjust to match your app name
+    # Run daily at 1:00 AM
+    ('0 1 * * *', 'yourapp.cron.archive_attendance'),
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -49,6 +48,62 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# CORS settings - allow your frontend domain
+CORS_ALLOWED_ORIGINS = [
+    "https://atalangym.netlify.app",
+]
+
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Don't allow all origins in prod
+
+# Session and CSRF cookie settings for cross-site requests:
+SESSION_COOKIE_SAMESITE = 'None'    # Allow cross-site cookies
+SESSION_COOKIE_SECURE = True        # Must be True for HTTPS
+
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
+
+# JWT Settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'AUTH_COOKIE': 'access_token',
+    'AUTH_COOKIE_SECURE': True,
+    'AUTH_COOKIE_SAMESITE': 'None',
+}
+
+# Trusted origins for CSRF checks
+CSRF_TRUSTED_ORIGINS = [
+    "https://atalangym.netlify.app",
+]
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+AUTH_USER_MODEL = 'users.CustomUser'
 
 ROOT_URLCONF = 'fitnessbackend.urls'
 
@@ -68,6 +123,10 @@ TEMPLATES = [
     },
 ]
 
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
 WSGI_APPLICATION = 'fitnessbackend.wsgi.application'
 
 DATABASES = {
@@ -78,67 +137,24 @@ DATABASES = {
 }
 
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
 LANGUAGE_CODE = 'en-us'
+
 TIME_ZONE = 'Asia/Kabul'
+
 USE_I18N = True
+
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-AUTH_USER_MODEL = 'users.CustomUser'
-
-# CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "https://fitness-frontend-0ri3.onrender.com",  # Use your frontend’s deployed URL
-]
-
-CORS_ALLOW_CREDENTIALS = True
-CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
-
-# Cookie and CSRF Settings
-SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
-
-# Security Headers
-X_FRAME_OPTIONS = 'SAMEORIGIN'
-
-# Django REST Framework
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-}
-
-# JWT Settings
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_COOKIE': 'access_token',
-    'AUTH_COOKIE_SECURE': True,
-    'AUTH_COOKIE_SAMESITE': 'None',
-}
