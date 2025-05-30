@@ -71,7 +71,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # Don't allow all origins in prod
+CORS_ALLOW_ALL_ORIGINS = True  # Don't allow all origins in prod
 
 # Session and CSRF cookie settings for cross-site requests:
 SESSION_COOKIE_SAMESITE = 'None'    # Allow cross-site cookies
