@@ -12,12 +12,15 @@ DEBUG = False  # Always False in production!
 
 # Allow your backend Render URL and any others here
 ALLOWED_HOSTS = [
-    'fitness-frontend-0ri3.onrender.com',
-    'your-backend-domain.onrender.com',  # Replace with your actual backend domain on Render
+   # 'fitness-frontend-0ri3.onrender.com',
+    '*'
+    # 'your-backend-domain.onrender.com',  # Replace with your actual backend domain on Render
 ]
 
 # Application definition
 INSTALLED_APPS = [
+     'admin_interface',   # must be before django.contrib.admin
+    'colorfield',  
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -64,6 +67,7 @@ REST_FRAMEWORK = {
 # CORS settings - allow your frontend domain
 CORS_ALLOWED_ORIGINS = [
     "https://atalangym.netlify.app",
+     "http://localhost:5173",
 ]
 
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']

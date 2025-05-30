@@ -6,4 +6,6 @@ django-cors-headers
 django-crontab
 requests
 whitenoise
-jazzmin
+django-admin-interface
+colorfield
+
