@@ -7,4 +7,5 @@ django-crontab
 requests
 whitenoise
 django-grappelli
+mysqlclient
 
