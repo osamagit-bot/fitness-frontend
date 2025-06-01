@@ -67,6 +67,8 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "https://atalangym.netlify.app",
      "http://localhost:5173",
+     "http://127.0.0.1:5173",
+
 ]
 
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
@@ -102,7 +104,15 @@ SIMPLE_JWT = {
 # Trusted origins for CSRF checks
 CSRF_TRUSTED_ORIGINS = [
     "https://atalangym.netlify.app",
+      "http://127.0.0.1:5173",
+        "http://localhost:5173",
 ]
+
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', 'your_twilio_sid')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', 'your_twilio_auth_token')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '+1234567890')
+
+
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
@@ -134,8 +144,12 @@ WSGI_APPLICATION = 'fitnessbackend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'fitnessgym',
+        'USER': 'root',  # default XAMPP user
+        'PASSWORD': '1234',  # default XAMPP password is empty
+        'HOST': 'localhost',
+        'PORT': '3307',
     }
 }
 

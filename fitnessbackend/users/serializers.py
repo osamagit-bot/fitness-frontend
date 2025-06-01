@@ -12,13 +12,15 @@ User = get_user_model()
 class MemberSerializer(serializers.ModelSerializer):
     # Add explicit fields for username and password
     username = serializers.CharField(write_only=True, required=False)
-    password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
+    password = serializers.CharField(write_only=True, required=False, style={'input_type':
+     'password'})
+    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     
     class Meta:
         model = Member
         fields = [
             'athlete_id', 'first_name', 'last_name', 'monthly_fee',
-            'membership_type', 'start_date', 'expiry_date',
+            'membership_type','phone', 'start_date', 'expiry_date',
             'box_number', 'time_slot', 'username', 'password', 'user', 'biometric_registered', 
         ]
         read_only_fields = ['user']

@@ -12,7 +12,9 @@ from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from rest_framework import status
 from django.contrib.auth.hashers import make_password
-
+# Add Twilio import
+from twilio.rest import Client
+from django.conf import settings
 from .models import (
     Member, Product, Trainer, Training, CustomUser, Attendance,
     # New models for community and support
@@ -147,6 +149,7 @@ def register_member_with_auth(request):
         user.role = 'member'
         user.save()
         
+        
         # Create the member object
         member_data = {
             'athlete_id': data.get('athlete_id'),
@@ -164,6 +167,8 @@ def register_member_with_auth(request):
         serializer = MemberSerializer(data=member_data)
         if serializer.is_valid():
             member = serializer.save()
+            if member.phone:
+                send_welcome_sms(member.phone, member.first_name)
             return Response({
                 "message": "Member registered successfully with authentication",
                 "member": serializer.data,
@@ -1840,3 +1845,19 @@ def reset_member_password(request):
         return Response({'detail': 'Member not found'}, status=404)
     except Exception as e:
         return Response({'detail': str(e)}, status=500)
+    
+
+    
+def send_welcome_sms(phone, name):
+    """Send a welcome SMS to the new member using Twilio."""
+    try:
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        message = f"Welcome to Atalan {name}, you have been registered successfully!"
+        client.messages.create(
+            body=message,
+            from_=settings.TWILIO_PHONE_NUMBER,
+            to=phone
+        )
+        print(f"Sent SMS to {phone}")
+    except Exception as e:
+        print(f"Failed to send SMS to {phone}: {e}")

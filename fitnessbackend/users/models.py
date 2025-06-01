@@ -167,7 +167,14 @@ class Member(models.Model):
         default='fitness',
         verbose_name=_('Membership Type')
     )
-    
+
+    phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name=_('Phone Number'),
+        help_text=_('Member phone number')
+    )
     start_date = models.DateField(
         verbose_name=_('Start Date'),
         help_text=_('Date when membership begins')
