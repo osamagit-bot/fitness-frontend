@@ -25,7 +25,7 @@ const AttendancePage = () => {
   const [checkInStatus, setCheckInStatus] = useState(null);
   const [memberAttendanceCounts, setMemberAttendanceCounts] = useState({});
 
-  const API_BASE_URL = 'fitness-frontend-0ri3.onrender.com';
+  const API_BASE_URL = 'api.newdomain.com';
 
   // Helper functions
   const getMemberId = (member) => member?.athlete_id || member?.id;

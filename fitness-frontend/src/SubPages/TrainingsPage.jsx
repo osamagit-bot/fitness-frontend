@@ -25,7 +25,7 @@ function TrainingsPage() {
   const fetchTrainers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('fitness-frontend-0ri3.onrender.com/api/trainers/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/trainers/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -53,7 +53,7 @@ function TrainingsPage() {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('fitness-frontend-0ri3.onrender.com/api/trainings/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/trainings/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -95,7 +95,7 @@ function TrainingsPage() {
       
       console.log('Sending training data:', payload);
 
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/trainings/', 
+      const response = await axios.post('http://127.0.0.1:8000/api/trainings/', 
         payload,
         {
           headers: {
@@ -146,7 +146,7 @@ function TrainingsPage() {
       try {
         const token = localStorage.getItem('token');
         
-        await axios.delete(`fitness-frontend-0ri3.onrender.com/api/trainings/${trainingId}/`, {
+        await axios.delete(`http://127.0.0.1:8000/api/trainings/${trainingId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

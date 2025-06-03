@@ -18,7 +18,7 @@ const MemberAttendancePage = () => {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [attendanceDates, setAttendanceDates] = useState(new Set());
 
-  const API_BASE_URL = 'fitness-frontend-0ri3.onrender.com';
+  const API_BASE_URL = 'api.newdomain.com';
 
   useEffect(() => {
     fetchMemberData();

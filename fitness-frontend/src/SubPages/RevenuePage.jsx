@@ -187,7 +187,7 @@ function RevenuePage() {
     const fetchMembers = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('fitness-frontend-0ri3.onrender.com/api/members/');
+            const response = await axios.get('api.newdomain.com/api/members/');
             
             // Process response data
             const memberList = Array.isArray(response.data) ? response.data : 

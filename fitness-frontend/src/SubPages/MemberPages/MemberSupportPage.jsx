@@ -33,7 +33,7 @@ function MemberSupportPage() {
           const config = {
             headers: { 'Authorization': `Bearer ${token}` }
           };
-          const faqResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/support/faqs/', config);
+          const faqResponse = await axios.get('api.newdomain.com/api/support/faqs/', config);
           setFaqCategories(faqResponse.data);
           if (faqResponse.data.length > 0) {
             setActiveCategory(faqResponse.data[0].id);
@@ -43,7 +43,7 @@ function MemberSupportPage() {
             headers: { 'Authorization': `Bearer ${token}` },
             params: { memberID }
           };
-          const ticketsResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/support/tickets/', ticketsConfig);
+          const ticketsResponse = await axios.get('api.newdomain.com/api/support/tickets/', ticketsConfig);
           setTickets(ticketsResponse.data);
         } catch (err) {
           console.error("Error fetching support data:", err);
@@ -71,7 +71,7 @@ function MemberSupportPage() {
         return;
       }
       // Submit ticket to API
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/support/tickets/create/', {
+      const response = await axios.post('api.newdomain.com/api/support/tickets/create/', {
         type: feedback.type,
         subject: feedback.subject,
         message: feedback.message,

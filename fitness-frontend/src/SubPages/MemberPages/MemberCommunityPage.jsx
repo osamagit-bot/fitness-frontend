@@ -28,13 +28,13 @@ function MemberCommunityPage() {
           }
         };
 
-        const announcementsResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/community/announcements/', config);
+        const announcementsResponse = await axios.get('api.newdomain.com/api/community/announcements/', config);
         setAnnouncements(announcementsResponse.data);
 
-        const challengesResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/community/challenges/', config);
+        const challengesResponse = await axios.get('api.newdomain.com/api/community/challenges/', config);
         setChallenges(challengesResponse.data);
 
-        const postsResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/community/posts/', config);
+        const postsResponse = await axios.get('api.newdomain.com/api/community/posts/', config);
         setPosts(postsResponse.data);
 
         setError(null);
@@ -62,7 +62,7 @@ function MemberCommunityPage() {
       }
 
       // Submit new post to API
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/community/posts/create/', {
+      const response = await axios.post('api.newdomain.com/api/community/posts/create/', {
         title: newPost.title,
         content: newPost.content,
         memberID: memberID
@@ -83,7 +83,7 @@ function MemberCommunityPage() {
   const handleLike = async (postId) => {
     try {
       // Send like to API
-      await axios.post(`fitness-frontend-0ri3.onrender.com/api/community/posts/${postId}/like/`, {
+      await axios.post(`api.newdomain.com/api/community/posts/${postId}/like/`, {
         memberID
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -106,7 +106,7 @@ function MemberCommunityPage() {
   const joinChallenge = async (challengeId) => {
     try {
       // Send join request to API
-      await axios.post(`fitness-frontend-0ri3.onrender.com/api/community/challenges/${challengeId}/join/`, {
+      await axios.post(`api.newdomain.com/api/community/challenges/${challengeId}/join/`, {
         memberID
       }, {
         headers: { 'Authorization': `Bearer ${token}` }

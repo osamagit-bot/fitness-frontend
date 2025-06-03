@@ -28,10 +28,10 @@ const AdminDashboardStats = () => {
       
       // Fetch data in parallel
       const [membersRes, trainersRes] = await Promise.all([
-        axios.get('https://fitness-frontend-0ri3.onrender.com/api/members/', {
+        axios.get('http://127.0.0.1:8000/api/members/', {
           headers: {'Authorization': `Bearer ${token}`}
         }),
-        axios.get('https://fitness-frontend-0ri3.onrender.com/api/trainers/', {
+        axios.get('http://127.0.0.1:8000/api/trainers/', {
           headers: {'Authorization': `Bearer ${token}`}
         })
       ]);

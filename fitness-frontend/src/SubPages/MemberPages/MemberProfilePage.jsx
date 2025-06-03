@@ -29,7 +29,7 @@ function MemberProfilePage() {
     confirmPassword: ''
   });
 
-  const BACKEND_URL = 'fitness-frontend-0ri3.onrender.com';
+  const BACKEND_URL = 'api.newdomain.com';
   const token = localStorage.getItem('token');
   const memberId = localStorage.getItem('memberId');
 

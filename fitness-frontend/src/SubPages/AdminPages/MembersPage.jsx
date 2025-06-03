@@ -26,7 +26,7 @@ function MembersPage() {
       if (!token) {
         throw new Error('No authentication token found. Please login again.');
       }
-      const response = await axios.get('https://fitness-frontend-0ri3.onrender.com/api/members/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/members/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

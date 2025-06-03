@@ -11,7 +11,7 @@ const BiometricRegistration = ({ memberId, onSuccess, onCancel }) => {
     try {
       // 1. Get registration options from backend
       const optionsRes = await axios.post(
-        'https://fitness-frontend-0ri3.onrender.com/api/biometrics/webauthn/register-options/',
+        'http://127.0.0.1:8000/api/biometrics/webauthn/register-options/',
         { athlete_id: memberId },
         { withCredentials: true }
       );
@@ -41,7 +41,7 @@ const BiometricRegistration = ({ memberId, onSuccess, onCancel }) => {
       };
 
       await axios.post(
-        'https://fitness-frontend-0ri3.onrender.com/api/biometrics/webauthn/register-complete/',
+        'http://127.0.0.1:8000/api/biometrics/webauthn/register-complete/',
         credentialData,
         { withCredentials: true }
       );

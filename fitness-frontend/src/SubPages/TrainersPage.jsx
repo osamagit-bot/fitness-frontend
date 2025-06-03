@@ -28,7 +28,7 @@ function TrainersPage() {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('fitness-frontend-0ri3.onrender.com/api/trainers/', {
+      const response = await axios.get('api.newdomain.com/api/trainers/', {
         headers: {
           'Authorization': `Bearer ${token}`
         },
@@ -105,7 +105,7 @@ function TrainersPage() {
       console.log('Submitting trainer data:', newTrainer);
       
       const response = await axios.post(
-        'fitness-frontend-0ri3.onrender.com/api/trainers/', 
+        'api.newdomain.com/api/trainers/', 
         {
           ...newTrainer,
           monthly_salary: parseFloat(newTrainer.monthly_salary)
@@ -185,7 +185,7 @@ function TrainersPage() {
       try {
         const token = localStorage.getItem('token');
         
-        await axios.delete(`fitness-frontend-0ri3.onrender.com/api/trainers/${trainerId}/`, {
+        await axios.delete(`api.newdomain.com/api/trainers/${trainerId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

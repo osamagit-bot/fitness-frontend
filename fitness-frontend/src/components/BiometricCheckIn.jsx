@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFingerprint, faCheck, faTimes, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 // API base URL
-const API_BASE_URL = 'https://fitness-frontend-0ri3.onrender.com';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 // Helper functions for ArrayBuffer conversion
 const base64ToArrayBuffer = (base64) => {

@@ -102,7 +102,7 @@ const RegisterPage = () => {
       const token = localStorage.getItem('token');
       console.log('Using token:', token);
       
-      const response = await axios.get('https://fitness-frontend-0ri3.onrender.com/api/test/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/test/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -128,7 +128,7 @@ const RegisterPage = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      await axios.get('https://fitness-frontend-0ri3.onrender.com/admin/stats/', {
+      await axios.get('http://127.0.0.1:8000/admin/stats/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -177,7 +177,7 @@ const RegisterPage = () => {
       
       // Update the existing member
       const response = await axios.patch(
-        `https://fitness-frontend-0ri3.onrender.com/api/members/${memberData.athlete_id}/`, 
+        `http://127.0.0.1:8000/api/members/${memberData.athlete_id}/`, 
         updateData,
         {
           headers: {
@@ -206,7 +206,7 @@ const RegisterPage = () => {
       
       // Check the member's current data
       const response = await axios.get(
-        `https://fitness-frontend-0ri3.onrender.com/api/members/${athleteId}/`, 
+        `http://127.0.0.1:8000/api/members/${athleteId}/`, 
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -286,7 +286,7 @@ const RegisterPage = () => {
         
         // Use the existing endpoint for member registration
         const response = await axios.post(
-          'https://fitness-frontend-0ri3.onrender.com/api/register-member/',
+          'http://127.0.0.1:8000/api/register-member/',
           memberDataWithAuth,
           {
             headers: {

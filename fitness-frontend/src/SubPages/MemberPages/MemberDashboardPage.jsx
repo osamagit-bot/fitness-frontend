@@ -19,7 +19,7 @@ const MemberDashboardPage = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
 
-        const response = await axios.get(`fitness-frontend-0ri3.onrender.com/api/members/${userId}/`, {
+        const response = await axios.get(`api.newdomain.com/api/members/${userId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },

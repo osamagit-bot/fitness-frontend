@@ -10,7 +10,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const BACKEND_URL = 'https://fitness-frontend-0ri3.onrender.com';
+  const BACKEND_URL = 'http://127.0.0.1:8000';
 
   const handleSubmit = async (e) => {
     e.preventDefault();

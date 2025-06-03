@@ -8,7 +8,7 @@ const MemberAttendanceHistory = ({ memberId }) => {
   const [error, setError] = useState(null);
   const [debugInfo, setDebugInfo] = useState({});
   
-  const API_BASE_URL = 'https://fitness-frontend-0ri3.onrender.com';
+  const API_BASE_URL = 'http://127.0.0.1:8000';
   
   // For debug display - get member info
   const [memberInfo, setMemberInfo] = useState({

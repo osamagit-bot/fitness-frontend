@@ -89,7 +89,7 @@ function Products() {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get('https://fitness-frontend-0ri3.onrender.com/api/products/');
+      const response = await axios.get('http://127.0.0.1:8000/api/products/');
       const productsData = response.data.results || response.data;
       
       // Ensure productsData is an array
@@ -276,7 +276,7 @@ function Products() {
                 />
               ) : selectedProduct.image ? (
                 <img 
-                  src={`https://fitness-frontend-0ri3.onrender.com${selectedProduct.image}`} 
+                  src={`http://127.0.0.1:8000${selectedProduct.image}`} 
                   alt={selectedProduct.name} 
                   className="max-h-80 object-contain"
                 />
@@ -411,7 +411,7 @@ function Products() {
                       {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-contain" />
                       ) : item.image ? (
-                        <img src={`https://fitness-frontend-0ri3.onrender.com${item.image}`} alt={item.name} className="w-full h-full object-contain" />
+                        <img src={`http://127.0.0.1:8000${item.image}`} alt={item.name} className="w-full h-full object-contain" />
                       ) : (
                         <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                           <span className="text-xs text-gray-500">No image</span>
@@ -596,7 +596,7 @@ function Products() {
                         />
                       ) : filteredProducts[currentIndex].image ? (
                         <img 
-                          src={`https://fitness-frontend-0ri3.onrender.com${filteredProducts[currentIndex].image}`} 
+                          src={`http://127.0.0.1:8000${filteredProducts[currentIndex].image}`} 
                           alt={filteredProducts[currentIndex].name} 
                           className="absolute inset-0 w-full h-full object-contain"
                         />
@@ -824,7 +824,7 @@ function Products() {
                     />
                   ) : product.image ? (
                     <img 
-                      src={`https://fitness-frontend-0ri3.onrender.com${product.image}`} 
+                      src={`http://127.0.0.1:8000${product.image}`} 
                       alt={product.name} 
                       className="h-48 object-contain transition-transform duration-500 ease-in-out group-hover:scale-110"
                       onError={(e) => {

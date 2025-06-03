@@ -28,7 +28,7 @@ const Register = () => {
     setErrors({});
 
     try {
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/register/', {
+      const response = await axios.post('api.newdomain.com/api/register/', {
         username: formData.username,
         email: formData.email,
         password1: formData.password1,

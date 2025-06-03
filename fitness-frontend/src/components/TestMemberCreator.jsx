@@ -9,7 +9,7 @@ const TestMemberCreator = () => {
   const [firstName, setFirstName] = useState('Test');
   const [lastName, setLastName] = useState('Member');
   
-  const API_BASE_URL = 'https://fitness-frontend-0ri3.onrender.com';
+  const API_BASE_URL = 'http://127.0.0.1:8000';
   
   const createTestMember = async () => {
     try {

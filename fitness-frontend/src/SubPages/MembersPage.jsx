@@ -16,7 +16,7 @@ function MembersPage() {
       const token = localStorage.getItem('token');
       
       // Basic request without extra headers
-      const response = await axios.get('https://fitness-frontend-0ri3.onrender.com/api/members/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/members/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -60,7 +60,7 @@ function MembersPage() {
       try {
         const token = localStorage.getItem('token');
         
-        await axios.delete(`https://fitness-frontend-0ri3.onrender.com/api/members/${athleteId}/`, {
+        await axios.delete(`http://127.0.0.1:8000/api/members/${athleteId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

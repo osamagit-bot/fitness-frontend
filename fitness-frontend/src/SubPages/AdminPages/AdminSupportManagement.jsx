@@ -28,11 +28,11 @@ function AdminSupportManagement() {
       };
       
       // Fetch all tickets
-      const ticketsResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/admin/support/tickets/', config);
+      const ticketsResponse = await axios.get('api.newdomain.com/api/admin/support/tickets/', config);
       setTickets(ticketsResponse.data);
       
       // Fetch FAQ categories
-      const faqCategoriesResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/admin/support/faq-categories/', config);
+      const faqCategoriesResponse = await axios.get('api.newdomain.com/api/admin/support/faq-categories/', config);
       setFaqCategories(faqCategoriesResponse.data);
       
       setLoading(false);
@@ -50,7 +50,7 @@ function AdminSupportManagement() {
     }
     
     try {
-      const response = await axios.post(`fitness-frontend-0ri3.onrender.com/api/admin/support/tickets/${ticketId}/respond/`, {
+      const response = await axios.post(`api.newdomain.com/api/admin/support/tickets/${ticketId}/respond/`, {
         message: ticketResponse
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -78,7 +78,7 @@ function AdminSupportManagement() {
     }
     
     try {
-      await axios.patch(`fitness-frontend-0ri3.onrender.com/api/admin/support/tickets/${ticketId}/close/`, {}, {
+      await axios.patch(`api.newdomain.com/api/admin/support/tickets/${ticketId}/close/`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -103,7 +103,7 @@ function AdminSupportManagement() {
     }
     
     try {
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/admin/support/faq-categories/create/', {
+      const response = await axios.post('api.newdomain.com/api/admin/support/faq-categories/create/', {
         name: newFaqCategory
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -128,7 +128,7 @@ function AdminSupportManagement() {
     }
     
     try {
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/admin/support/faqs/create/', newFaq, {
+      const response = await axios.post('api.newdomain.com/api/admin/support/faqs/create/', newFaq, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

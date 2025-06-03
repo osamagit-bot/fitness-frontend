@@ -43,7 +43,7 @@ const HisabPayCheckout = ({
       }));
       
       // Send payment request to your backend
-      const response = await axios.post('https://fitness-frontend-0ri3.onrender.com/api/payments/hisab-pay/', {
+      const response = await axios.post('http://127.0.0.1:8000/api/payments/hisab-pay/', {
         phoneNumber: phoneNumber,
         amount: total,
         items: orderItems

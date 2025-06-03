@@ -79,7 +79,7 @@ const RegisterTrainerPage = () => {
       
       // Just do a simple check, don't try to use trainerDataWithAuth here
       const response = await axios.get(
-        'fitness-frontend-0ri3.onrender.com/api/test-auth/', 
+        'api.newdomain.com/api/test-auth/', 
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -107,7 +107,7 @@ const RegisterTrainerPage = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      await axios.get('fitness-frontend-0ri3.onrender.com/admin/stats/', {
+      await axios.get('api.newdomain.com/admin/stats/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -188,7 +188,7 @@ const RegisterTrainerPage = () => {
       
       // Use the trainer registration endpoint
       const response = await axios.post(
-        'fitness-frontend-0ri3.onrender.com/api/trainers/', 
+        'api.newdomain.com/api/trainers/', 
         trainerDataWithAuth,
         {
           headers: {

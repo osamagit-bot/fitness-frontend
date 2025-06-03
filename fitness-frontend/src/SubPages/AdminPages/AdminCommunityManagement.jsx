@@ -29,21 +29,21 @@ function AdminCommunityManagement() {
       
       // Try to fetch data, handle errors gracefully
       try {
-        const announcementsResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/admin/announcements/', config);
+        const announcementsResponse = await axios.get('http://127.0.0.1:8000/api/admin/announcements/', config);
         setAnnouncements(announcementsResponse.data);
       } catch (err) {
         console.log('Announcements API not available yet:', err);
       }
       
       try {
-        const challengesResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/admin/challenges/', config);
+        const challengesResponse = await axios.get('http://127.0.0.1:8000/api/admin/challenges/', config);
         setChallenges(challengesResponse.data);
       } catch (err) {
         console.log('Challenges API not available yet:', err);
       }
       
       try {
-        const postsResponse = await axios.get('fitness-frontend-0ri3.onrender.com/api/admin/community-posts/', config);
+        const postsResponse = await axios.get('http://127.0.0.1:8000/api/admin/community-posts/', config);
         setPosts(postsResponse.data);
       } catch (err) {
         console.log('Community posts API not available yet:', err);
@@ -70,7 +70,7 @@ function AdminCommunityManagement() {
     }
     
     try {
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/admin/announcements/create/', newAnnouncement, {
+      const response = await axios.post('http://127.0.0.1:8000/api/admin/announcements/create/', newAnnouncement, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -93,7 +93,7 @@ function AdminCommunityManagement() {
     }
     
     try {
-      const response = await axios.post('fitness-frontend-0ri3.onrender.com/api/admin/challenges/create/', newChallenge, {
+      const response = await axios.post('http://127.0.0.1:8000/api/admin/challenges/create/', newChallenge, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

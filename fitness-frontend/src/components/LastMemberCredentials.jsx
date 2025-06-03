@@ -72,7 +72,7 @@ const MemberCredentials = () => {
       }
       
       // Use debug endpoint for fetching member credentials
-      const membersResponse = await axios.get('https://fitness-frontend-0ri3.onrender.com/api/debug/list-members/', {
+      const membersResponse = await axios.get('http://127.0.0.1:8000/api/debug/list-members/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -168,7 +168,7 @@ const handlePasswordReset = async (e) => {
     // Try API endpoint with PUT method instead of POST
     const response = await axios({
       method: 'put', // Try PUT instead of POST
-      url: `https://fitness-frontend-0ri3.onrender.com/api/admin/reset-member-password/`,
+      url: `http://127.0.0.1:8000/api/admin/reset-member-password/`,
       data: {
         member_id: resetMemberId,
         new_password: newPassword

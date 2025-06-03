@@ -21,7 +21,7 @@ function TrainerDashboard() {
       
       try {
         setLoading(true);
-        const response = await axios.get('https://fitness-frontend-0ri3.onrender.com/api/trainer-profile/', {
+        const response = await axios.get('http://127.0.0.1:8000/api/trainer-profile/', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
