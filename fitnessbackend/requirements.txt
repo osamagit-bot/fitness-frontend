@@ -8,4 +8,5 @@ requests
 whitenoise
 django-grappelli
 mysqlclient
+pymysql
 
