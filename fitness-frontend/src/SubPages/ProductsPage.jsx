@@ -23,7 +23,7 @@ function ProductsPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('api.newdomain.com/api/products/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/products/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const productsData = response.data.results || response.data;
@@ -69,7 +69,7 @@ function ProductsPage() {
       if (newProduct.description) formData.append('description', newProduct.description);
       if (newProduct.image) formData.append('image', newProduct.image);
 
-      await axios.post('api.newdomain.com/api/products/', formData, {
+      await axios.post('http://127.0.0.1:8000/api/products/', formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -98,7 +98,7 @@ function ProductsPage() {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`api.newdomain.com/api/products/${productId}/`, {
+        await axios.delete(`http://127.0.0.1:8000/api/products/${productId}/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setProducts(products.filter(product => product.product_id !== productId));

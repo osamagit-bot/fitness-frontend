@@ -18,7 +18,7 @@ const MemberAttendancePage = () => {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [attendanceDates, setAttendanceDates] = useState(new Set());
 
-  const API_BASE_URL = 'api.newdomain.com';
+  const API_BASE_URL = 'http://127.0.0.1:8000';
 
   useEffect(() => {
     fetchMemberData();

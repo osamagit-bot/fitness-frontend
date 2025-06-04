@@ -1,4 +1,3 @@
-// src/SubPages/AdminPages/AdminSupportManagement.jsx
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -13,28 +12,29 @@ function AdminSupportManagement() {
   const [newFaqCategory, setNewFaqCategory] = useState('');
   const [newFaq, setNewFaq] = useState({ category: '', question: '', answer: '' });
   const [ticketFilter, setTicketFilter] = useState('all');
-  
+
   const token = localStorage.getItem('token');
-  
+
   useEffect(() => {
     fetchSupportData();
+    // eslint-disable-next-line
   }, []);
-  
+
   const fetchSupportData = async () => {
     setLoading(true);
     try {
       const config = {
         headers: { 'Authorization': `Bearer ${token}` }
       };
-      
+
       // Fetch all tickets
       const ticketsResponse = await axios.get('api.newdomain.com/api/admin/support/tickets/', config);
-      setTickets(ticketsResponse.data);
-      
+      setTickets(Array.isArray(ticketsResponse.data) ? ticketsResponse.data : []);
+
       // Fetch FAQ categories
       const faqCategoriesResponse = await axios.get('api.newdomain.com/api/admin/support/faq-categories/', config);
-      setFaqCategories(faqCategoriesResponse.data);
-      
+      setFaqCategories(Array.isArray(faqCategoriesResponse.data) ? faqCategoriesResponse.data : []);
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -42,28 +42,26 @@ function AdminSupportManagement() {
       setLoading(false);
     }
   };
-  
+
   const handleTicketResponse = async (ticketId) => {
     if (!ticketResponse.trim()) {
       alert('Please enter a response message');
       return;
     }
-    
+
     try {
       const response = await axios.post(`api.newdomain.com/api/admin/support/tickets/${ticketId}/respond/`, {
         message: ticketResponse
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      // Update the ticket in the state
-      setTickets(tickets.map(ticket => 
-        ticket.id === ticketId 
-          ? { ...ticket, responses: [...ticket.responses, response.data] }
+
+      setTickets(tickets.map(ticket =>
+        ticket.id === ticketId
+          ? { ...ticket, responses: [...(ticket.responses || []), response.data] }
           : ticket
       ));
-      
-      // Clear the response text
+
       setTicketResponse('');
       alert('Response sent successfully!');
     } catch (err) {
@@ -71,44 +69,43 @@ function AdminSupportManagement() {
       alert('Failed to send response. Please try again.');
     }
   };
-  
+
   const handleCloseTicket = async (ticketId) => {
     if (!window.confirm('Are you sure you want to close this ticket?')) {
       return;
     }
-    
+
     try {
       await axios.patch(`api.newdomain.com/api/admin/support/tickets/${ticketId}/close/`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      // Update the ticket status in the state
-      setTickets(tickets.map(ticket => 
+
+      setTickets(tickets.map(ticket =>
         ticket.id === ticketId ? { ...ticket, status: 'closed' } : ticket
       ));
-      
+
       alert('Ticket closed successfully!');
     } catch (err) {
       console.error('Error closing ticket:', err);
       alert('Failed to close ticket. Please try again.');
     }
   };
-  
+
   const handleCreateFaqCategory = async (e) => {
     e.preventDefault();
-    
+
     if (!newFaqCategory.trim()) {
       alert('Please enter a category name');
       return;
     }
-    
+
     try {
       const response = await axios.post('api.newdomain.com/api/admin/support/faq-categories/create/', {
         name: newFaqCategory
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       setFaqCategories([...faqCategories, response.data]);
       setNewFaqCategory('');
       setNewFaq({ ...newFaq, category: response.data.id });
@@ -118,27 +115,26 @@ function AdminSupportManagement() {
       alert('Failed to create FAQ category. Please try again.');
     }
   };
-  
+
   const handleCreateFaq = async (e) => {
     e.preventDefault();
-    
+
     if (!newFaq.category || !newFaq.question.trim() || !newFaq.answer.trim()) {
       alert('Please fill in all FAQ fields');
       return;
     }
-    
+
     try {
       const response = await axios.post('api.newdomain.com/api/admin/support/faqs/create/', newFaq, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
-      // Update the FAQ category in the state
-      setFaqCategories(faqCategories.map(category => 
-        category.id === newFaq.category 
-          ? { ...category, faqs: [...category.faqs, response.data] }
+
+      setFaqCategories(faqCategories.map(category =>
+        category.id === newFaq.category
+          ? { ...category, faqs: [...(category.faqs || []), response.data] }
           : category
       ));
-      
+
       setNewFaq({ category: newFaq.category, question: '', answer: '' });
       alert('FAQ created successfully!');
     } catch (err) {
@@ -146,11 +142,14 @@ function AdminSupportManagement() {
       alert('Failed to create FAQ. Please try again.');
     }
   };
-  
-  const filteredTickets = ticketFilter === 'all' 
-    ? tickets 
-    : tickets.filter(ticket => ticket.status === ticketFilter);
-  
+
+  // Ensure filteredTickets is always an array
+  const filteredTickets = Array.isArray(tickets)
+    ? (ticketFilter === 'all'
+        ? tickets
+        : tickets.filter(ticket => ticket.status === ticketFilter))
+    : [];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -158,12 +157,12 @@ function AdminSupportManagement() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="text-center p-10">
         <div className="text-red-500 mb-4">{error}</div>
-        <button 
+        <button
           onClick={fetchSupportData}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
@@ -172,14 +171,14 @@ function AdminSupportManagement() {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Support Management</h1>
         <p className="text-gray-600">Manage support tickets and FAQs.</p>
       </div>
-      
+
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="flex space-x-8">
@@ -205,7 +204,7 @@ function AdminSupportManagement() {
           </button>
         </nav>
       </div>
-      
+
       {/* Content based on active tab */}
       {activeTab === 'tickets' && (
         <div>
@@ -223,20 +222,20 @@ function AdminSupportManagement() {
               </select>
             </div>
           </div>
-          
+
           {filteredTickets.length > 0 ? (
             <div className="space-y-6">
               {filteredTickets.map(ticket => (
-                <div 
-                  key={ticket.id} 
+                <div
+                  key={ticket.id}
                   className={`bg-white rounded-lg shadow-md overflow-hidden ${
                     activeTicket === ticket.id ? 'ring-2 ring-blue-500' : ''
                   }`}
                 >
-                  <div 
+                  <div
                     className={`p-4 cursor-pointer ${
-                      ticket.status === 'open' ? 'bg-blue-50 border-l-4 border-blue-500' : 
-                                               'bg-green-50 border-l-4 border-green-500'
+                      ticket.status === 'open' ? 'bg-blue-50 border-l-4 border-blue-500' :
+                      'bg-green-50 border-l-4 border-green-500'
                     }`}
                     onClick={() => setActiveTicket(activeTicket === ticket.id ? null : ticket.id)}
                   >
@@ -257,7 +256,7 @@ function AdminSupportManagement() {
                         </span>
                         {ticket.status === 'open' && (
                           <button
-                            onClick={(e) => {
+                            onClick={e => {
                               e.stopPropagation();
                               handleCloseTicket(ticket.id);
                             }}
@@ -269,13 +268,13 @@ function AdminSupportManagement() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {activeTicket === ticket.id && (
                     <div>
                       <div className="p-4 border-b border-gray-200">
                         <p className="text-gray-700">{ticket.message}</p>
                       </div>
-                      
+
                       {ticket.responses && ticket.responses.length > 0 && (
                         <div className="p-4 bg-gray-50">
                           <h4 className="font-medium text-sm mb-3">Responses:</h4>
@@ -292,7 +291,7 @@ function AdminSupportManagement() {
                           </div>
                         </div>
                       )}
-                      
+
                       {ticket.status === 'open' && (
                         <div className="p-4 bg-white border-t border-gray-200">
                           <h4 className="font-medium text-sm mb-3">Add Response:</h4>
@@ -302,7 +301,7 @@ function AdminSupportManagement() {
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                               rows="3"
                               value={ticketResponse}
-                              onChange={(e) => setTicketResponse(e.target.value)}
+                              onChange={e => setTicketResponse(e.target.value)}
                             ></textarea>
                             <div className="text-right">
                               <button
@@ -327,7 +326,7 @@ function AdminSupportManagement() {
           )}
         </div>
       )}
-      
+
       {activeTab === 'faqs' && (
         <div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -342,7 +341,7 @@ function AdminSupportManagement() {
                       placeholder="New category name"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={newFaqCategory}
-                      onChange={(e) => setNewFaqCategory(e.target.value)}
+                      onChange={e => setNewFaqCategory(e.target.value)}
                     />
                   </div>
                   <button
@@ -353,11 +352,11 @@ function AdminSupportManagement() {
                   </button>
                 </form>
               </div>
-              
+
               <div className="bg-white rounded-lg shadow-md p-4">
                 <h3 className="font-medium text-gray-700 mb-3">Categories</h3>
                 <ul className="space-y-2">
-                  {faqCategories.map(category => (
+                  {Array.isArray(faqCategories) && faqCategories.map(category => (
                     <li key={category.id}>
                       <div className="flex justify-between items-center px-3 py-2 bg-gray-100 rounded-md">
                         <span>{category.name}</span>
@@ -368,7 +367,7 @@ function AdminSupportManagement() {
                 </ul>
               </div>
             </div>
-            
+
             {/* Create FAQ */}
             <div className="md:col-span-3">
               <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -380,11 +379,11 @@ function AdminSupportManagement() {
                       id="category"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={newFaq.category}
-                      onChange={(e) => setNewFaq({ ...newFaq, category: e.target.value })}
+                      onChange={e => setNewFaq({ ...newFaq, category: e.target.value })}
                       required
                     >
                       <option value="">Select a category</option>
-                      {faqCategories.map(category => (
+                      {Array.isArray(faqCategories) && faqCategories.map(category => (
                         <option key={category.id} value={category.id}>{category.name}</option>
                       ))}
                     </select>
@@ -397,7 +396,7 @@ function AdminSupportManagement() {
                       placeholder="Enter question"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={newFaq.question}
-                      onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })}
+                      onChange={e => setNewFaq({ ...newFaq, question: e.target.value })}
                       required
                     />
                   </div>
@@ -409,7 +408,7 @@ function AdminSupportManagement() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows="4"
                       value={newFaq.answer}
-                      onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })}
+                      onChange={e => setNewFaq({ ...newFaq, answer: e.target.value })}
                       required
                     ></textarea>
                   </div>
@@ -423,11 +422,11 @@ function AdminSupportManagement() {
                   </div>
                 </form>
               </div>
-              
+
               {/* View/Edit Existing FAQs */}
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold mb-4">Existing FAQs</h2>
-                {faqCategories.map(category => (
+                {Array.isArray(faqCategories) && faqCategories.map(category => (
                   <div key={category.id} className="mb-6 last:mb-0">
                     <h3 className="text-md font-semibold mb-3 pb-2 border-b border-gray-200">{category.name}</h3>
                     {category.faqs && category.faqs.length > 0 ? (

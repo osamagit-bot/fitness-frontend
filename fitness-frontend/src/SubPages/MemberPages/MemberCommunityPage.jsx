@@ -1,4 +1,3 @@
-// src/SubPages/MemberPages/MemberCommunityPage.jsx
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,13 +28,13 @@ function MemberCommunityPage() {
         };
 
         const announcementsResponse = await axios.get('api.newdomain.com/api/community/announcements/', config);
-        setAnnouncements(announcementsResponse.data);
+        setAnnouncements(Array.isArray(announcementsResponse.data) ? announcementsResponse.data : []);
 
         const challengesResponse = await axios.get('api.newdomain.com/api/community/challenges/', config);
-        setChallenges(challengesResponse.data);
+        setChallenges(Array.isArray(challengesResponse.data) ? challengesResponse.data : []);
 
         const postsResponse = await axios.get('api.newdomain.com/api/community/posts/', config);
-        setPosts(postsResponse.data);
+        setPosts(Array.isArray(postsResponse.data) ? postsResponse.data : []);
 
         setError(null);
       } catch (err) {
@@ -122,6 +121,11 @@ function MemberCommunityPage() {
       alert('Failed to join challenge. Please try again.');
     }
   };
+
+  // Ensure arrays for rendering
+  const safePosts = Array.isArray(posts) ? posts : [];
+  const safeAnnouncements = Array.isArray(announcements) ? announcements : [];
+  const safeChallenges = Array.isArray(challenges) ? challenges : [];
 
   if (loading) {
     return (
@@ -262,8 +266,8 @@ function MemberCommunityPage() {
             {/* Posts */}
             <div className="space-y-6">
               <AnimatePresence>
-                {posts.length > 0 ? (
-                  posts.map((post, idx) => (
+                {safePosts.length > 0 ? (
+                  safePosts.map((post, idx) => (
                     <motion.div
                       key={post.id}
                       className="bg-white rounded-lg shadow-md p-6"
@@ -274,7 +278,7 @@ function MemberCommunityPage() {
                     >
                       <div className="flex items-center mb-4">
                         <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full flex items-center justify-center font-bold text-white">
-                          {post.author.charAt(0)}
+                          {post.author?.charAt(0) || 'M'}
                         </div>
                         <div className="ml-3">
                           <h3 className="font-medium">{post.author}</h3>
@@ -333,8 +337,8 @@ function MemberCommunityPage() {
             className="space-y-6"
           >
             <AnimatePresence>
-              {announcements.length > 0 ? (
-                announcements.map((announcement, idx) => (
+              {safeAnnouncements.length > 0 ? (
+                safeAnnouncements.map((announcement, idx) => (
                   <motion.div
                     key={announcement.id}
                     className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500"
@@ -374,8 +378,8 @@ function MemberCommunityPage() {
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
             <AnimatePresence>
-              {challenges.length > 0 ? (
-                challenges.map((challenge, idx) => (
+              {safeChallenges.length > 0 ? (
+                safeChallenges.map((challenge, idx) => (
                   <motion.div
                     key={challenge.id}
                     className="bg-white rounded-lg shadow-md overflow-hidden"

@@ -1,4 +1,3 @@
-// src/SubPages/MemberPages/MemberSupportPage.jsx
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,14 +27,13 @@ function MemberSupportPage() {
           setLoading(false);
           return;
         }
-        // First fetch FAQs
         try {
           const config = {
             headers: { 'Authorization': `Bearer ${token}` }
           };
-          const faqResponse = await axios.get('api.newdomain.com/api/support/faqs/', config);
-          setFaqCategories(faqResponse.data);
-          if (faqResponse.data.length > 0) {
+          const faqResponse = await axios.get('http://127.0.0.1:8000/api/support/faqs/', config);
+          setFaqCategories(Array.isArray(faqResponse.data) ? faqResponse.data : []);
+          if (Array.isArray(faqResponse.data) && faqResponse.data.length > 0) {
             setActiveCategory(faqResponse.data[0].id);
           }
           // Then fetch tickets with memberID
@@ -43,8 +41,8 @@ function MemberSupportPage() {
             headers: { 'Authorization': `Bearer ${token}` },
             params: { memberID }
           };
-          const ticketsResponse = await axios.get('api.newdomain.com/api/support/tickets/', ticketsConfig);
-          setTickets(ticketsResponse.data);
+          const ticketsResponse = await axios.get('http://127.0.0.1:8000/api/support/tickets/', ticketsConfig);
+          setTickets(Array.isArray(ticketsResponse.data) ? ticketsResponse.data : []);
         } catch (err) {
           console.error("Error fetching support data:", err);
           setError('Failed to load support content. Please try again later.');
@@ -71,7 +69,7 @@ function MemberSupportPage() {
         return;
       }
       // Submit ticket to API
-      const response = await axios.post('api.newdomain.com/api/support/tickets/create/', {
+      const response = await axios.post('http://127.0.0.1:8000/api/support/tickets/create/', {
         type: feedback.type,
         subject: feedback.subject,
         message: feedback.message,
@@ -79,7 +77,7 @@ function MemberSupportPage() {
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      setTickets([response.data, ...tickets]);
+      setTickets([response.data, ...(Array.isArray(tickets) ? tickets : [])]);
       setFeedback({ type: 'general', subject: '', message: '' });
       alert('Your ticket has been submitted. We will respond as soon as possible.');
     } catch (err) {
@@ -92,6 +90,11 @@ function MemberSupportPage() {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
+
+  // Ensure faqCategories is always an array
+  const safeFaqCategories = Array.isArray(faqCategories) ? faqCategories : [];
+  // Get FAQs for active category safely
+  const currentFaqs = safeFaqCategories.find(category => category.id === activeCategory)?.faqs || [];
 
   if (loading) {
     return (
@@ -122,9 +125,6 @@ function MemberSupportPage() {
       </motion.div>
     );
   }
-
-  // Get FAQs for active category
-  const currentFaqs = faqCategories.find(category => category.id === activeCategory)?.faqs || [];
 
   return (
     <motion.div
@@ -195,7 +195,7 @@ function MemberSupportPage() {
             transition={{ duration: 0.3 }}
           >
             <h2 className="text-xl font-semibold mb-4">Your Support Tickets</h2>
-            {tickets.length > 0 ? (
+            {Array.isArray(tickets) && tickets.length > 0 ? (
               <div className="space-y-6">
                 <AnimatePresence>
                   {tickets.map((ticket, idx) => (
@@ -282,7 +282,7 @@ function MemberSupportPage() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="font-medium text-gray-700 mb-3">Categories</h3>
                   <ul className="space-y-2">
-                    {faqCategories.map(category => (
+                    {safeFaqCategories.map(category => (
                       <li key={category.id}>
                         <button
                           onClick={() => setActiveCategory(category.id)}
@@ -310,9 +310,9 @@ function MemberSupportPage() {
                   {activeCategory ? (
                     <>
                       <h3 className="font-semibold text-lg mb-4">
-                        {faqCategories.find(c => c.id === activeCategory)?.name} FAQs
+                        {safeFaqCategories.find(c => c.id === activeCategory)?.name} FAQs
                       </h3>
-                      {currentFaqs.length > 0 ? (
+                      {Array.isArray(currentFaqs) && currentFaqs.length > 0 ? (
                         <div className="space-y-4">
                           {currentFaqs.map((faq, index) => (
                             <motion.div

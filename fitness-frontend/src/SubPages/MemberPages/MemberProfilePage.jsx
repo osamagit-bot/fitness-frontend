@@ -29,7 +29,7 @@ function MemberProfilePage() {
     confirmPassword: ''
   });
 
-  const BACKEND_URL = 'api.newdomain.com';
+  const BACKEND_URL = 'http://127.0.0.1:8000';
   const token = localStorage.getItem('token');
   const memberId = localStorage.getItem('memberId');
 

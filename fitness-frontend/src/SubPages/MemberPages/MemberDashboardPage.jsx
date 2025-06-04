@@ -19,7 +19,7 @@ const MemberDashboardPage = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
 
-        const response = await axios.get(`api.newdomain.com/api/members/${userId}/`, {
+        const response = await axios.get(`http://127.0.0.1:8000/api/members/${userId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },

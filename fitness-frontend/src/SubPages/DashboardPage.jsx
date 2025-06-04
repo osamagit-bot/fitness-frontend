@@ -38,7 +38,7 @@ function DashboardPage() {
       if (!token) return;
       
       // Fetch all members for analysis
-      const membersResponse = await axios.get('api.newdomain.com/api/members/', {
+      const membersResponse = await axios.get('http://127.0.0.1:8000/api/members/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -81,7 +81,7 @@ function DashboardPage() {
       
       // Get attendance records for all members
       try {
-        const attendanceResponse = await axios.get('api.newdomain.com/api/attendance/history/?today_only=true', {
+        const attendanceResponse = await axios.get('ahttp://127.0.0.1:8000/api/attendance/history/?today_only=true', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -192,7 +192,7 @@ function DashboardPage() {
       console.log('Fetching stats...');
       
       // Get active members - fixed URL with no double slashes
-      const membersResponse = await axios.get('api.newdomain.com/api/members/', {
+      const membersResponse = await axios.get('http://127.0.0.1:8000/api/members/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -242,7 +242,7 @@ function DashboardPage() {
       try {
         // Get today's attendance for present members count - using the correct endpoint
         const today = new Date().toISOString().substr(0, 10);
-        const attendanceResponse = await axios.get(`api.newdomain.com/api/attendance/history/?today_only=true`, {
+        const attendanceResponse = await axios.get(`http://127.0.0.1:8000/api/attendance/history/?today_only=true`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -298,7 +298,7 @@ function DashboardPage() {
       if (!token) return;
       
       // Get latest 5 members
-      const response = await axios.get('api.newdomain.com/api/members/', {
+      const response = await axios.get('http://127.0.0.1:8000/api/members/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
