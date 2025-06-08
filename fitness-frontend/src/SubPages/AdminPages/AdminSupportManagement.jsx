@@ -28,11 +28,11 @@ function AdminSupportManagement() {
       };
 
       // Fetch all tickets
-      const ticketsResponse = await axios.get('api.newdomain.com/api/admin/support/tickets/', config);
+      const ticketsResponse = await axios.get('http://127.0.0.1:8000/api/admin/support/tickets/', config);
       setTickets(Array.isArray(ticketsResponse.data) ? ticketsResponse.data : []);
 
       // Fetch FAQ categories
-      const faqCategoriesResponse = await axios.get('api.newdomain.com/api/admin/support/faq-categories/', config);
+      const faqCategoriesResponse = await axios.get('http://127.0.0.1:8000/api/admin/support/faq-categories/', config);
       setFaqCategories(Array.isArray(faqCategoriesResponse.data) ? faqCategoriesResponse.data : []);
 
       setLoading(false);
@@ -50,7 +50,7 @@ function AdminSupportManagement() {
     }
 
     try {
-      const response = await axios.post(`api.newdomain.com/api/admin/support/tickets/${ticketId}/respond/`, {
+      const response = await axios.post(`http://127.0.0.1:8000/api/admin/support/tickets/${ticketId}/respond/`, {
         message: ticketResponse
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -76,7 +76,7 @@ function AdminSupportManagement() {
     }
 
     try {
-      await axios.patch(`api.newdomain.com/api/admin/support/tickets/${ticketId}/close/`, {}, {
+      await axios.patch(`http://127.0.0.1:8000/api/admin/support/tickets/${ticketId}/close/`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -100,7 +100,7 @@ function AdminSupportManagement() {
     }
 
     try {
-      const response = await axios.post('api.newdomain.com/api/admin/support/faq-categories/create/', {
+      const response = await axios.post('http://127.0.0.1:8000/api/admin/support/faq-categories/create/', {
         name: newFaqCategory
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -125,7 +125,7 @@ function AdminSupportManagement() {
     }
 
     try {
-      const response = await axios.post('api.newdomain.com/api/admin/support/faqs/create/', newFaq, {
+      const response = await axios.post('http://127.0.0.1:8000/api/admin/support/faqs/create/', newFaq, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

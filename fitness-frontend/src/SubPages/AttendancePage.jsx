@@ -25,7 +25,7 @@ const AttendancePage = () => {
   const [checkInStatus, setCheckInStatus] = useState(null);
   const [memberAttendanceCounts, setMemberAttendanceCounts] = useState({});
 
-  const API_BASE_URL = 'api.newdomain.com';
+  const API_BASE_URL = 'http://127.0.0.1:8000';
 
   // Helper functions
   const getMemberId = (member) => member?.athlete_id || member?.id;

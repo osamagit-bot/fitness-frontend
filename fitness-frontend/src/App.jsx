@@ -36,6 +36,7 @@ import MemberDashboardPage from './SubPages/MemberPages/MemberDashboardPage';
 import MemberProfilePage from './SubPages/MemberPages/MemberProfilePage';
 import MemberAttendancePage from './SubPages/MemberPages/MemberAttendancePage';
 import MemberTrainingSessionsPage from './SubPages/MemberPages/MemberTrainingSessionsPage';
+import ShopPage from './SubPages/MemberPages/ShopPage';
 import MemberCommunityPage from './SubPages/MemberPages/MemberCommunityPage';
 import MemberSupportPage from './SubPages/MemberPages/MemberSupportPage';
 
@@ -205,7 +206,7 @@ function App() {
           <Route path="profile" element={<MemberProfilePage />} />
           <Route path="attendance" element={<MemberAttendancePage />} />
           <Route path="trainings" element={<MemberTrainingSessionsPage />} />
-          <Route path="shop" element={<div className="p-4"><h1 className="text-2xl font-bold">Shop</h1></div>} />
+     <Route path="shop" element={<ShopPage />} />
           <Route path="community" element={<MemberCommunityPage />} />
           <Route path="support" element={<MemberSupportPage />} />
         </Route>

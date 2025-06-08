@@ -27,13 +27,13 @@ function MemberCommunityPage() {
           }
         };
 
-        const announcementsResponse = await axios.get('api.newdomain.com/api/community/announcements/', config);
+        const announcementsResponse = await axios.get('http://127.0.0.1:8000/api/community/announcements/', config);
         setAnnouncements(Array.isArray(announcementsResponse.data) ? announcementsResponse.data : []);
 
         const challengesResponse = await axios.get('api.newdomain.com/api/community/challenges/', config);
         setChallenges(Array.isArray(challengesResponse.data) ? challengesResponse.data : []);
 
-        const postsResponse = await axios.get('api.newdomain.com/api/community/posts/', config);
+        const postsResponse = await axios.get('http://127.0.0.1:8000/api/community/posts/', config);
         setPosts(Array.isArray(postsResponse.data) ? postsResponse.data : []);
 
         setError(null);
@@ -61,7 +61,7 @@ function MemberCommunityPage() {
       }
 
       // Submit new post to API
-      const response = await axios.post('api.newdomain.com/api/community/posts/create/', {
+      const response = await axios.post('http://127.0.0.1:8000/api/community/posts/create/', {
         title: newPost.title,
         content: newPost.content,
         memberID: memberID
@@ -82,7 +82,7 @@ function MemberCommunityPage() {
   const handleLike = async (postId) => {
     try {
       // Send like to API
-      await axios.post(`api.newdomain.com/api/community/posts/${postId}/like/`, {
+      await axios.post(`http://127.0.0.1:8000/api/community/posts/${postId}/like/`, {
         memberID
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -105,7 +105,7 @@ function MemberCommunityPage() {
   const joinChallenge = async (challengeId) => {
     try {
       // Send join request to API
-      await axios.post(`api.newdomain.com/api/community/challenges/${challengeId}/join/`, {
+      await axios.post(`http://127.0.0.1:8000/api/community/challenges/${challengeId}/join/`, {
         memberID
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
