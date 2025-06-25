@@ -103,7 +103,7 @@ const DebugLoginState = () => {
     const memberId = localStorage.getItem('memberId') || localStorage.getItem('memberID');
     console.log("Current login state:", {
       isAuthenticated: localStorage.getItem('isAuthenticated'),
-      token: localStorage.getItem('token') ? "exists" : "missing",
+      token: localStorage.getItem('access_token') ? "exists" : "missing",
       userType: localStorage.getItem('userType'),
       userId: localStorage.getItem('userId'),
       memberId,
@@ -113,6 +113,7 @@ const DebugLoginState = () => {
 
   return null;
 };
+
 
 function NavbarHandler() {
   const location = useLocation();

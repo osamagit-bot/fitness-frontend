@@ -1,6 +1,6 @@
 // Create this in src/utils/auth.js
 export const verifyToken = async (requiredRole = null) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     const userJson = localStorage.getItem('user');
     
     if (!token || !userJson) return false;

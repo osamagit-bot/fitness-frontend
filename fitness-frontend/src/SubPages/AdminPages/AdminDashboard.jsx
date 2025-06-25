@@ -2,13 +2,8 @@ import 'boxicons/css/boxicons.min.css';
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import PageTransitionWrapper from '../../components/PageTransitionWrapper';
-import api from '../../utils/api'; // Assuming you have a configured axios instance
+import api from '../../utils/api';
 import AdminDashboardStats from './AdminDashboardStats';
-
-
-
-
-
 
 const getNotifStyle = (message) => {
   const lower = message.toLowerCase();
@@ -37,7 +32,7 @@ function AdminDashboard() {
   const location = useLocation();
 
   const [authChecked, setAuthChecked] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed to false by default for mobile
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -199,7 +194,7 @@ function AdminDashboard() {
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative overflow-hidden">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-gradient-to-r from-blue-600 to-indigo-700 p-4 flex justify-between items-center shadow-lg z-30">
+      <div className="lg:hidden bg-gradient-to-r from-blue-600 to-indigo-700 p-4 flex justify-between items-center shadow-lg z-40">
         <h1 className="text-xl font-bold text-white">Admin Portal</h1>
         <button
           onClick={toggleSidebar}
@@ -214,7 +209,7 @@ function AdminDashboard() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
         lg:translate-x-0 lg:w-72 bg-gradient-to-b from-indigo-700 to-blue-800 text-white flex flex-col
         transform transition-all duration-300 ease-in-out
-        fixed lg:relative z-20 h-full lg:h-auto
+        fixed lg:relative z-30 h-full lg:h-auto
         w-80 shadow-xl
       `}>
         <div className="p-6 pb-4 border-b border-blue-600">
@@ -284,7 +279,7 @@ function AdminDashboard() {
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-10 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
@@ -292,7 +287,7 @@ function AdminDashboard() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto bg-gradient-to-br from-gray-50 to-blue-50 relative">
         {/* Top Navigation */}
-        <div className="bg-white shadow-sm sticky top-0 z-30">
+        <div className="bg-white shadow-sm sticky top-0 z-10">
           <div className="flex justify-between items-center p-4">
             <h2 className="text-xl font-semibold text-gray-800 capitalize">
               {activeTab.replace(/-/g, ' ')}

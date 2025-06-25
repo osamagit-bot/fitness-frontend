@@ -272,7 +272,7 @@ const RegisterTrainerPage = () => {
           <h3 className="font-bold">Auth Status:</h3>
           <pre>{JSON.stringify(authStatus, null, 2)}</pre>
           <p className="mt-2">
-            Token in localStorage: {localStorage.getItem('token') ? '✅ Present' : '❌ Missing'}
+            Token in localStorage: {localStorage.getItem('access_token') ? '✅ Present' : '❌ Missing'}
           </p>
         </div>
       )}

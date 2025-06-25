@@ -66,7 +66,7 @@ const MemberCredentials = () => {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       
       if (!token) {
         throw new Error('Authentication token not found');
@@ -160,7 +160,7 @@ const handlePasswordReset = async (e) => {
   setResetSuccess(false);
   
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     
     if (!token) {
       throw new Error('Authentication token not found');

@@ -108,7 +108,7 @@ function MemberCommunityPage() {
       await api.post(
         `community/posts/${postId}/like/`,
         null,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        { headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` } }
       );
 
       setPosts(
@@ -122,7 +122,7 @@ function MemberCommunityPage() {
       }
     }
   };
-  console.log("Community ID: ",communityId);
+  
 
   const joinChallenge = async (challengeId) => {
     if (!communityId) {

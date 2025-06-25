@@ -404,21 +404,26 @@ class MemberViewSet(viewsets.ModelViewSet):
 
    
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    
     def request_delete(self, request):
+        print(f"DEBUG AUTH: request.user={request.user}, authenticated={request.user.is_authenticated}")
+        user = request.user
         try:
-            member = request.user.member
+            member = user.member
         except ObjectDoesNotExist:
-            return Response({"detail": "You do not have a member profile linked."}, status=400)
+            return Response({
+                "detail": f"No Member profile found for user '{user.username}'"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         member.delete_request = True
         member.save()
 
         Notification.objects.create(
             user=None,
-            message=f"Member '{request.user.username}' has requested account deletion."
+            message=f"Member '{user.username}' has requested account deletion."
         )
 
-        return Response({"detail": "Account deletion request sent."}, status=200)
+        return Response({"detail": "Account deletion request sent."}, status=status.HTTP_200_OK)
 
 
     @action(detail=True, methods=['post'])
@@ -2220,6 +2225,7 @@ def debug_urls(request):
 
     collect_urls(resolver.url_patterns)
 
+
     # Optional: Sort alphabetically by path
     url_list.sort(key=lambda x: x["url"])
     
@@ -2244,3 +2250,17 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         Notification.objects.create(
             message=f"{product_name} sold for {total_price:.2f} AFN"
         )
+        
+        
+        
+        
+        
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication])
+def test_jwt_view(request):
+    return Response({
+        "user": str(request.user),
+        "is_authenticated": request.user.is_authenticated,
+        "user_id": request.user.id
+    })

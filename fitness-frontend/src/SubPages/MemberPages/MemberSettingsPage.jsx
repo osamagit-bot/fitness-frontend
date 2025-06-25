@@ -201,7 +201,7 @@ function MemberSettingsPage() {
 
   // Logout handler
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('memberId');
     window.location.href = '/login';
   };

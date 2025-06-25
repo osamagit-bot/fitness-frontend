@@ -8,7 +8,7 @@ from .views import (
     AdminDashboardViewSet, CommunityViewSet, SupportViewSet,
     AdminCommunityViewSet, AdminSupportViewSet, ProductViewSet,
     TrainingViewSet, PurchaseViewSet, AttendanceViewSet, PostViewSet,
-    CommentViewSet  # Make sure you import CommentViewSet here
+    CommentViewSet,test_jwt_view  # Make sure you import CommentViewSet here
 )
 
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -52,7 +52,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('users/', views.UserListView.as_view(), name='user-list'),
     
-    
+    path('test-jwt/', test_jwt_view, name='test-jwt'),
       
 
     # Debug and test endpoints

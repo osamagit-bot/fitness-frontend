@@ -143,7 +143,7 @@ function TrainingsPage() {
   const deleteTraining = async (trainingId) => {
     if (window.confirm('Are you sure you want to cancel this training session?')) {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         
         await api.delete(`trainings/${trainingId}/`, {
           headers: {
