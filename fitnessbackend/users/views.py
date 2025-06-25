@@ -4,6 +4,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import AllowAny
 from rest_framework import serializers, status, viewsets
 from .serializers import RegisterSerializer, UserSerializer
+from django.db.models import Q
+import logging
+logger = logging.getLogger(__name__)
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAdminUser
 from django.urls.resolvers import URLPattern, URLResolver
@@ -281,25 +284,30 @@ class MemberViewSet(viewsets.ModelViewSet):
     def login(self, request):
         login_input = request.data.get('username')
         password = request.data.get('password')
-        print(f"Login attempt with username/email: {login_input}")
-        try:
-            # Try to find user by username first
-            user = CustomUser.objects.filter(username=login_input).first()
-            if not user:
-                # Try to find user by email if username not found
-                user = CustomUser.objects.filter(email=login_input).first()
-            if not user:
-                print("User not found")
-                return Response({'error': 'User not found'}, status=404)
 
+        print(f"Login attempt with username/email: {login_input}")
+
+        try:
+            # Find user by username or email, AND role must be member
+            user = CustomUser.objects.filter(
+                Q(username=login_input) | Q(email=login_input),
+                role=CustomUser.Role.MEMBER  # ensure only member can login here
+            ).first()
+
+            if not user:
+                print("User not found or not a member")
+                return Response({'error': 'User not found or not a member'}, status=404)
+
+            # Now get member object
             member = Member.objects.get(user=user)
-            print(f"Found member: {member.first_name} {member.last_name} with username: {user.username}")
-        except (CustomUser.DoesNotExist, Member.DoesNotExist):
-            print("User or member does not exist")
+
+        except (CustomUser.DoesNotExist, Member.DoesNotExist) as e:
+            print(f"Exception during login: {e}")
             return Response({"detail": "Invalid credentials"}, status=401)
 
-        authenticated_user = authenticate(username=user.username, password=password)
+        authenticated_user = authenticate(username=user.email, password=password)
         print(f"Authentication result: {'Success' if authenticated_user else 'Failed'}")
+
         if authenticated_user:
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -307,17 +315,18 @@ class MemberViewSet(viewsets.ModelViewSet):
                 "refresh": str(refresh),
                 "user_id": user.id,
                 "member_id": member.athlete_id,
-                "athlete_id": member.athlete_id, 
+                "athlete_id": member.athlete_id,
                 "name": f"{member.first_name} {member.last_name}"
             })
         elif check_password(password, user.password):
-            print("Password matches but authenticate() failed - using fallback")
+            # Fallback: password matches but authenticate() failed
             refresh = RefreshToken.for_user(user)
             return Response({
                 "token": str(refresh.access_token),
                 "refresh": str(refresh),
                 "user_id": user.id,
                 "member_id": member.athlete_id,
+                "athlete_id": member.athlete_id,
                 "name": f"{member.first_name} {member.last_name}"
             })
         else:
@@ -403,27 +412,31 @@ class MemberViewSet(viewsets.ModelViewSet):
             return Response({'error': 'No member profile found.'}, status=404)
 
    
+   
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
-    
     def request_delete(self, request):
-        print(f"DEBUG AUTH: request.user={request.user}, authenticated={request.user.is_authenticated}")
         user = request.user
-        try:
-            member = user.member
-        except ObjectDoesNotExist:
-            return Response({
-                "detail": f"No Member profile found for user '{user.username}'"
-            }, status=status.HTTP_400_BAD_REQUEST)
+        print(f"Request user: email={user.email}, role={user.role}, id={user.id}, is_staff={user.is_staff}, is_superuser={user.is_superuser}")
 
-        member.delete_request = True
-        member.save()
+        member = getattr(user, 'member', None)
+        print(f"Member attached: {member}")
 
-        Notification.objects.create(
-            user=None,
-            message=f"Member '{user.username}' has requested account deletion."
-        )
+        if member:
+            member.delete_requested = True
+            member.save()
 
-        return Response({"detail": "Account deletion request sent."}, status=status.HTTP_200_OK)
+            Notification.objects.create(
+                user=user,
+                message=f"Member '{user.username}' has requested account deletion."
+            )
+            return Response({"detail": "Member account deletion request sent."}, status=status.HTTP_200_OK)
+
+        if user.is_staff or user.is_superuser:
+            return Response({"detail": "Admins cannot request account deletion here."}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response({"detail": "User profile type not supported for deletion."}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 
     @action(detail=True, methods=['post'])

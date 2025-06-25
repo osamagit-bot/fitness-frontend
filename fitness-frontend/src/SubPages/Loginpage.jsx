@@ -17,24 +17,34 @@ const LoginPage = () => {
     setError('');
 
     try {
+      localStorage.clear();
       let response;
 
-      if (loginType === 'member') {
+      if (loginType === 'member'){
         response = await api.post(`members/login/`, { username, password });
-        localStorage.setItem('access_token', response.data.access_token);
+    
+        // Use the correct key 'token' as backend returns 'token', not 'access_token'
+        localStorage.setItem('access_token', response.data.token);
+        localStorage.setItem('refreshToken', response.data.refresh);
         localStorage.setItem('userType', 'member');
         localStorage.setItem('memberId', response.data.member_id);
+        localStorage.setItem('userId', response.data.user_id);  
         localStorage.setItem('name', response.data.name);
         localStorage.setItem('isAuthenticated', 'true');
+    
         setTimeout(() => navigate('/member-dashboard'), 500);
+    
       } else if (loginType === 'admin') {
         response = await api.post(`admin-dashboard/login/`, { username, password });
-        localStorage.setItem('access_token', response.data.access_token);  // Changed from 'token' to 'access_token' for consistency
+    
+        // Assuming admin login returns 'token' too — confirm your backend for admin login!
+        localStorage.setItem('access_token', response.data.access_token);
         localStorage.setItem('refreshToken', response.data.refresh || '');
         localStorage.setItem('userType', 'admin');
         localStorage.setItem('userId', response.data.user_id);
         localStorage.setItem('name', response.data.name);
         localStorage.setItem('isAuthenticated', 'true');
+    
         setTimeout(() => navigate('/admin/dashboard'), 500);
       }
     } catch (err) {

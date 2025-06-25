@@ -179,14 +179,8 @@ function MemberSettingsPage() {
   
   const handleDeleteAccount = async () => {
     setLoading(true);
-  
     try {
-      await api.post(
-        `members/request_delete/`,
-        {}, // empty body
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-  
+      await api.post('members/request_delete/', {});  // Axios adds Authorization header
       setShowDeleteModal(false);
       toast.info("Account deletion request sent. Our team will contact you.");
     } catch (err) {
@@ -197,11 +191,10 @@ function MemberSettingsPage() {
     }
   };
   
-  
 
   // Logout handler
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('memberId');
     window.location.href = '/login';
   };
