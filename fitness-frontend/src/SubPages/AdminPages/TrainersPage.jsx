@@ -26,7 +26,7 @@ function TrainersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get('trainers/', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -99,7 +99,7 @@ function TrainersPage() {
     }
   
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       
       console.log('Submitting trainer data:', newTrainer);
       
@@ -182,7 +182,7 @@ function TrainersPage() {
   const deleteTrainer = async (trainerId) => {
     if (window.confirm('Are you sure you want to delete this trainer?')) {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         
         await api.delete(`trainers/${trainerId}/`, {
           headers: {

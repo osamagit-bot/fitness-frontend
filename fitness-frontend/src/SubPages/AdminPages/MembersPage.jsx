@@ -23,7 +23,7 @@ function MembersPage() {
     setIsLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get('members/', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -108,7 +108,7 @@ function MembersPage() {
   const deleteAthlete = async (athleteId) => {
     if (window.confirm('Are you sure you want to delete this athlete?')) {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         await api.delete(`members/${athleteId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`

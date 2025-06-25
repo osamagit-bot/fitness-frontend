@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { useEffect, useState } from 'react';
 import api from '../../utils/api';
 function TrainingsPage() {
@@ -24,7 +23,7 @@ function TrainingsPage() {
 
   const fetchTrainers = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get('trainers/', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -52,7 +51,7 @@ function TrainingsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get('trainings/', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -80,7 +79,7 @@ function TrainingsPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const formattedDateTime = `${newTraining.date}T${newTraining.time}:00`;
       
       // Create the payload with the correct field names
@@ -146,7 +145,7 @@ function TrainingsPage() {
       try {
         const token = localStorage.getItem('token');
         
-        await axios.delete(`http://127.0.0.1:8000/api/trainings/${trainingId}/`, {
+        await api.delete(`trainings/${trainingId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

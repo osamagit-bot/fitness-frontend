@@ -7,7 +7,7 @@ import api from '../../utils/api';
 
 function MemberSettingsPage() {
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   const memberId = localStorage.getItem('memberId');
   const [userData, setUserData] = useState({
     name: '',
@@ -201,7 +201,7 @@ function MemberSettingsPage() {
 
   // Logout handler
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('memberId');
     window.location.href = '/login';
   };

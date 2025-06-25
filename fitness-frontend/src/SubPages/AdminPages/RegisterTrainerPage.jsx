@@ -43,7 +43,7 @@ const RegisterTrainerPage = () => {
     const checkAuth = async () => {
       setPageReady(false); // Start with page not ready
       
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const isAuthenticated = localStorage.getItem('isAuthenticated');
       
       if (!token || isAuthenticated !== 'true') {
@@ -70,7 +70,7 @@ const RegisterTrainerPage = () => {
   // Test authentication status
   const testAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       console.log('Using token:', token);
       
       if (!token) {
@@ -104,7 +104,7 @@ const RegisterTrainerPage = () => {
   // Function to refresh dashboard stats
   const refreshStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (!token) return;
       
       await axios.get('api.newdomain.com/admin/stats/', {
@@ -142,7 +142,7 @@ const RegisterTrainerPage = () => {
   
     try {
       // Get the token from local storage
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       
       if (!token) {
         throw new Error('No authentication token found. Please login again.');

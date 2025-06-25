@@ -6,7 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import api from '../../utils/api';
 function AdminSettingsPage() {
   
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   const [loading, setLoading] = useState(false);
 
   // Notification preferences

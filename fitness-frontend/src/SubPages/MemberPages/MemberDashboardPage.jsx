@@ -78,7 +78,7 @@ const MemberDashboardPage = () => {
   const fetchNotifications = async () => {
     setNotifLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const res = await api.get('member/notifications/', {
         headers: { Authorization: `Bearer ${token}` }
       });

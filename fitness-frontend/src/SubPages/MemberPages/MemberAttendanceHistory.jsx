@@ -1,7 +1,6 @@
 // src/components/MemberAttendanceHistory.jsx
 import axios from 'axios';
 import { useEffect, useState } from 'react';
-
 const MemberAttendanceHistory = ({ memberId }) => {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,10 +113,10 @@ const MemberAttendanceHistory = ({ memberId }) => {
     
     // Try different endpoint formats
     const endpoints = [
-      `${API_BASE_URL}/api/attendance/history/${id}/`,
+      `${API_BASE_URL}/api/attendance/${id}/history`,
       `${API_BASE_URL}/api/attendance/member/${id}/`,
-      `${API_BASE_URL}/attendance/history/${id}/`,
-      `${API_BASE_URL}/attendance/member/${id}/`
+      `${API_BASE_URL}/api/attendance/${id}/history/`,
+      `${API_BASE_URL}/api/attendance/member/${id}/`
     ];
     
     let success = false;
@@ -152,7 +151,7 @@ const MemberAttendanceHistory = ({ memberId }) => {
     if (!success) {
       // If all endpoints failed, try with query parameter
       try {
-        const endpoint = `${API_BASE_URL}/api/attendance/history/?member_id=${id}`;
+        const endpoint = `${API_BASE_URL}/api/attendance/?member_id=${id}/history`;
         setDebugInfo(prev => ({
           ...prev,
           attemptedEndpoints: [...(prev.attemptedEndpoints || []), endpoint]

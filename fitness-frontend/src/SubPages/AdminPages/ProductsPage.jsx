@@ -25,7 +25,7 @@ function ProductsPage() {
     setIsLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get('products/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -48,7 +48,7 @@ function ProductsPage() {
   const fetchSoldProducts = async () => {
     setSoldLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get('purchases/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -81,7 +81,7 @@ function ProductsPage() {
     setIsLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const formData = new FormData();
       formData.append('name', newProduct.name);
       formData.append('price', newProduct.price);
@@ -116,7 +116,7 @@ function ProductsPage() {
   const deleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         await api.delete(`products/${productId}/`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });

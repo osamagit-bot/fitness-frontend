@@ -46,7 +46,7 @@ function RevenuePage() {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const [membersRes, purchasesRes] = await Promise.all([
         api.get(`members/`, { headers }),

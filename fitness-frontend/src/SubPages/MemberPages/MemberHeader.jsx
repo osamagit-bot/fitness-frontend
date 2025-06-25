@@ -1,15 +1,15 @@
 // src/components/MemberHeader.jsx
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FaBars, FaBell, FaUser } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 function MemberHeader({ toggleSidebar }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const navigate = useNavigate();
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     localStorage.removeItem('isAuthenticated');
