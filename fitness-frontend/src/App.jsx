@@ -8,13 +8,13 @@ import About from './components/About';
 import ContactSection from './components/Contact';
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
-import HelpSupport from './components/HelpSupport';
 import Hero from './components/Hero';
 import Navbar from './components/Navbar';
 import Products from './components/Products';
 import Testimonials from './components/Testimonials';
 import TrainerProfiles from './components/TrainerProfiles';
 import TrainingSection from './components/Training';
+import HelpSupport from './SubPages/HelpSupport';
 
 // Public Pages
 import Home from './SubPages/Home';
@@ -46,17 +46,16 @@ import MemberSettingsPage from './SubPages/MemberPages/MemberSettingsPage';
 import MemberSupportPage from './SubPages/MemberPages/MemberSupportPage';
 import MemberTrainingSessionsPage from './SubPages/MemberPages/MemberTrainingSessionsPage';
 
-// Trainer Pages
-import TrainerDashboard from './SubPages/TrainerPages/TrainerDashboard';
+
 
 const ProtectedRoute = ({ children, userType }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('token') !== null;
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('access_token') !== null;
   const currentUserType = localStorage.getItem('userType');
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (userType && userType !== currentUserType) {
     if (currentUserType === 'member') return <Navigate to="/member-dashboard" replace />;
-    if (currentUserType === 'trainer') return <Navigate to="/trainer-dashboard" replace />;
+    
     if (currentUserType === 'admin') return <Navigate to="/admin/dashboard" replace />;
     return <Navigate to="/login" replace />;
   }
@@ -65,7 +64,7 @@ const ProtectedRoute = ({ children, userType }) => {
 };
 
 const AdminRoute = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('token') !== null;
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('access_token') !== null;
   const userType = localStorage.getItem('userType');
   if (!isAuthenticated || userType !== 'admin') return <Navigate to="/login" replace />;
   return children;
@@ -79,18 +78,13 @@ const MemberRoute = ({ children }) => {
     else if (memberId && !memberID) localStorage.setItem('memberID', memberId);
   }, []);
 
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('token') !== null;
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('access_token') !== null;
   const userType = localStorage.getItem('userType');
   if (!isAuthenticated || userType !== 'member') return <Navigate to="/login" replace />;
   return children;
 };
 
-const TrainerRoute = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('token') !== null;
-  const userType = localStorage.getItem('userType');
-  if (!isAuthenticated || userType !== 'trainer') return <Navigate to="/login" replace />;
-  return children;
-};
+
 
 const DebugLoginState = () => {
   useEffect(() => {
@@ -113,7 +107,7 @@ const DebugLoginState = () => {
       userType: localStorage.getItem('userType'),
       userId: localStorage.getItem('userId'),
       memberId,
-      trainerId: localStorage.getItem('trainerId')
+     
     });
   }, []);
 
@@ -124,8 +118,7 @@ function NavbarHandler() {
   const location = useLocation();
   if (
     location.pathname.startsWith('/admin') ||
-    location.pathname.startsWith('/member-dashboard') ||
-    location.pathname.startsWith('/trainer-dashboard')
+    location.pathname.startsWith('/member-dashboard') 
   ) {
     return null;
   }
@@ -170,7 +163,7 @@ function App() {
         <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/helpandsupportpage" element={<HelpSupport />} />
 
-        {/* Admin */}
+        {/* Admin Routes */}
         <Route path="/admin/*" element={
           <AdminRoute>
             <AdminDashboard />
@@ -190,7 +183,7 @@ function App() {
           <Route path="adminsettings" element={<AdminSettingsPage />} />
         </Route>
 
-        {/* Member */}
+        {/* Member Routes */}
         <Route path="/member-dashboard/*" element={
           <MemberRoute>
             <MemberDashboard />
@@ -206,17 +199,9 @@ function App() {
           <Route path="support" element={<MemberSupportPage />} />
         </Route>
 
-        {/* Trainer */}
-        <Route path="/trainer-dashboard/*" element={
-          <TrainerRoute>
-            <TrainerDashboard />
-          </TrainerRoute>
-        }>
-          <Route index element={<div className="p-4"><h1 className="text-2xl font-bold">Trainer Dashboard</h1></div>} />
-          <Route path="profile" element={<div className="p-4"><h1 className="text-2xl font-bold">My Profile</h1></div>} />
-          <Route path="sessions" element={<div className="p-4"><h1 className="text-2xl font-bold">My Sessions</h1></div>} />
-          <Route path="members" element={<div className="p-4"><h1 className="text-2xl font-bold">My Members</h1></div>} />
-        </Route>
+     
+        
+        
 
         {/* Fallbacks */}
         <Route path="/debug-member-dashboard" element={<Navigate to="/member-dashboard" replace />} />

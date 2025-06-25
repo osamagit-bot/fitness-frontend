@@ -21,7 +21,7 @@ function MemberProfilePage() {
     confirmPassword: ''
   });
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   const memberId = localStorage.getItem('memberId');
 
   // Load member data

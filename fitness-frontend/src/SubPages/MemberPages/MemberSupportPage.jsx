@@ -12,15 +12,15 @@ function MemberSupportPage() {
   const [error, setError] = useState(null);
 
   const memberName = localStorage.getItem('name') || 'Member';
-  const memberID = localStorage.getItem('memberID');
-  const token = localStorage.getItem('token');
+  const memberID = localStorage.getItem('memberId');
+  const token = localStorage.getItem('access_token');
 
   useEffect(() => {
     const fetchSupportData = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        const memberID = localStorage.getItem('athleteID');
+        const token = localStorage.getItem('access_token');
+        const memberID = localStorage.getItem('memberId');
         if (!memberID) {
           setError('Member ID not found. Please login again.');
           setLoading(false);
@@ -59,7 +59,7 @@ function MemberSupportPage() {
   const submitFeedback = async (e) => {
     e.preventDefault();
   
-    const memberID = localStorage.getItem("memberID"); // ✅ correct key
+
   
     console.log("DEBUG: memberID =", memberID);
   

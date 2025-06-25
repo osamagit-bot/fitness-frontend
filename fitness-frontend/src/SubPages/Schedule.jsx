@@ -4,7 +4,10 @@ const schedule = [
     day: "Saturday",
     muscleGroup: "Chest",
     images: [
-      "/images/chest1.jpeg",
+      "/images/chest1.jpg",
+      "/images/chest2.png",
+      "/images/chest3.jpg",
+
      
     ],
   },
@@ -69,7 +72,7 @@ const SchedulePage = () => {
                 {item.images.map((img, i) => (
                   <div key={i} className="overflow-hidden rounded-2xl shadow-md hover:scale-105 transition-transform">
                     <img
-                      src={`${img}&${idx}-${i}`} // Avoid caching by appending index
+                      src={`${img}?v=${idx}-${i}`} // Avoid caching by appending index as query param
                       alt={`${item.muscleGroup} workout ${i + 1}`}
                       className="w-full h-48 object-cover rounded-2xl"
                     />

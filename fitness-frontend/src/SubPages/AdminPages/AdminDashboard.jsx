@@ -52,7 +52,7 @@ function AdminDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const isAuthenticated = localStorage.getItem('isAuthenticated');
       const user = localStorage.getItem('user');
 
@@ -100,7 +100,7 @@ function AdminDashboard() {
     localStorage.clear();
     navigate('/login');
   };
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
@@ -110,7 +110,7 @@ function AdminDashboard() {
     setNotifLoading(true);
     setNotificationError(null);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get(
         'notifications/admin_notifications/',
         { headers: { Authorization: `Bearer ${token}` } }
@@ -144,7 +144,7 @@ function AdminDashboard() {
     setIsMarkingRead(true);
     setNotificationError(null);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.post(
         'notifications/mark_all_read/',
         {},
@@ -166,7 +166,7 @@ function AdminDashboard() {
     setIsDeleting(true);
     setNotificationError(null);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.delete(
         'notifications/delete_all/',
         { headers: { Authorization: `Bearer ${token}` } }

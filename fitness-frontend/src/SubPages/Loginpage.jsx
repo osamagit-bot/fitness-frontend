@@ -21,21 +21,21 @@ const LoginPage = () => {
 
       if (loginType === 'member') {
         response = await api.post(`members/login/`, { username, password });
-        localStorage.setItem('access_token', response.data.token);
+        localStorage.setItem('access_token', response.data.access_token);
         localStorage.setItem('userType', 'member');
         localStorage.setItem('memberId', response.data.member_id);
         localStorage.setItem('name', response.data.name);
         localStorage.setItem('isAuthenticated', 'true');
-        setTimeout(() => navigate('/member-dashboard'), 300);
+        setTimeout(() => navigate('/member-dashboard'), 500);
       } else if (loginType === 'admin') {
         response = await api.post(`admin-dashboard/login/`, { username, password });
-        localStorage.setItem('access_token', response.data.token);  // Changed from 'token' to 'access_token' for consistency
+        localStorage.setItem('access_token', response.data.access_token);  // Changed from 'token' to 'access_token' for consistency
         localStorage.setItem('refreshToken', response.data.refresh || '');
         localStorage.setItem('userType', 'admin');
         localStorage.setItem('userId', response.data.user_id);
         localStorage.setItem('name', response.data.name);
         localStorage.setItem('isAuthenticated', 'true');
-        setTimeout(() => navigate('/admin/dashboard'), 300);
+        setTimeout(() => navigate('/admin/dashboard'), 500);
       }
     } catch (err) {
       if (err.response) {

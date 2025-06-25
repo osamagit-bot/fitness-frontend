@@ -168,7 +168,7 @@ const RegisterPage = () => {
     const checkAuth = async () => {
       setPageReady(false);
       
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const isAuthenticated = localStorage.getItem('isAuthenticated');
       
       if (!token || isAuthenticated !== 'true') {
@@ -193,7 +193,7 @@ const RegisterPage = () => {
 
   const testAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const response = await api.get('test/', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -214,7 +214,7 @@ const RegisterPage = () => {
 
   const refreshStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (!token) return;
       
       await api.get('admin/stats/', {
@@ -242,7 +242,7 @@ const RegisterPage = () => {
 
   const renewMembership = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       
       if (!token) {
         throw new Error('No authentication token found. Please login again.');
@@ -276,7 +276,7 @@ const RegisterPage = () => {
 
   const verifyRenewal = async (athleteId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       
       if (!token) {
         throw new Error('No authentication token found. Please login again.');
@@ -306,7 +306,7 @@ const RegisterPage = () => {
     setShowCredentials(false);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       
       if (!token) {
         throw new Error('No authentication token found. Please login again.');
@@ -433,7 +433,7 @@ const RegisterPage = () => {
           <h3 className="font-bold">Auth Status:</h3>
           <pre>{JSON.stringify(authStatus, null, 2)}</pre>
           <p className="mt-2">
-            Token in localStorage: {localStorage.getItem('token') ? '✅ Present' : '❌ Missing'}
+            Token in localStorage: {localStorage.getItem('access_token') ? '✅ Present' : '❌ Missing'}
           </p>
         </div>
       )}

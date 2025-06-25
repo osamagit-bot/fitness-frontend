@@ -25,7 +25,7 @@ function MemberCommunityPage() {
   const memberName = localStorage.getItem('name') || 'Member';
   const memberID = localStorage.getItem('memberId');
  
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
 
 
 

@@ -45,12 +45,12 @@ const MemberDashboardPage = () => {
 
   const memberId = localStorage.getItem('memberId') || '';
 
-
+  const token = localStorage.getItem('access_token');
   useEffect(() => {
     const fetchMemberData = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
+     
 
         const response = await api.get(`members/${memberId}/`, {
           headers: {
@@ -99,7 +99,7 @@ const MemberDashboardPage = () => {
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       const isAuthenticated = localStorage.getItem('isAuthenticated');
       const user = localStorage.getItem('user');
 
@@ -115,7 +115,7 @@ const MemberDashboardPage = () => {
           const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
           // Use backend server URL for WebSocket connection
           const backendHost = 'localhost:8001'; // Change this if your backend runs on a different host/port
-          const token = localStorage.getItem('token');
+          const token = localStorage.getItem('access_token');
           const wsUrl = `${protocol}://${backendHost}/ws/notifications/?token=${token}`;
           console.log('Connecting to WebSocket URL:', wsUrl);
           const socket = new WebSocket(wsUrl);
@@ -186,7 +186,7 @@ const MemberDashboardPage = () => {
   }, [notifications, memberData]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('memberId');
     navigate('/login');
   };
