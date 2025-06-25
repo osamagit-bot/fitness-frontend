@@ -3,72 +3,81 @@ from django.contrib.auth import get_user_model
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Member, Trainer, Training 
-from .models import  Product
+from .models import Member, Trainer, Training,CustomUser
+from .models import Product, Purchase, Notification, Post, Comment, Announcement, Challenge, SupportTicket, FAQ, FAQCategory, TicketResponse, TrainingSchedule, Attendance
+from django.core.exceptions import ObjectDoesNotExist
+User = get_user_model()  # This now correctly refers to your CustomUser
 
-User = get_user_model()
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['email', 'username']
 
-# Serializer for the Member model
+
 class MemberSerializer(serializers.ModelSerializer):
-    # Add explicit fields for username and password
-    username = serializers.CharField(write_only=True, required=False)
-    password = serializers.CharField(write_only=True, required=False, style={'input_type':
-     'password'})
+    # Accept username/password on input, but also expose username on output
+    username = serializers.SerializerMethodField(read_only=True)
+    password = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
     phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    
+    user_email = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Member
         fields = [
             'athlete_id', 'first_name', 'last_name', 'monthly_fee',
-            'membership_type','phone', 'start_date', 'expiry_date',
-            'box_number', 'time_slot', 'username', 'password', 'user', 'biometric_registered', 
+            'membership_type', 'phone', 'start_date', 'expiry_date',
+            'box_number', 'time_slot', 'username', 'password', 'user', 'biometric_registered','user_email',
         ]
         read_only_fields = ['user']
-    
+
+    def get_username(self, obj):
+        # Return the username from the related user
+        return obj.user.username if obj.user else None
+    def get_user_email(self, obj):
+        return obj.user.email if obj.user else None
+
     def create(self, validated_data):
-        """
-        Handle both cases - with and without explicit username/password
-        """
-        # Get the user model properly
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        
-        # Check if username and password were provided
-        username = validated_data.pop('username', None)
+
+        # Extract and remove password
         password = validated_data.pop('password', None)
-        
-        if username and password:
-            # Use provided username and password
-            user = User.objects.create_user(
-                username=username,
-                email=validated_data.get('email', f"{username}@gym.temp"),
-                password=password
-            )
-        else:
-            # Fall back to old behavior for compatibility
-            athlete_id = validated_data.get('athlete_id')
+
+        # ✅ Extract athlete_id first
+        athlete_id = validated_data.get('athlete_id')
+        first_name = validated_data.get('first_name', '').lower()
+        email = validated_data.get('email')
+        if not email:
+            email = self.initial_data.get('email')
+        if not email:
             email = f"{athlete_id}@gym.temp"
-            unique_username = f"member_{athlete_id}"
-            
-            import secrets
-            temp_password = secrets.token_urlsafe(12)
-            
+        username = self.initial_data.get('username') or f"{first_name}{athlete_id}"
+
+        # Generate a secure temporary password if not provided
+        import secrets
+        temp_password = password or secrets.token_urlsafe(12)
+
+        # ✅ Prevent duplicate email
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user:
+            user = existing_user
+        else:
             user = User.objects.create_user(
                 email=email,
-                username=unique_username,
+                username=username,
                 password=temp_password,
                 first_name=validated_data.get('first_name', ''),
                 last_name=validated_data.get('last_name', '')
             )
-        
-        # Set user role if applicable
+
         if hasattr(user, 'role'):
             user.role = 'member'
             user.save()
-        
-        # Create member with user relationship
+
         member = Member.objects.create(user=user, **validated_data)
         return member
+
+
 
 # Serializer for JWT token
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -142,6 +151,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             return user
         except Exception as e:
             raise serializers.ValidationError({"error": str(e)})
+        
+        
+        
 
 # Serializer to retrieve user info along with their member details
 class UserSerializer(serializers.ModelSerializer):
@@ -151,6 +163,9 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'email', 'role', 'date_joined', 'member_details')
         read_only_fields = ('id', 'date_joined', 'member_details')
+
+
+
 
 # Custom JWT token serializer
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -202,7 +217,6 @@ class ProductSerializer(serializers.ModelSerializer):
             return obj.image.url
         return None
 
-# Attendance serializer
 
 
 # Training serializer
@@ -264,63 +278,27 @@ class TrainerSerializer(serializers.ModelSerializer):
 
 
 
-# In your Django serializers.py
-# users/serializers.py
 
-from rest_framework import serializers
-from .models import Post, Comment, Announcement, Challenge, SupportTicket, FAQ, FAQCategory, TicketResponse
-from django.contrib.auth.models import User
-
-class PostSerializer(serializers.ModelSerializer):
-    author = serializers.SerializerMethodField(read_only=True)
-    date = serializers.SerializerMethodField(read_only=True)
-    comments = serializers.SerializerMethodField(read_only=True)
-    isCoach = serializers.SerializerMethodField(read_only=True)
     
-    class Meta:
-        model = Post
-        fields = ['id', 'title', 'content', 'author', 'date', 'likes', 'comments', 'isCoach']
-        read_only_fields = ['author', 'date', 'likes', 'comments', 'isCoach']
     
-    def get_author(self, obj):
-        return obj.author.get_full_name() or obj.author.username
-    
-    def get_date(self, obj):
-        return obj.date_created
-    
-    def get_comments(self, obj):
-        return obj.comments.count()
-    
-    def get_isCoach(self, obj):
-        # Check if the user has a trainer profile
-        return hasattr(obj.author, 'trainer')
 class AnnouncementSerializer(serializers.ModelSerializer):
-    date = serializers.SerializerMethodField()
-    creator_name = serializers.SerializerMethodField()
-    
     class Meta:
         model = Announcement
-        fields = ['id', 'title', 'content', 'date', 'creator_name']
-    
-    def get_date(self, obj):
-        return obj.date_created
-        
-    def get_creator_name(self, obj):
-        return obj.created_by.get_full_name() or obj.created_by.username
+        fields = ['id', 'title', 'content', 'date_created']
+        read_only_fields = ['date_created']
 
+    
 class ChallengeSerializer(serializers.ModelSerializer):
     participants = serializers.SerializerMethodField()
-    endDate = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Challenge
-        fields = ['id', 'title', 'description', 'participants', 'endDate']
-    
+        fields = ['id', 'title', 'description', 'start_date', 'end_date', 'participants', 'date_created']
+        read_only_fields = ['date_created']
+
     def get_participants(self, obj):
         return obj.participants.count()
-    
-    def get_endDate(self, obj):
-        return obj.end_date
+
 
 class TicketResponseSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
@@ -335,22 +313,45 @@ class TicketResponseSerializer(serializers.ModelSerializer):
     
     def get_date(self, obj):
         return obj.date_created
+    
+"""  
+class CommunitySerializer(serializers.ModelSerializer):
+    challenges = ChallengeSerializer(many=True)
+
+    class Meta:
+        model = Community
+        fields = ['id', 'name', 'challenges']
+"""
+
+    
+    
 
 class SupportTicketSerializer(serializers.ModelSerializer):
     responses = TicketResponseSerializer(many=True, read_only=True)
     date = serializers.SerializerMethodField()
-    
+    member_name = serializers.SerializerMethodField()
+
     class Meta:
         model = SupportTicket
-        fields = ['id', 'subject', 'message', 'status', 'date', 'type', 'responses']
-    
+        fields = ['id', 'subject', 'message', 'status', 'date', 'type', 'responses', 'member_name', 'member']
+        extra_kwargs = {
+            'member': {'read_only': True}  
+        }
+
     def get_date(self, obj):
         return obj.date_created
+
+    def get_member_name(self, obj):
+        if obj.member:
+            return f"{obj.member.first_name} {obj.member.last_name}"
+        return "Unknown"
+
 
 class FAQSerializer(serializers.ModelSerializer):
     class Meta:
         model = FAQ
-        fields = ['question', 'answer']
+        fields = ['id', 'question', 'answer', 'category']
+
 
 class FAQCategorySerializer(serializers.ModelSerializer):
     faqs = FAQSerializer(many=True, read_only=True)
@@ -358,3 +359,94 @@ class FAQCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = FAQCategory
         fields = ['id', 'name', 'faqs']
+
+
+
+
+class PurchaseSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    class Meta:
+        model = Purchase
+        fields = ['id', 'member', 'product', 'product_name', 'quantity', 'total_price', 'date']
+        extra_kwargs = {
+            'member':{'required':False, 'allow_null':True}
+        }
+        read_only_fields = ['id', 'date', 'product_name']
+        
+        
+        
+        
+        
+class NotificationSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = Notification
+        fields = '__all__'    
+        
+        
+class TrainingScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrainingSchedule
+        fields = '__all__'
+        
+        
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attendance
+        fields = '__all__'
+        read_only_fields = ['check_in_time', 'date']
+        
+        
+        
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'post', 'author', 'content', 'date_created']
+        read_only_fields = ['id', 'author', 'date_created']
+
+    def get_author(self, obj):
+        return obj.author.username if obj.author else "Anonymous"
+
+
+
+class PostSerializer(serializers.ModelSerializer):
+    comments_list = CommentSerializer(source='comments', many=True, read_only=True)
+    author = serializers.SerializerMethodField(read_only=True)
+    date = serializers.SerializerMethodField(read_only=True)
+    comments = serializers.SerializerMethodField(read_only=True)
+    isCoach = serializers.SerializerMethodField(read_only=True)
+    likes = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = Post
+        fields = ['id', 'title', 'content', 'author', 'date', 'likes', 'comments', 'isCoach', 'comments_list']
+        read_only_fields = ['author', 'date', 'likes', 'comments', 'isCoach']
+    
+    def get_author(self, obj):
+        user = getattr(obj, 'created_by', None)
+        if not user:
+            return None
+        full_name = user.get_full_name()
+        return full_name if full_name else user.username
+    
+    def get_date(self, obj):
+        if hasattr(obj, 'date_created') and obj.date_created:
+            return obj.date_created.isoformat()
+        return None
+    
+    def get_comments(self, obj):
+        return obj.comments.count() if hasattr(obj, 'comments') else 0
+    
+    def get_isCoach(self, obj):
+        user = getattr(obj, 'created_by', None)
+        if not user:
+            return False
+        return hasattr(user, 'trainer')
+   
+    def get_likes(self, obj):
+        try:
+            return obj.likes.count()
+        except AttributeError:
+            return 0

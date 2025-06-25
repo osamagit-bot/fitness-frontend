@@ -19,6 +19,7 @@ ALLOWED_HOSTS = [
 
 # Application definition
 INSTALLED_APPS = [
+    'channels',
        'grappelli', 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -32,11 +33,12 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'django_crontab',
+    
 ]
 
 CRONJOBS = [
     # Run daily at 1:00 AM
-    ('0 1 * * *', 'yourapp.cron.archive_attendance'),
+    ('0 1 * * *', 'users.management.commands.backup_db'),
 ]
 
 MIDDLEWARE = [
@@ -140,7 +142,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-WSGI_APPLICATION = 'fitnessbackend.wsgi.application'
+ASGI_APPLICATION = 'fitnessbackend.fitnessbackend.asgi.application'
 
 DATABASES = {
     'default': {
@@ -151,6 +153,17 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '3307',
     }
+}
+
+
+    # Redis as the channel layer backend
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],  # Redis must be running
+        },
+    },
 }
 
 AUTH_PASSWORD_VALIDATORS = [

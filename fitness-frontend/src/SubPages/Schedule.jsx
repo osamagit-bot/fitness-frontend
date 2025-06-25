@@ -1,11 +1,10 @@
-import React from "react";
 
 const schedule = [
   {
     day: "Saturday",
     muscleGroup: "Chest",
     images: [
-      "/images/chest1.jpg",
+      "/images/chest1.jpeg",
      
     ],
   },
@@ -13,72 +12,42 @@ const schedule = [
     day: "Sunday",
     muscleGroup: "Back",
     images: [
-      "https://source.unsplash.com/featured/?lat-pulldown",
-      "https://source.unsplash.com/featured/?deadlift",
-      "https://source.unsplash.com/featured/?pull-up",
-      "https://source.unsplash.com/featured/?barbell-row",
-      "https://source.unsplash.com/featured/?seated-row",
-      "https://source.unsplash.com/featured/?t-bar-row",
+      
     ],
   },
   {
     day: "Monday",
     muscleGroup: "Biceps",
     images: [
-      "https://source.unsplash.com/featured/?bicep-curl",
-      "https://source.unsplash.com/featured/?hammer-curl",
-      "https://source.unsplash.com/featured/?preacher-curl",
-      "https://source.unsplash.com/featured/?concentration-curl",
-      "https://source.unsplash.com/featured/?dumbbell-bicep-curl",
-      "https://source.unsplash.com/featured/?barbell-curl",
+
     ],
   },
   {
     day: "Tuesday",
     muscleGroup: "Triceps",
     images: [
-      "https://source.unsplash.com/featured/?tricep-pushdown",
-      "https://source.unsplash.com/featured/?skull-crusher",
-      "https://source.unsplash.com/featured/?dips",
-      "https://source.unsplash.com/featured/?overhead-tricep-extension",
-      "https://source.unsplash.com/featured/?close-grip-bench",
-      "https://source.unsplash.com/featured/?cable-triceps",
+
     ],
   },
   {
     day: "Wednesday",
     muscleGroup: "Shoulders",
     images: [
-      "https://source.unsplash.com/featured/?shoulder-press",
-      "https://source.unsplash.com/featured/?lateral-raise",
-      "https://source.unsplash.com/featured/?rear-delt-fly",
-      "https://source.unsplash.com/featured/?military-press",
-      "https://source.unsplash.com/featured/?dumbbell-shoulder",
-      "https://source.unsplash.com/featured/?front-raise",
+     
     ],
   },
   {
     day: "Thursday",
     muscleGroup: "Legs",
     images: [
-      "https://source.unsplash.com/featured/?squat",
-      "https://source.unsplash.com/featured/?deadlift",
-      "https://source.unsplash.com/featured/?leg-press",
-      "https://source.unsplash.com/featured/?lunges",
-      "https://source.unsplash.com/featured/?hamstring-curl",
-      "https://source.unsplash.com/featured/?leg-extension",
+
     ],
   },
   {
     day: "Friday",
     muscleGroup: "Core",
     images: [
-      "https://source.unsplash.com/featured/?abs",
-      "https://source.unsplash.com/featured/?plank",
-      "https://source.unsplash.com/featured/?situp",
-      "https://source.unsplash.com/featured/?crunch",
-      "https://source.unsplash.com/featured/?leg-raise",
-      "https://source.unsplash.com/featured/?core-workout",
+ 
     ],
   },
 ];

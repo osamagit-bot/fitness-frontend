@@ -1,7 +1,7 @@
 // src/SubPages/MemberPages/MemberTrainingSessionsPage.jsx
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
 function MemberTrainingSessionsPage() {
   const [loading, setLoading] = useState(true);
@@ -119,7 +119,7 @@ function MemberTrainingSessionsPage() {
   if (loading) {
     return (
       <motion.div
-        className="p-6"
+        className="p-6 mt-5 lg:ml-20"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -134,7 +134,7 @@ function MemberTrainingSessionsPage() {
 
   return (
     <motion.div
-      className="p-6"
+      className="p-6 mt-5 lg:ml-20"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

@@ -1,17 +1,50 @@
 // src/SubPages/MemberPages/MemberDashboardPage.jsx
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../../utils/api';
+
+import 'boxicons/css/boxicons.min.css';
+
+const getNotifStyle = (message) => {
+  const lower = message.toLowerCase();
+  if (lower.includes('expiring soon')) {
+    return 'bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800';
+  }
+  if (lower.includes('expired')) {
+    return 'bg-red-50 border-l-4 border-red-400 text-red-800';
+  }
+  if (lower.includes('membership renewed')) {
+    return 'bg-green-50 border-l-4 border-green-400 text-green-800';
+  }
+  return 'bg-gray-50 border-l-4 border-gray-300 text-gray-700';
+};
+
+const getNotifIcon = (message) => {
+  const lower = message.toLowerCase();
+  if (lower.includes('expiring soon')) return 'bx-error-circle';
+  if (lower.includes('expired')) return 'bx-error-circle';
+  if (lower.includes('membership renewed')) return 'bx-check-circle';
+  return 'bx-info-circle';
+};
 
 const MemberDashboardPage = () => {
   const [memberData, setMemberData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [memberNotifications, setMemberNotifications] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+
   const navigate = useNavigate();
 
-  const userId = localStorage.getItem('userId') || '';
+  const memberId = localStorage.getItem('memberId') || '';
+
 
   useEffect(() => {
     const fetchMemberData = async () => {
@@ -19,7 +52,7 @@ const MemberDashboardPage = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
 
-        const response = await axios.get(`http://127.0.0.1:8000/api/members/${userId}/`, {
+        const response = await api.get(`members/${memberId}/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -35,16 +68,126 @@ const MemberDashboardPage = () => {
       }
     };
 
-    if (userId) {
+    if (memberId) {
       fetchMemberData();
     } else {
       setLoading(false);
     }
-  }, [userId]);
+  }, [memberId]);
+
+  const fetchNotifications = async () => {
+    setNotifLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get('member/notifications/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(res.data.notifications || []);
+    } catch (err) {
+      setNotifications([
+        {
+          id: 0,
+          message: 'Failed to load notifications',
+          created_at: '',
+          is_read: true
+        }
+      ]);
+    }
+    setNotifLoading(false);
+  };
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      const isAuthenticated = localStorage.getItem('isAuthenticated');
+      const user = localStorage.getItem('user');
+
+      if (!token || isAuthenticated !== 'true') {
+        navigate('/login');
+      } else {
+        try {
+          setUserData(user ? JSON.parse(user) : null);
+          setAuthChecked(true);
+          fetchNotifications();
+
+          // WebSocket setup for notifications
+          const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+          // Use backend server URL for WebSocket connection
+          const backendHost = 'localhost:8001'; // Change this if your backend runs on a different host/port
+          const token = localStorage.getItem('token');
+          const wsUrl = `${protocol}://${backendHost}/ws/notifications/?token=${token}`;
+          console.log('Connecting to WebSocket URL:', wsUrl);
+          const socket = new WebSocket(wsUrl);
+
+          socket.onopen = () => {
+            console.log('WebSocket connection opened');
+          };
+
+          socket.onmessage = (event) => {
+            console.log('WebSocket message received:', event.data);
+            try {
+              const data = JSON.parse(event.data);
+              if (data.notification) {
+                setNotifications((prevNotifs) => {
+                  const all = [data.notification, ...prevNotifs];
+                  const unique = Array.from(new Map(all.map(n => [n.id, n])).values());
+                  return unique;
+                });
+              }
+            } catch (err) {
+              console.error('Error parsing WebSocket message:', err);
+            }
+          };
+
+          socket.onclose = (event) => {
+            console.log('WebSocket connection closed:', event);
+          };
+
+          socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+          };
+
+          // Cleanup on unmount
+          return () => {
+            socket.close();
+          };
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          navigate('/login');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    checkAuth();
+
+    // Auto-resize sidebar
+    const handleResize = () => {
+      // Removed setSidebarOpen call because it is not defined in this component
+      // You can implement sidebar state management if needed
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [navigate]);
+
+  // Filter notifications related to member info
+  useEffect(() => {
+    if (!memberData) {
+      setMemberNotifications([]);
+      return;
+    }
+    setMemberNotifications(notifications);
+  }, [notifications, memberData]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('userId');
+    localStorage.removeItem('memberId');
     navigate('/login');
   };
 
@@ -77,6 +220,18 @@ const MemberDashboardPage = () => {
     return diffDays > 0 ? diffDays : 0;
   };
 
+  const getDaysSinceJoining = () => {
+    if (!memberData?.start_date) return 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(memberData.start_date);
+    startDate.setHours(0, 0, 0, 0);
+
+    const diffTime = today.getTime() - startDate.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -106,6 +261,7 @@ const MemberDashboardPage = () => {
 
   const membershipStatus = memberData ? getMembershipStatus() : 'Unknown';
   const daysRemaining = getDaysRemaining();
+  const daysSinceJoining = getDaysSinceJoining();
   const statusColorClass = getStatusColorClass(membershipStatus);
 
   return (
@@ -118,6 +274,29 @@ const MemberDashboardPage = () => {
         >
           Logout
         </button>
+      </div>
+
+      {/* Notifications UI */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-2">Notifications</h2>
+        {memberNotifications.length === 0 ? (
+          <p className="text-gray-600">No new notifications</p>
+        ) : (
+          <ul className="max-h-48 overflow-y-auto border border-gray-300 rounded p-2 bg-white">
+            {memberNotifications.map((notif) => (
+              <li
+                key={notif.id}
+                className={`flex items-start gap-3 p-2 border-b ${getNotifStyle(notif.message)} ${!notif.is_read ? 'font-semibold' : ''}`}
+              >
+                <i className={`bx ${getNotifIcon(notif.message)} text-xl mt-1`}></i>
+                <div className="flex-1">
+                  <div>{notif.message}</div>
+                  <div className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {loading ? (
@@ -173,7 +352,7 @@ const MemberDashboardPage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-xl shadow-md border border-yellow-200 mb-8"
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Membership Type</h3>
                 <p className="mt-1 text-2xl font-semibold text-gray-800 capitalize">
@@ -192,6 +371,12 @@ const MemberDashboardPage = () => {
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Time Slot</h3>
                 <p className="mt-1 text-2xl font-semibold text-gray-800">
                   {formatTimeSlot(memberData?.time_slot)}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Days as Member</h3>
+                <p className="mt-1 text-2xl font-semibold text-gray-800">
+                  {daysSinceJoining} {daysSinceJoining === 1 ? 'day' : 'days'}
                 </p>
               </div>
             </div>

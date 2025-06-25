@@ -1,8 +1,6 @@
-// src/SubPages/MemberPages/MemberProfilePage.jsx
-
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import api from '../../utils/api';
 
 function MemberProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -17,25 +15,14 @@ function MemberProfilePage() {
     phone: ''
   });
 
-  // Local state for displaying updated values
-  const [displayData, setDisplayData] = useState({
-    email: '',
-    phone: ''
-  });
-
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
 
-  const BACKEND_URL = 'http://127.0.0.1:8000';
   const token = localStorage.getItem('token');
   const memberId = localStorage.getItem('memberId');
-
-  // Create member-specific localStorage keys
-  const userEmailKey = `userEmail_${memberId}`;
-  const userPhoneKey = `userPhone_${memberId}`;
 
   // Load member data
   useEffect(() => {
@@ -50,30 +37,18 @@ function MemberProfilePage() {
       setError(null);
 
       try {
-        const memberUrl = `${BACKEND_URL}/api/members/${memberId}/`;
-        const response = await axios.get(memberUrl, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        // Use api.get with relative URL and headers
+        const response = await api.get(`members/${memberId}/`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
 
-        // Store the entire response data
         const memberData = response.data;
-
-        // Check if we have saved email/phone in localStorage for THIS specific member
-        const savedEmail = localStorage.getItem(userEmailKey);
-        const savedPhone = localStorage.getItem(userPhoneKey);
-
         setMember(memberData);
 
-        // Pre-fill the update form with saved values if available
+        // Pre-fill update form
         setUpdateFormData({
-          email: savedEmail || '',
-          phone: savedPhone || ''
-        });
-
-        // Also set display data
-        setDisplayData({
-          email: savedEmail || '',
-          phone: savedPhone || ''
+          email: memberData.user_email || '',
+          phone: memberData.phone || ''
         });
 
         setLoading(false);
@@ -84,7 +59,7 @@ function MemberProfilePage() {
     }
 
     loadMemberData();
-  }, [memberId, token, userEmailKey, userPhoneKey]);
+  }, [memberId, token]);
 
   // Handle form field changes
   const handleUpdateFormChange = (e) => {
@@ -115,34 +90,23 @@ function MemberProfilePage() {
 
     setLoading(true);
     try {
-      // Try updating the member profile
-      try {
-        await axios.put(
-          `${BACKEND_URL}/api/members/${memberId}/`,
-          {
-            ...member,
-            email: updateFormData.email,
-            phone: updateFormData.phone
-          },
-          { headers: { 'Authorization': `Bearer ${token}` }}
-        );
-      } catch (memberUpdateError) {
-        // Continue anyway - we'll save locally
-      }
+      await api.put(
+        `members/${memberId}/`,
+        {
+          ...member,
+          email: updateFormData.email,
+          phone: updateFormData.phone
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      // Save email and phone to localStorage with member-specific keys
-      localStorage.setItem(userEmailKey, updateFormData.email);
-      localStorage.setItem(userPhoneKey, updateFormData.phone);
-
-      // Update display data
-      setDisplayData({
+      setMember(prev => ({
+        ...prev,
         email: updateFormData.email,
         phone: updateFormData.phone
-      });
+      }));
 
-      // Close the form
       setShowUpdateForm(false);
-
       alert("Profile updated successfully!");
     } catch (err) {
       alert(`Failed to update profile: ${err.message}`);
@@ -162,17 +126,16 @@ function MemberProfilePage() {
 
     setLoading(true);
 
-    // Create payload based on the field names your backend expects
     const passwordPayload = {
       current_password: passwordData.currentPassword,
       new_password: passwordData.newPassword
     };
 
     try {
-      await axios.post(
-        `${BACKEND_URL}/api/members/${memberId}/change-password/`,
+      await api.post(
+        `members/${memberId}/change_password/`,
         passwordPayload,
-        { headers: { 'Authorization': `Bearer ${token}` }}
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setShowPasswordForm(false);
@@ -194,10 +157,11 @@ function MemberProfilePage() {
     }
   };
 
+
   if (loading) {
     return (
       <motion.div
-        className="p-4"
+        className="p-4 lg:ml-20"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -214,7 +178,7 @@ function MemberProfilePage() {
   if (error) {
     return (
       <motion.div
-        className="p-4"
+        className="p-4 mt-5 lg:ml-20"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -240,7 +204,7 @@ function MemberProfilePage() {
   if (!member) {
     return (
       <motion.div
-        className="p-4"
+        className="p-4 mt-5 lg:ml-20"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -261,7 +225,7 @@ function MemberProfilePage() {
 
   return (
     <motion.div
-      className="p-4"
+      className="p-4 mt-5 lg:ml-20"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -278,7 +242,7 @@ function MemberProfilePage() {
 
       {/* Debug Data */}
       <motion.div
-        className="mb-4 p-2 bg-gray-100 rounded text-xs"
+        className="mb-4 mt-5 lg:ml-20 p-2 bg-gray-100 rounded text-xs"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
@@ -287,8 +251,6 @@ function MemberProfilePage() {
           <summary className="cursor-pointer font-bold">API Debug Data (Click to expand)</summary>
           <pre className="mt-2 overflow-auto max-h-40">{JSON.stringify(member, null, 2)}</pre>
           <p className="mt-2">Member ID: {memberId}</p>
-          <p className="mt-1">Display Data (Email/Phone):</p>
-          <pre className="mt-1 overflow-auto max-h-20">{JSON.stringify(displayData, null, 2)}</pre>
         </details>
       </motion.div>
 
@@ -317,14 +279,13 @@ function MemberProfilePage() {
 
       {/* Personal Information */}
       <motion.div
-        className="bg-white p-6 rounded-lg shadow mb-6"
+        className="bg-white p-6 lg:ml-5 rounded-lg shadow mb-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
         <h3 className="text-xl font-bold mb-6">Personal Information</h3>
         <div className="space-y-4">
-          {/* ...personal info fields... */}
           <div className="flex items-start">
             <div className="bg-yellow-100 p-2 rounded mr-4">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
@@ -356,7 +317,7 @@ function MemberProfilePage() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Email</p>
-              <p className="font-semibold">{displayData.email || 'Not set'}</p>
+              <p className="font-semibold">{member.user_email || 'Not set'}</p>
             </div>
           </div>
           <div className="flex items-start">
@@ -367,7 +328,7 @@ function MemberProfilePage() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Phone</p>
-              <p className="font-semibold">{displayData.phone || 'Not set'}</p>
+              <p className="font-semibold">{member.phone || 'Not set'}</p>
             </div>
           </div>
           <div className="flex items-start">
@@ -420,7 +381,7 @@ function MemberProfilePage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-lg w-full max-w-md p-6"
+              className="bg-white rounded-lg mt-16 lg:ml-64 w-full max-w-md p-6"
               initial={{ scale: 0.9, y: 40 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 40 }}
@@ -487,7 +448,7 @@ function MemberProfilePage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-lg w-full max-w-md p-6"
+              className="bg-white mt-10 lg:ml-20 rounded-lg w-full max-w-md p-6"
               initial={{ scale: 0.9, y: 40 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 40 }}
@@ -563,11 +524,8 @@ function MemberProfilePage() {
           </motion.div>
         )}
       </AnimatePresence>
-
- 
-  
     </motion.div>
-  );  
+  );
 }
 
 export default MemberProfilePage;

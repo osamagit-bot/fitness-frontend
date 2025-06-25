@@ -12,13 +12,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 
-# Logger for this file
+
 logger = logging.getLogger(__name__)
 
-# These would be environment variables in production
+
 HISAB_PAY_API_KEY = os.environ.get('HISAB_PAY_API_KEY', '')
 HISAB_PAY_MERCHANT_ID = os.environ.get('HISAB_PAY_MERCHANT_ID', '')
-HISAB_PAY_API_URL = os.environ.get('HISAB_PAY_API_URL', 'https://api.hisabpay.com/v1')  # Example URL, replace with real one
+HISAB_PAY_API_URL = os.environ.get('HISAB_PAY_API_URL', 'https://api.hisabpay.com/v1') 
 
 @api_view(['POST'])
 @csrf_exempt

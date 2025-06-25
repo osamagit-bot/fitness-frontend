@@ -1,5 +1,4 @@
 // src/SubPages/MemberPages/MemberDashboard.jsx
-import React from 'react';
 import { Outlet } from 'react-router-dom';
 import MemberSidebar from '../../components/MemberSidebar';
 
@@ -10,7 +9,7 @@ const MemberDashboard = () => {
       <MemberSidebar />
       
       {/* Main Content */}
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-4 lg:ml-44 overflow-auto">
         <Outlet />
       </div>
     </div>

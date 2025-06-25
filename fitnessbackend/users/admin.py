@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import CustomUser, Member, Product  # Added Product import
+from .models import CustomUser, Member, Product,Purchase  # Added Product import
 from django import forms
 from django.contrib.admin.widgets import AdminDateWidget
 
@@ -100,6 +100,10 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
 
+class PurchaseAdmin(admin.ModelAdmin):
+    list_display = ('id', 'member', 'product', 'quantity', 'total_price', 'date')
+    list_filter = ('member', 'product')
+    search_fields = ('member__user__email', 'product__name')
 
 
 
@@ -107,5 +111,8 @@ class ProductAdmin(admin.ModelAdmin):
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Member, MemberAdmin)
+admin.site.register(Purchase, PurchaseAdmin) 
+
+
 # Added Product model registration
 admin.site.register(Product, ProductAdmin)

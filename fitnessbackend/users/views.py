@@ -1,31 +1,45 @@
 from django.shortcuts import render
 from rest_framework.response import Response
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import AllowAny
+from rest_framework import serializers, status, viewsets
 from .serializers import RegisterSerializer, UserSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAdminUser
+from django.urls.resolvers import URLPattern, URLResolver
+from django.utils.dateparse import parse_date
+from datetime import date
+import traceback
+from .permissions import IsOwnerOrReadOnly
 from django.contrib.auth.hashers import check_password
 from django.contrib.auth.models import User
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Notification
+from .serializers import NotificationSerializer
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from rest_framework import status
+from django.views.decorators.http import require_GET
 from django.contrib.auth.hashers import make_password
-# Add Twilio import
+from rest_framework.views import APIView
+
 from twilio.rest import Client
 from django.conf import settings
 from .models import (
-    Member, Product, Trainer, Training, CustomUser, Attendance,
-    # New models for community and support
-    Post, Announcement, Challenge, SupportTicket, FAQ, FAQCategory, TicketResponse
+    Member, Product, Trainer, Training,Comment, CustomUser, Attendance, Notification,
+ 
+    Post, Announcement, Challenge, SupportTicket, FAQ, FAQCategory, TicketResponse, Purchase
 )
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from .serializers import (
     MemberSerializer, CustomTokenObtainPairSerializer, ProductSerializer, 
-    TrainerSerializer, TrainingSerializer,
-    # New serializers for community and support
-    PostSerializer, AnnouncementSerializer, ChallengeSerializer,
-    SupportTicketSerializer, FAQCategorySerializer, TicketResponseSerializer
+    TrainerSerializer, TrainingSerializer, PurchaseSerializer,AttendanceSerializer,
+  
+    PostSerializer, AnnouncementSerializer,CommentSerializer, ChallengeSerializer,FAQSerializer,
+    SupportTicketSerializer, FAQCategorySerializer, TicketResponseSerializer,CommentSerializer
 )
 from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
 from django.contrib.auth import get_user_model
@@ -34,7 +48,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.http import JsonResponse, Http404
 from django.middleware.csrf import get_token
 from django.urls import path
-# Add these imports
+
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import Sum
@@ -47,7 +61,6 @@ from rest_framework import viewsets, permissions, status, generics
 
 from datetime import timedelta
 from django.views.decorators.csrf import csrf_exempt
-# Define the MyTokenObtainPairSerializer class first
 
 User = get_user_model()
 
@@ -78,6 +91,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 
+#Homepage
+
+def Home(request):
+    return render(request,"home.html")
 
 
 
@@ -86,37 +103,340 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 
-@api_view(['POST'])
-@permission_classes([permissions.AllowAny])  # Add this to allow unauthenticated access
-def admin_login(request):
-    """Admin login endpoint"""
-    username = request.data.get('username')
-    password = request.data.get('password')
+
+
+
+
+
+
+class AdminDashboardViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
     
-    print(f"Login attempt for admin: {username}")  # Debug logging
-    
-    user = authenticate(username=username, password=password)
-    
-    if user is not None and user.is_staff:
-        # Generate JWT token for admin
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'token': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user_id': user.pk,
-            'username': user.username,
-            'is_admin': True
-        })
-    else:
-        # Authentication failed
-        if user is None:
+    @action(detail=False, methods=['get'], url_path='stats')
+    def dashboard_stats(self, request):
+        """Admin dashboard stats including shop revenue"""
+        try:
+            total_members = Member.objects.count()
+            total_trainers = Trainer.objects.count()
+
+            # Sum of monthly fees from all members
+            monthly_revenue_members = Member.objects.aggregate(
+                Sum('monthly_fee')
+            )['monthly_fee__sum'] or 0
+
+            # Sum of shop purchases (total_price)
+            monthly_revenue_shop = Purchase.objects.filter(
+                date__month=timezone.now().month,
+                date__year=timezone.now().year
+            ).aggregate(Sum('total_price'))['total_price__sum'] or 0
+
+            # Combine both sources of revenue
+            total_monthly_revenue = monthly_revenue_members + monthly_revenue_shop
+
+            # Calculate daily revenue
+            now = timezone.now()
+            days_in_month = (timezone.datetime(
+                now.year + (now.month == 12),
+                ((now.month % 12) + 1), 1
+            ) - timezone.datetime(now.year, now.month, 1)).days
+
+            daily_revenue = round(total_monthly_revenue / days_in_month, 2) if days_in_month > 0 else 0
+
+            return Response({
+                'total_members': total_members,
+                'total_trainers': total_trainers,
+                'monthly_revenue': f"{total_monthly_revenue:.2f} AFN",
+                'monthly_revenue_members': f"{monthly_revenue_members:.2f} AFN",
+                'monthly_revenue_shop': f"{monthly_revenue_shop:.2f} AFN",
+                'daily_revenue': f"{daily_revenue:.2f} AFN",
+            })
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], url_path='login', permission_classes=[permissions.AllowAny])
+    def login(self, request):
+        """Admin login"""
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = authenticate(username=username, password=password)
+
+        if user is not None and user.is_staff:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access_token': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user_id': user.pk,
+                'username': user.username,
+                'is_admin': True
+            })
+        elif user is None:
             return Response({'detail': 'Invalid credentials'}, status=401)
-        elif not user.is_staff:
-            return Response({'detail': 'User is not an admin'}, status=403)
         else:
-            return Response({'detail': 'Unknown error'}, status=401)
+            return Response({'detail': 'User is not an admin'}, status=403)
+        
+        
+        
 
+class MemberViewSet(viewsets.ModelViewSet):
+    queryset = Member.objects.all()
+    serializer_class = MemberSerializer
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        if lookup_url_kwarg in self.kwargs:
+            pk_value = self.kwargs[lookup_url_kwarg]
+            try:
+                return super().get_object()
+            except Http404:
+                queryset = self.filter_queryset(self.get_queryset())
+                try:
+                    member = queryset.get(athlete_id=pk_value)
+                    self.check_object_permissions(self.request, member)
+                    return member
+                except Member.DoesNotExist:
+                    raise Http404(f"No Member matches the given query: {pk_value}")
+        return super().get_object()
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        old_expiry_date = instance.expiry_date
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        new_expiry_date = serializer.instance.expiry_date
+        if new_expiry_date != old_expiry_date:
+            instance.notified_expired = False
+            instance.save()
+            Notification.objects.filter(
+                message__icontains=f"Membership expired for: {instance.first_name} {instance.last_name}",
+                is_read=False
+            ).delete()
+            Notification.objects.create(
+                message=f"Membership renewed for: {instance.first_name} {instance.last_name}"
+            )
+        return Response(serializer.data)
+
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def register(self, request):
+        data = request.data
+        email = data.get('email', '').strip().lower()
+
+        
+        if CustomUser.objects.filter(email=email).exists():
+            return Response({"error": "Email already exists."}, status=400)
+
+        username = f"{data.get('first_name', '').lower()}{data.get('athlete_id', '')}"
+
+        if CustomUser.objects.filter(username=username).exists():
+            return Response({"error": "Username already taken."}, status=400)
+        
+
+       
+        user = CustomUser.objects.create_user(
+            username=username,
+            email=email,
+            password=data.get('password')
+        )
+        user.role = 'member'
+        user.save()
+
+        member_data = data.copy()
+        member_data['user'] = user.id
+        member_data['email'] = email  # Add real email here to avoid temp email fallback in serializer
+        serializer = self.get_serializer(data=member_data)
+        if serializer.is_valid():
+            member = serializer.save()
+            Notification.objects.create(message=f"New member registered: {member.first_name} {member.last_name}")
+            return Response({
+                "message": "Member registered successfully",
+                "member": serializer.data,
+                "auth": {"username": user.username, "email": user.email}
+            }, status=201)
+        else:
+            user.delete()
+            return Response({"error": serializer.errors}, status=400)
+
+        
+        
+        
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def login(self, request):
+        login_input = request.data.get('username')
+        password = request.data.get('password')
+        print(f"Login attempt with username/email: {login_input}")
+        try:
+            # Try to find user by username first
+            user = CustomUser.objects.filter(username=login_input).first()
+            if not user:
+                # Try to find user by email if username not found
+                user = CustomUser.objects.filter(email=login_input).first()
+            if not user:
+                print("User not found")
+                return Response({'error': 'User not found'}, status=404)
+
+            member = Member.objects.get(user=user)
+            print(f"Found member: {member.first_name} {member.last_name} with username: {user.username}")
+        except (CustomUser.DoesNotExist, Member.DoesNotExist):
+            print("User or member does not exist")
+            return Response({"detail": "Invalid credentials"}, status=401)
+
+        authenticated_user = authenticate(username=user.username, password=password)
+        print(f"Authentication result: {'Success' if authenticated_user else 'Failed'}")
+        if authenticated_user:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "token": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user_id": user.id,
+                "member_id": member.athlete_id,
+                "athlete_id": member.athlete_id, 
+                "name": f"{member.first_name} {member.last_name}"
+            })
+        elif check_password(password, user.password):
+            print("Password matches but authenticate() failed - using fallback")
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "token": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user_id": user.id,
+                "member_id": member.athlete_id,
+                "name": f"{member.first_name} {member.last_name}"
+            })
+        else:
+            print("Incorrect password")
+            return Response({"detail": "Incorrect password"}, status=401)
+
+
+
+    @action(detail=True, methods=['get'])
+    def profile(self, request, pk=None):
+        member = self.get_object()
+        serializer = self.get_serializer(member)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def dashboard(self, request, pk=None):
+        member = self.get_object()
+        now = timezone.now()
+        days_remaining = max(0, (member.expiry_date - now.date()).days if member.expiry_date else 0)
+        upcoming_sessions = []  # Populate as needed
+        status_value = "Active" if member.membership_status else "Inactive"
+        return Response({
+            'name': f"{member.first_name} {member.last_name}",
+            'days_remaining': days_remaining,
+            'next_payment_date': member.next_payment_date.strftime('%B %d, %Y') if member.next_payment_date else "No payment due",
+            'status': status_value,
+            'upcoming_sessions': upcoming_sessions
+        })
+
+    @action(detail=True, methods=['put', 'patch'])
+    def update_profile(self, request, pk=None):
+        member = self.get_object()
+        serializer = self.get_serializer(member, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            Notification.objects.create(message=f"Member Profile Updated For: {member.first_name} {member.last_name}")
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    @action(detail=True, methods=['post'])
+    def change_password(self, request, pk=None):
+        member = self.get_object()
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        if not check_password(current_password, member.user.password):
+            return Response({"detail": "Current password incorrect."}, status=400)
+        member.user.set_password(new_password)
+        member.user.save()
+        refresh = RefreshToken.for_user(member.user)
+        return Response({"message": "Password changed", "token": str(refresh.access_token), "refresh": str(refresh)})
+
+    @action(detail=False, methods=['post'])
+    def reset_password(self, request):
+        member_id = request.data.get('member_id')
+        new_password = request.data.get('new_password')
+        try:
+            member = Member.objects.get(athlete_id=member_id)
+            member.user.password = make_password(new_password)
+            member.user.save()
+            return Response({"detail": "Password reset successful"})
+        except Member.DoesNotExist:
+            return Response({"detail": "Member not found"}, status=404)
+
+    @action(detail=False, methods=['get'])
+    def all_members(self, request):
+        members = Member.objects.all()
+        data = []
+        for member in members:
+            data.append({
+                'id': member.pk,
+                'athlete_id': member.athlete_id,
+                'name': f"{member.first_name} {member.last_name}",
+                'username': member.user.username if member.user else '',
+                'email': member.user.email if member.user else '',
+            })
+        return Response({"members": data})
+
+    @action(detail=False, methods=['get'])
+    def get_member_pk(self, request):
+        try:
+            return Response({'member_pk': request.user.member.pk})
+        except Member.DoesNotExist:
+            return Response({'error': 'No member profile found.'}, status=404)
+
+   
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def request_delete(self, request):
+        try:
+            member = request.user.member
+        except ObjectDoesNotExist:
+            return Response({"detail": "You do not have a member profile linked."}, status=400)
+
+        member.delete_request = True
+        member.save()
+
+        Notification.objects.create(
+            user=None,
+            message=f"Member '{request.user.username}' has requested account deletion."
+        )
+
+        return Response({"detail": "Account deletion request sent."}, status=200)
+
+
+    @action(detail=True, methods=['post'])
+    def renew(self, request, pk=None):
+        member = self.get_object()
+        member.start_date = request.data.get('start_date', member.start_date)
+        member.expiry_date = request.data.get('expiry_date', member.expiry_date)
+        member.notified_expired = False
+        member.save()
+        Notification.objects.create(message=f"Membership renewed for: {member.first_name} {member.last_name}")
+        return Response({"message": "Member renewed", "member": self.get_serializer(member).data})
+
+        
+        
+        
+        
+'''    
+    
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
 @permission_classes([permissions.IsAuthenticated])
@@ -149,7 +469,6 @@ def register_member_with_auth(request):
         user.role = 'member'
         user.save()
         
-        
         # Create the member object
         member_data = {
             'athlete_id': data.get('athlete_id'),
@@ -167,6 +486,9 @@ def register_member_with_auth(request):
         serializer = MemberSerializer(data=member_data)
         if serializer.is_valid():
             member = serializer.save()
+            Notification.objects.create(
+            message=f"New member registered: {member.first_name} {member.last_name}"
+    )
             if member.phone:
                 send_welcome_sms(member.phone, member.first_name)
             return Response({
@@ -189,200 +511,7 @@ def register_member_with_auth(request):
         return Response({
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# NEW FUNCTION: Add this to your views.py
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([permissions.IsAuthenticated])
-def register_member(request):
-    """
-    Register a new member with user account based on frontend data
-    """
-    try:
-        # Extract data from request
-        data = request.data
-        print("Received member data:", data)
         
-        # Create the member object with auth fields included
-        serializer = MemberSerializer(data=data)
-        if serializer.is_valid():
-            member = serializer.save()
-            
-            # Get the actual username that was created
-            actual_username = member.user.username
-            
-            # Check for primary key field - use pk which is always available
-            member_id = member.pk  # Use .pk instead of .id
-            
-            return Response({
-                "message": f"Member registered successfully: {member.first_name} {member.last_name}",
-                "member": {
-                    "pk": member_id,  # Changed from id to pk
-                    "athlete_id": member.athlete_id,
-                    "first_name": member.first_name,
-                    "last_name": member.last_name
-                },
-                "auth": {
-                    "username": actual_username,
-                    "email": member.user.email if hasattr(member.user, 'email') else "",
-                }
-            }, status=status.HTTP_201_CREATED)
-        else:
-            return Response({
-                "error": "Invalid member data",
-                "details": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    except Exception as e:
-        print(f"Error registering member: {str(e)}")
-        return Response({
-            "error": str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
-def get_csrf_token(request):
-    return JsonResponse({'csrfToken': get_token(request)})
-
-@api_view(['GET'])
-@permission_classes([permissions.AllowAny])
-def test_endpoint(request):
-    return Response({"message": "Test endpoint is working"})
-
-# In views.py
-
-
-
-class MemberViewSet(viewsets.ModelViewSet):
-    queryset = Member.objects.all()
-    serializer_class = MemberSerializer
-    # Temporarily set to AllowAny for testing
-    permission_classes = [permissions.AllowAny]
-    # Uncomment when ready to enforce auth
-    # permission_classes = [permissions.IsAuthenticated]
-    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
-    
-    def get_object(self):
-        """
-        Allow looking up a member by athlete_id from the URL or by primary key
-        """
-        # Try to get the object by primary key first
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        if lookup_url_kwarg in self.kwargs:
-            pk_value = self.kwargs[lookup_url_kwarg]
-            # Try primary key lookup
-            try:
-                return super().get_object()
-            except Http404:
-                # Try by athlete_id instead
-                queryset = self.filter_queryset(self.get_queryset())
-                try:
-                    # Log what we're trying to find
-                    print(f"Looking for member with athlete_id={pk_value}")
-                    member = queryset.get(athlete_id=pk_value)
-                    # May raise a PermissionDenied
-                    self.check_object_permissions(self.request, member)
-                    return member
-                except Member.DoesNotExist:
-                    print(f"No member found with athlete_id={pk_value}")
-                    # If we couldn't find by athlete_id, re-raise the original Http404
-                    raise Http404(f"No Member matches the given query: {pk_value}")
-        return super().get_object()
-    
-    def destroy(self, request, *args, **kwargs):
-        """
-        Custom destroy method with better error handling
-        """
-        try:
-            instance = self.get_object()
-            print(f"Destroying member with athlete_id={instance.athlete_id}, user_id={instance.user_id}")
-            self.perform_destroy(instance)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Http404 as e:
-            return Response(
-                {"detail": str(e)},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {"detail": f"Error deleting member: {str(e)}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    
-    def perform_create(self, serializer):
-        """Custom method to handle member creation"""
-        try:
-            # Let the serializer handle creation with all the data
-            member = serializer.save()
-            return member
-        except Exception as e:
-            # Better error handling
-            raise serializers.ValidationError(f"Error creating member: {str(e)}")
-    
-    def metadata(self, request):
-        return super().metadata(request)
-
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def register(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            member = self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        except serializers.ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Add for debugging
-    @action(detail=False, methods=['get'])
-    def test_auth(self, request):
-        return Response({
-            "message": "Authentication successful",
-            "user": request.user.email if request.user.is_authenticated else "Anonymous",
-            "is_authenticated": request.user.is_authenticated,
-            "auth_type": str(request.auth.__class__) if request.auth else None
-        })
-
-    # Add an endpoint to get a member by athlete_id
-    @action(detail=False, methods=['get'], url_path='by-athlete-id/(?P<athlete_id>[^/.]+)')
-    def by_athlete_id(self, request, athlete_id=None):
-        try:
-            member = Member.objects.get(athlete_id=athlete_id)
-            serializer = self.get_serializer(member)
-            return Response(serializer.data)
-        except Member.DoesNotExist:
-            return Response(
-                {"detail": f"No member found with athlete_id: {athlete_id}"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-class UserListView(generics.ListAPIView):
-    queryset = CustomUser.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAdminUser] 
-    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
-
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    serializer_class = RegisterSerializer
-    
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            "user": UserSerializer(user, context=self.get_serializer_context()).data,
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            "token": str(refresh.access_token),  # Add this for frontend compatibility
-            "message": "User created successfully",
-        }, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
@@ -460,256 +589,6 @@ def member_login(request):
             print(f"Error in fallback authentication: {str(e)}")
             return Response({"detail": "Authentication error"}, 
                           status=status.HTTP_401_UNAUTHORIZED)
-
-@api_view(['POST'])
-@permission_classes([permissions.AllowAny])
-def trainer_login(request):
-    """Trainer login endpoint with enhanced debugging"""
-    username = request.data.get('username')
-    password = request.data.get('password')
-    
-    print(f"Trainer login attempt: {username}")
-    
-    # Check if user exists
-    try:
-        user_obj = CustomUser.objects.get(username=username)
-        print(f"User exists: id={user_obj.id}, active={user_obj.is_active}")
-        
-        # Check if trainer exists
-        try:
-            trainer = Trainer.objects.get(user=user_obj)
-            print(f"Trainer profile found: trainer_id={trainer.trainer_id}")
-        except Trainer.DoesNotExist:
-            print("No trainer profile found for this user")
-            return Response({"detail": "No trainer profile found for this username"}, 
-                          status=status.HTTP_403_FORBIDDEN)
-    except CustomUser.DoesNotExist:
-        print(f"User not found: {username}")
-        return Response({"detail": "Username not found"}, 
-                      status=status.HTTP_401_UNAUTHORIZED)
-    
-    # Attempt authentication
-    user = authenticate(username=username, password=password)
-    print(f"Authentication result: {'Success' if user else 'Failed'}")
-    
-    if user is not None:
-        # Standard authentication worked
-        trainer = Trainer.objects.get(user=user)
-        
-        # Generate JWT token
-        refresh = RefreshToken.for_user(user)
-        print(f"Generated token for trainer: {trainer.first_name}")
-        
-        return Response({
-            'token': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user_id': user.id,
-            'trainer_id': trainer.trainer_id,
-            'name': f"{trainer.first_name} {trainer.last_name}"
-        })
-    else:
-        # Try direct password verification as fallback
-        try:
-            from django.contrib.auth.hashers import check_password
-            
-            if check_password(password, user_obj.password):
-                print("Password matches but authenticate() failed - using fallback")
-                
-                # Get trainer profile
-                trainer = Trainer.objects.get(user=user_obj)
-                
-                # Generate JWT token manually
-                refresh = RefreshToken.for_user(user_obj)
-                print(f"Generated token for trainer: {trainer.first_name}")
-                
-                return Response({
-                    'token': str(refresh.access_token),
-                    'refresh': str(refresh),
-                    'user_id': user_obj.id,
-                    'trainer_id': trainer.trainer_id,
-                    'name': f"{trainer.first_name} {trainer.last_name}"
-                })
-            else:
-                print(f"Incorrect password for user: {username}")
-                return Response({"detail": "Incorrect password"}, 
-                              status=status.HTTP_401_UNAUTHORIZED)
-        except Exception as e:
-            print(f"Error in fallback authentication: {str(e)}")
-            return Response({"detail": "Authentication error"}, 
-                          status=status.HTTP_401_UNAUTHORIZED)
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([permissions.IsAuthenticated])
-def test_auth(request):
-    """
-    Test authentication endpoint
-    """
-    return Response({
-        "message": "Authentication successful",
-        "user": {
-            "id": request.user.id,
-            "username": request.user.username,
-            "email": request.user.email,
-            "is_staff": request.user.is_staff,
-            "role": getattr(request.user, 'role', 'unknown')
-        },
-        "auth_type": str(request.auth.__class__) if request.auth else None
-    })
-
-# Add the missing ProductViewSet
-class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [permissions.AllowAny]  # Change to IsAuthenticated in production
-    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
-
-# Add the missing TrainingViewSet
-class TrainingViewSet(viewsets.ModelViewSet):
-    queryset = Training.objects.all()
-    serializer_class = TrainingSerializer
-    permission_classes = [permissions.AllowAny]  # Change to IsAuthenticated in production
-    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
-
-# Add the missing AttendanceViewSet
-
-    # Add other methods like check_in, check_out, etc.
-
-class TrainerViewSet(viewsets.ModelViewSet):
-    queryset = Trainer.objects.all()
-    serializer_class = TrainerSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
-    
-    def list(self, request, *args, **kwargs):
-        try:
-            # Get all trainers directly from database
-            trainers = Trainer.objects.all()
-            
-            # Manually create the response data
-            trainer_data = []
-            for trainer in trainers:
-                # Create a dictionary with trainer data
-                data = {
-                    'id': trainer.id,
-                    'trainer_id': trainer.trainer_id,
-                    'first_name': trainer.first_name,
-                    'last_name': trainer.last_name,
-                    'email': trainer.email,
-                    'phone': trainer.phone,
-                    'monthly_salary': str(trainer.monthly_salary),
-                    'specialization': trainer.specialization,
-                    'start_date': str(trainer.start_date),
-                    'user': trainer.user.id if trainer.user else None,
-                }
-                
-                # Add username and password
-                if trainer.user:
-                    data['username'] = trainer.user.username
-                    # Get raw password from user if available (this will be the hashed version)
-                    data['password'] = trainer.user.password
-                else:
-                    data['username'] = 'N/A'
-                    data['password'] = 'N/A'
-                
-                trainer_data.append(data)
-            
-            # Return the response
-            return Response(trainer_data)
-        
-        except Exception as e:
-            # Log the error
-            import traceback
-            print(f"Error in trainer list: {e}")
-            print(traceback.format_exc())
-            return Response(
-                {"error": f"Failed to list trainers: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    
-    @transaction.atomic
-    def create(self, request, *args, **kwargs):
-        try:
-            data = request.data
-            
-            # Extract user credentials
-            username = data.get('username')
-            password = data.get('password')
-            email = data.get('email', '')
-            
-            if not username or not password:
-                return Response(
-                    {"error": "Username and password are required"}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Check if user with this username already exists
-            if User.objects.filter(username=username).exists():
-                return Response(
-                    {"error": f"User with username '{username}' already exists."}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Create the user
-            user = User.objects.create_user(
-                username=username,
-                password=password,
-                email=email
-            )
-            
-            # Create the trainer
-            trainer = Trainer.objects.create(
-                user=user,
-                trainer_id=data.get('trainer_id'),
-                first_name=data.get('first_name'),
-                last_name=data.get('last_name'),
-                email=email,
-                phone=data.get('phone'),
-                monthly_salary=data.get('monthly_salary'),
-                specialization=data.get('specialization'),
-                start_date=data.get('start_date')
-            )
-            
-            # Create response data
-            response_data = {
-                'id': trainer.id,
-                'trainer_id': trainer.trainer_id,
-                'first_name': trainer.first_name,
-                'last_name': trainer.last_name,
-                'email': trainer.email,
-                'phone': trainer.phone,
-                'monthly_salary': str(trainer.monthly_salary),
-                'specialization': trainer.specialization,
-                'start_date': str(trainer.start_date),
-                'user': user.id,
-                'username': username,
-                'password': password  # Return the password for admin to see
-            }
-            
-            return Response(response_data, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            # Log the error for debugging
-            import traceback
-            print(f"Error in trainer creation: {str(e)}")
-            print(traceback.format_exc())
-            
-            # Return a proper error response
-            return Response(
-                {"error": f"Failed to create trainer: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        
-
-
-
-
-
-
-
-
-
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
 @permission_classes([permissions.IsAuthenticated])
@@ -730,119 +609,6 @@ def get_member_profile(request):
             {"detail": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([permissions.IsAuthenticated])
-def register_trainer(request):
-    """
-    Register a new trainer with authentication credentials
-    """
-    try:
-        # Extract data from request
-        data = request.data
-        
-        # Create trainer using serializer
-        serializer = TrainerSerializer(data=data)
-        if serializer.is_valid():
-            trainer = serializer.save()
-            
-            # Get the actual username that was created
-            actual_username = trainer.user.username
-            
-            # Use pk which is always available
-            trainer_id = trainer.pk
-            
-            return Response({
-                "message": f"Trainer registered successfully: {trainer.first_name} {trainer.last_name}",
-                "trainer": {
-                    "pk": trainer_id,  # Changed from id to pk
-                    "trainer_id": trainer.trainer_id,
-                    "first_name": trainer.first_name,
-                    "last_name": trainer.last_name
-                },
-                "auth": {
-                    "username": actual_username,
-                    "email": trainer.user.email if hasattr(trainer.user, 'email') else "",
-                }
-            }, status=status.HTTP_201_CREATED)
-        else:
-            return Response({
-                "error": "Invalid trainer data",
-                "details": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    except Exception as e:
-        print(f"Error registering trainer: {str(e)}")
-        return Response({
-            "error": str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([permissions.IsAuthenticated])
-def get_trainer_profile(request):
-    """Get the profile of the currently logged-in trainer"""
-    try:
-        # Find the trainer associated with the current user
-        trainer = Trainer.objects.get(user=request.user)
-        serializer = TrainerSerializer(trainer)
-        return Response(serializer.data)
-    except Trainer.DoesNotExist:
-        return Response(
-            {"detail": "No trainer profile found for this user"},
-            status=status.HTTP_404_NOT_FOUND
-        )
-    except Exception as e:
-        return Response(
-            {"detail": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-@api_view(['GET'])
-def get_admin_dashboard_stats(request):
-    """Get statistics for the admin dashboard"""
-    try:
-        # Total members
-        total_members = Member.objects.count()
-        
-        # Members present today
-      
-        
-        # Total trainers
-        total_trainers = Trainer.objects.count()
-        
-        # Monthly revenue
-        monthly_revenue = Member.objects.aggregate(Sum('monthly_fee'))['monthly_fee__sum'] or 0
-        
-        # Today's attendance
-        
-        
-        # Calculate daily revenue - monthly revenue divided by days in month
-        now = timezone.now()
-        days_in_month = (timezone.datetime(now.year + (now.month == 12), 
-                                         ((now.month % 12) + 1), 1) - 
-                       timezone.datetime(now.year, now.month, 1)).days
-        daily_revenue = round(monthly_revenue / days_in_month, 2) if days_in_month > 0 else 0
-        
-        return Response({
-            'total_members': total_members,
-          
-            'total_trainers': total_trainers,
-            'monthly_revenue': f"{monthly_revenue:.2f} AFN",
-            'daily_revenue': f"{daily_revenue:.2f} AFN",
-            
-        })
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-
-
-
-
-
-
-    # In your views.py (or create a new view file if needed)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -927,8 +693,6 @@ def member_dashboard(request, member_id):
 
 
 
-    # In views.py
-# In views.py
 @api_view(['GET'])
 def get_member_details(request, member_id):
     """Get member details for dashboard or profile"""
@@ -999,10 +763,6 @@ def get_member_details(request, member_id):
 
 
 
-
-    # In views.py
-
-# Add or update this view
 @api_view(['GET', 'PUT', 'PATCH'])
 def update_member_profile(request, member_id):
     """
@@ -1055,7 +815,7 @@ def change_member_password(request, member_id):
         user.set_password(new_password)
         user.save()
         
-        # Generate new token since password change invalidates existing tokens
+    
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
         
@@ -1078,13 +838,12 @@ def change_member_password(request, member_id):
     
 
 
-    # Add this to views.py
 @api_view(['GET', 'PUT', 'PATCH'])
 @permission_classes([permissions.AllowAny])  # For testing, change to IsAuthenticated later
 def update_member_profile(request, member_id):
     """Get or update member profile"""
     try:
-        # Try to find the member by different IDs
+     
         member = None
         try:
             member = Member.objects.get(athlete_id=member_id)
@@ -1102,6 +861,10 @@ def update_member_profile(request, member_id):
             serializer = MemberSerializer(member, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
+                Notification.objects.create(
+            message=f"Member Profile Updated Successfully For: {member.first_name} {member.last_name}"
+    )
+       
                 return Response(serializer.data)
             return Response(serializer.errors, status=400)
             
@@ -1112,60 +875,44 @@ def update_member_profile(request, member_id):
 
 
 
-        # In your Django views.py or viewsets
-@api_view(['GET', 'PUT'])
-def member_training_schedule(request, member_id):
-    """
-    Get or update a member's training schedule
-    """
-    try:
-        member = Member.objects.get(id=member_id)
-    except Member.DoesNotExist:
-        return Response({"detail": "Member not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST', 'PUT'])  # Accept both POST and PUT methods
+@permission_classes([IsAuthenticated])
+def reset_member_password(request):
+    """Reset a member's password"""
+    member_id = request.data.get('member_id')
+    new_password = request.data.get('new_password')
     
-    # Only allow the member to access their own schedule or staff users
-    if str(request.user.id) != str(member_id) and not request.user.is_staff:
-        return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
-    
-    if request.method == 'GET':
-        # Get or create training schedule
-        schedule, created = TrainingSchedule.objects.get_or_create(member=member)
-        return Response({
-            'monday': schedule.monday,
-            'tuesday': schedule.tuesday,
-            'wednesday': schedule.wednesday,
-            'thursday': schedule.thursday,
-            'friday': schedule.friday,
-            'saturday': schedule.saturday,
-            'sunday': schedule.sunday
-        })
-    
-    elif request.method == 'PUT':
-        # Update training schedule
-        schedule, created = TrainingSchedule.objects.get_or_create(member=member)
-        schedule.monday = request.data.get('monday', schedule.monday)
-        schedule.tuesday = request.data.get('tuesday', schedule.tuesday)
-        schedule.wednesday = request.data.get('wednesday', schedule.wednesday)
-        schedule.thursday = request.data.get('thursday', schedule.thursday)
-        schedule.friday = request.data.get('friday', schedule.friday)
-        schedule.saturday = request.data.get('saturday', schedule.saturday)
-        schedule.sunday = request.data.get('sunday', schedule.sunday)
-        schedule.save()
+    if not member_id or not new_password:
+        return Response({'detail': 'Member ID and new password are required'}, status=400)
         
-        return Response({
-            'monday': schedule.monday,
-            'tuesday': schedule.tuesday,
-            'wednesday': schedule.wednesday,
-            'thursday': schedule.thursday,
-            'friday': schedule.friday,
-            'saturday': schedule.saturday,
-            'sunday': schedule.sunday
-        })
+    try:
+        # Find the member
+        member = Member.objects.get(athlete_id=member_id)
+        
+        # Update the user's password if member has a user
+        if hasattr(member, 'user') and member.user:
+            user = member.user
+            user.password = make_password(new_password)
+            user.save()
+            
+            # Also store raw password for debugging
+            if hasattr(member, 'raw_password'):
+                member.raw_password = new_password
+                member.save()
+            
+            return Response({'detail': 'Password reset successful'})
+        else:
+            return Response({'detail': 'Member has no associated user account'}, status=404)
+            
+    except Member.DoesNotExist:
+        return Response({'detail': 'Member not found'}, status=404)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=500)
     
 
 
-
-# In your views.py file
 @csrf_exempt
 def member_dashboard(request, member_id):
     """Get member dashboard data"""
@@ -1173,12 +920,12 @@ def member_dashboard(request, member_id):
         # Try to find the member
         member = Member.objects.get(athlete_id=member_id)
         
-        # Get recent attendance (if Attendance model exists)
+
         recent_attendance = []
         try:
             attendance_records = Attendance.objects.filter(
                 member=member
-            ).order_by('-date')[:5]  # Get 5 most recent records
+            ).order_by('-date')[:5]  
             
             for record in attendance_records:
                 if hasattr(record, 'check_in_time'):
@@ -1197,7 +944,7 @@ def member_dashboard(request, member_id):
                     })
         except Exception as e:
             print(f"Error fetching attendance: {e}")
-            # Continue even if attendance fetching fails
+         
         
         # Build the response with member data
         response_data = {
@@ -1224,7 +971,6 @@ def member_dashboard(request, member_id):
         print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
     
-
 
 @csrf_exempt
 def get_member_details(request, member_id):
@@ -1341,13 +1087,6 @@ def member_dashboard(request, member_id):
         return JsonResponse({'error': str(e)}, status=500)
     
 
-
-
-
-
-
-
-# In your views.py
 def list_all_members(request):
     """List all members in the database with full credentials for debugging"""
     try:
@@ -1390,474 +1129,1118 @@ def list_all_members(request):
         return JsonResponse({'members': member_list})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
+@permission_classes([permissions.IsAuthenticated])
+def register_member(request):
+    """
+    Register a new member with user account based on frontend data
+    """
+    try:
+        # Extract data from request
+        data = request.data
+        print("Received member data:", data)
+        
+        # Create the member object with auth fields included
+        serializer = MemberSerializer(data=data)
+        if serializer.is_valid():
+            member = serializer.save()
+            Notification.objects.create(
+            message=f"New member registered: {member.first_name} {member.last_name}"
+    )
+            
+            # Get the actual username that was created
+            actual_username = member.user.username
+            
+            # Check for primary key field - use pk which is always available
+            member_id = member.pk  # Use .pk instead of .id
+            
+            return Response({
+                "message": f"Member registered successfully: {member.first_name} {member.last_name}",
+                "member": {
+                    "pk": member_id,  # Changed from id to pk
+                    "athlete_id": member.athlete_id,
+                    "first_name": member.first_name,
+                    "last_name": member.last_name
+                },
+                "auth": {
+                    "username": actual_username,
+                    "email": member.user.email if hasattr(member.user, 'email') else "",
+                }
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                "error": "Invalid member data",
+                "details": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        print(f"Error registering member: {str(e)}")
+        return Response({
+            "error": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+class MemberViewSet(viewsets.ModelViewSet):
+    queryset = Member.objects.all()
+    serializer_class = MemberSerializer
+    # Temporarily set to AllowAny for testing
+    permission_classes = [permissions.AllowAny]
+    # Uncomment when ready to enforce auth
+    # permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    
+    def get_object(self):
+        """
+        Allow looking up a member by athlete_id from the URL or by primary key
+        """
+        # Try to get the object by primary key first
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        if lookup_url_kwarg in self.kwargs:
+            pk_value = self.kwargs[lookup_url_kwarg]
+            # Try primary key lookup
+            try:
+                return super().get_object()
+            except Http404:
+                # Try by athlete_id instead
+                queryset = self.filter_queryset(self.get_queryset())
+                try:
+                    # Log what we're trying to find
+                    print(f"Looking for member with athlete_id={pk_value}")
+                    member = queryset.get(athlete_id=pk_value)
+                    # May raise a PermissionDenied
+                    self.check_object_permissions(self.request, member)
+                    return member
+                except Member.DoesNotExist:
+                    print(f"No member found with athlete_id={pk_value}")
+                    # If we couldn't find by athlete_id, re-raise the original Http404
+                    raise Http404(f"No Member matches the given query: {pk_value}")
+        return super().get_object()
+    
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Custom destroy method with better error handling
+        """
+        try:
+            instance = self.get_object()
+            print(f"Destroying member with athlete_id={instance.athlete_id}, user_id={instance.user_id}")
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Http404 as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"Error deleting member: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated]) 
+    def renew(self, request, pk=None):
+        """
+        Custom action to renew a member's membership and send a notification.
+        """
+        print("Renew method called for member with pk:", pk)
+        member = self.get_object()
+
+        # Update start_date and expiry_date from request data
+        member.start_date = request.data.get('start_date', member.start_date)
+        member.expiry_date = request.data.get('expiry_date', member.expiry_date)
+        # Reset notified_expired flag on renewal
+        member.notified_expired = False
+        member.save()
+        print(f"Creating notification for membership renewal of {member.first_name} {member.last_name}")
+        Notification.objects.create(
+            message=f"Membership renewed for: {member.first_name} {member.last_name}"
+        )
+        print("Notification created successfully")
+
+        return Response({
+        "message": "Member renewed successfully.",
+        "member": MemberSerializer(member).data
+    }, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        """
+        Override update method to handle renew notifications
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        old_expiry_date = instance.expiry_date
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        new_expiry_date = serializer.instance.expiry_date
+
+        if new_expiry_date != old_expiry_date:
+            # Expiry date changed, treat as renewal
+            instance.notified_expired = False
+            instance.save()
+            # Mark expired notifications for this member as read or remove them
+            expired_notifications = Notification.objects.filter(
+                message__icontains=f"Membership expired for: {instance.first_name} {instance.last_name}",
+                is_read=False
+            )
+            # Delete expired notifications instead of marking as read
+            expired_notifications.delete()
+            Notification.objects.create(
+                message=f"Membership renewed for: {instance.first_name} {instance.last_name}"
+            )
+            print(f"Renew notification created for member {instance.first_name} {instance.last_name}")
+
+        return Response(serializer.data)
+            
+    
+    def perform_create(self, serializer):
+        """Custom method to handle member creation"""
+        try:
+            # Let the serializer handle creation with all the data
+            member = serializer.save()
+            return member
+        except Exception as e:
+            # Better error handling
+            raise serializers.ValidationError(f"Error creating member: {str(e)}")
+    
+    def metadata(self, request):
+        return super().metadata(request)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def register(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            member = self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except serializers.ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Add for debugging
+    @action(detail=False, methods=['get'])
+    def test_auth(self, request):
+        return Response({
+            "message": "Authentication successful",
+            "user": request.user.email if request.user.is_authenticated else "Anonymous",
+            "is_authenticated": request.user.is_authenticated,
+            "auth_type": str(request.auth.__class__) if request.auth else None
+        })
+
+    # Add an endpoint to get a member by athlete_id
+    @action(detail=False, methods=['get'], url_path='by-athlete-id/(?P<athlete_id>[^/.]+)')
+    def by_athlete_id(self, request, athlete_id=None):
+        try:
+            member = Member.objects.get(athlete_id=athlete_id)
+            serializer = self.get_serializer(member)
+            return Response(serializer.data)
+        except Member.DoesNotExist:
+            return Response(
+                {"detail": f"No member found with athlete_id: {athlete_id}"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+
+        return queryset
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_member_pk(request):
+    try:
+        member = request.user.member  # If you have a OneToOneField from CustomUser to Member
+        return Response({'member_pk': member.pk})
+    except Member.DoesNotExist:
+        return Response({'error': 'No member profile found.'}, status=404)
+    
+    '''
+    
+        
+        
+        
+        
+        
+        
+        
+
+class TrainerViewSet(viewsets.ModelViewSet):
+    queryset = Trainer.objects.all()
+    serializer_class = TrainerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        try:
+            trainers = Trainer.objects.all()
+            trainer_data = []
+            for trainer in trainers:
+                data = {
+                    'id': trainer.id,
+                    'trainer_id': trainer.trainer_id,
+                    'first_name': trainer.first_name,
+                    'last_name': trainer.last_name,
+                    'email': trainer.email,
+                    'phone': trainer.phone,
+                    'monthly_salary': str(trainer.monthly_salary),
+                    'specialization': trainer.specialization,
+                    'start_date': str(trainer.start_date),
+                    'user': trainer.user.id if trainer.user else None,
+                    'username': trainer.user.username if trainer.user else 'N/A',
+                    'password': trainer.user.password if trainer.user else 'N/A',
+                }
+                trainer_data.append(data)
+            return Response(trainer_data)
+        except Exception as e:
+            import traceback
+            print(f"Error in trainer list: {e}")
+            print(traceback.format_exc())
+            return Response({"error": f"Failed to list trainers: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            username = data.get('username')
+            password = data.get('password')
+            email = data.get('email', '')
+
+            if not username or not password:
+                return Response({"error": "Username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if User.objects.filter(username=username).exists():
+                return Response({"error": f"User with username '{username}' already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = User.objects.create_user(username=username, password=password, email=email)
+
+            trainer = Trainer.objects.create(
+                user=user,
+                trainer_id=data.get('trainer_id'),
+                first_name=data.get('first_name'),
+                last_name=data.get('last_name'),
+                email=email,
+                phone=data.get('phone'),
+                monthly_salary=data.get('monthly_salary'),
+                specialization=data.get('specialization'),
+                start_date=data.get('start_date')
+            )
+
+            Notification.objects.create(message=f"New trainer registered: {trainer.first_name} {trainer.last_name}")
+
+            response_data = {
+                'id': trainer.id,
+                'trainer_id': trainer.trainer_id,
+                'first_name': trainer.first_name,
+                'last_name': trainer.last_name,
+                'email': trainer.email,
+                'phone': trainer.phone,
+                'monthly_salary': str(trainer.monthly_salary),
+                'specialization': trainer.specialization,
+                'start_date': str(trainer.start_date),
+                'user': user.id,
+                'username': username,
+                'password': password
+            }
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            import traceback
+            print(f"Error in trainer creation: {str(e)}")
+            print(traceback.format_exc())
+            return Response({"error": f"Failed to create trainer: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def login(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        print(f"Trainer login attempt: {username}")
+
+        try:
+            user_obj = CustomUser.objects.get(username=username)
+            print(f"User exists: id={user_obj.id}, active={user_obj.is_active}")
+
+            try:
+                trainer = Trainer.objects.get(user=user_obj)
+                print(f"Trainer profile found: trainer_id={trainer.trainer_id}")
+            except Trainer.DoesNotExist:
+                return Response({"detail": "No trainer profile found for this username"}, status=status.HTTP_403_FORBIDDEN)
+        except CustomUser.DoesNotExist:
+            return Response({"detail": "Username not found"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = authenticate(username=username, password=password)
+        print(f"Authentication result: {'Success' if user else 'Failed'}")
+
+        if user is not None:
+            trainer = Trainer.objects.get(user=user)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'token': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user_id': user.id,
+                'trainer_id': trainer.trainer_id,
+                'name': f"{trainer.first_name} {trainer.last_name}"
+            })
+        else:
+            try:
+                if check_password(password, user_obj.password):
+                    trainer = Trainer.objects.get(user=user_obj)
+                    refresh = RefreshToken.for_user(user_obj)
+                    return Response({
+                        'token': str(refresh.access_token),
+                        'refresh': str(refresh),
+                        'user_id': user_obj.id,
+                        'trainer_id': trainer.trainer_id,
+                        'name': f"{trainer.first_name} {trainer.last_name}"
+                    })
+                else:
+                    return Response({"detail": "Incorrect password"}, status=status.HTTP_401_UNAUTHORIZED)
+            except Exception as e:
+                return Response({"detail": "Authentication error"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    @action(detail=False, methods=['get'])
+    def profile(self, request):
+        try:
+            trainer = Trainer.objects.get(user=request.user)
+            serializer = TrainerSerializer(trainer)
+            return Response(serializer.data)
+        except Trainer.DoesNotExist:
+            return Response({"detail": "No trainer profile found for this user"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+       
+        
+        
+
+class AuthTestViewSet(viewsets.ViewSet):
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'], url_path='test-auth')
+    def test_auth(self, request):
+        """Test authentication"""
+        return Response({
+            "message": "Authentication successful",
+            "user": {
+                "id": request.user.id,
+                "username": request.user.username,
+                "email": request.user.email,
+                "is_staff": request.user.is_staff,
+                "role": getattr(request.user, 'role', 'unknown')
+            },
+            "auth_type": str(request.auth.__class__) if request.auth else None
+        })
+
+
+
+class CommunityViewSet(viewsets.ViewSet):
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'], url_path='posts')
+    def get_community_posts(self, request):
+        try:
+            posts = Post.objects.all().order_by('-date_created')
+            serializer = PostSerializer(posts, many=True)
+            print("Successfully serialized posts")
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error getting posts: {str(e)}")
+            print(traceback.format_exc())
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @action(detail=True, methods=['post'], url_path='like')
+    def like_community_post(self, request, pk=None):
+        try:
+            post = Post.objects.get(id=pk)
+            user = request.user
+            
+            if user in post.likes.all():
+                return Response({'status': 'already liked'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            post.likes.add(user)
+            post.save()
+            
+            return Response({'status': 'success'}, status=status.HTTP_200_OK)
+        except Post.DoesNotExist:
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"Error liking post: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], url_path='posts/create')
+    def create_community_post(self, request):
+        member_id = request.data.get('memberID')
+
+        if not member_id:
+            return Response({'error': 'memberID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            member = Member.objects.get(athlete_id=member_id)
+            user = member.user
+
+            data = {
+                'title': request.data.get('title'),
+                'content': request.data.get('content'),
+            }
+
+            serializer = PostSerializer(data=data)
+            if serializer.is_valid():
+                post = serializer.save(created_by=user)
+                Notification.objects.create(
+                    message=f"New community post created by {member.first_name} {member.last_name}"
+                )
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Member.DoesNotExist:
+            return Response({'error': 'Member not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            error_trace = traceback.format_exc()
+            print(f"Error creating post: {str(e)}")
+            print(error_trace)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
+
+    @action(detail=False, methods=['get'], url_path='announcements')
+    def get_community_announcements(self, request):
+        try:
+            announcements = Announcement.objects.all().order_by('-date_created')
+            serializer = AnnouncementSerializer(announcements, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error getting announcements: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], url_path='challenges')
+    def get_community_challenges(self, request):
+        try:
+            challenges = Challenge.objects.all()
+            serializer = ChallengeSerializer(challenges, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error getting challenges: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def join_challenge(self, request, pk=None):
+        try:
+            challenge_id = request.data.get("challengeID")
+            member_id = request.data.get("memberID")
+
+            if not challenge_id or not member_id:
+                return Response({"error": "Missing challengeID or memberID"}, status=400)
+
+            challenge = get_object_or_404(Challenge, id=challenge_id)
+            member = get_object_or_404(Member, id=member_id)
+
+            # Check if already joined
+            if ChallengeParticipant.objects.filter(challenge=challenge, member=member).exists():
+                return Response({"detail": "Already joined this challenge"}, status=400)
+
+            ChallengeParticipant.objects.create(challenge=challenge, member=member)
+
+            return Response({"detail": "Challenge joined successfully"}, status=201)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()  # Print full traceback to console
+            return Response({"error": str(e)}, status=500)
+
+            
+        
+
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all().order_by('-date_created')
+    serializer_class = PostSerializer
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=True, methods=['post'], url_path='like')
+    def like_community_post(self, request, pk=None):
+        try:
+            post = Post.objects.get(id=pk)
+            user = request.user  # the user who is liking the post
+            
+            # Check if the user already liked the post
+            if user in post.likes.all():
+                return Response({'status': 'already liked'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Add the user to the likes relation
+            post.likes.add(user)
+            post.save()
+
+            return Response({'status': 'success'}, status=status.HTTP_200_OK)
+        
+        except Post.DoesNotExist:
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"Error liking post: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+        
+
+
+class PostLikeView(APIView):
+    def post(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+        # Logic for liking the post (e.g., checking if the user already liked)
+        if request.user in post.liked_by.all():
+            return Response({'error': 'You already liked this post.'}, status=400)
+        post.liked_by.add(request.user)
+        return Response({'message': 'Liked the post successfully.'})
+
+        
+        
+        
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        post_pk = self.kwargs.get('post_pk')
+        if post_pk:
+            return Comment.objects.filter(post_id=post_pk).order_by('-date_created')
+        return Comment.objects.all().order_by('-date_created')
+
+    def perform_create(self, serializer):
+        post_pk = self.kwargs.get('post_pk')
+        if not post_pk:
+            raise NotFound('Post ID is required')
+        serializer.save(author=self.request.user, post_id=post_pk)
+
+    # Optional: override update to ensure permissions are checked (but DRF does this by default)
+    def update(self, request, *args, **kwargs):
+        self.check_object_permissions(request, self.get_object())
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self.check_object_permissions(request, self.get_object())
+        return super().destroy(request, *args, **kwargs)
+
+
+    
+    
+
+class SupportViewSet(viewsets.ViewSet):
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=["get"], url_path="tickets")
+    def get_tickets(self, request):
+        member_id = request.query_params.get("memberID")
+        if not member_id:
+            return Response({"error": "memberID parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            tickets = SupportTicket.objects.filter(member__athlete_id=member_id).order_by("-date_created")
+            serializer = SupportTicketSerializer(tickets, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            import traceback
+            print(f"Error getting tickets: {str(e)}")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"], url_path="tickets/create")
+    def create_ticket(self, request):
+        member_id = request.data.get("memberID")
+        if not member_id:
+            return Response({"error": "memberID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            member = Member.objects.get(athlete_id=member_id)  # use athlete_id here if that’s the unique identifier
+            data = {
+                "type": request.data.get("type", "general"),
+                "subject": request.data.get("subject"),
+                "message": request.data.get("message"),
+            }
+            serializer = SupportTicketSerializer(data=data)
+            if serializer.is_valid():
+                ticket = serializer.save(member=member)  # Make sure member is passed here
+                Notification.objects.create(
+                    message=f"{member.first_name} {member.last_name} needs support. Click here to view his/her message."
+                )
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                print("Serializer errors:", serializer.errors)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Member.DoesNotExist:
+            return Response({"error": "Member not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            import traceback
+            print(f"Error creating ticket: {str(e)}")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+    @action(detail=False, methods=["get"], url_path="faqs")
+    def get_faqs(self, request):
+        try:
+            categories = FAQCategory.objects.all()
+            serializer = FAQCategorySerializer(categories, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"Error getting FAQs: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+
+
+class AdminCommunityViewSet(viewsets.ViewSet):
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    # Announcements
+    @action(detail=False, methods=['get'])
+    def announcements(self, request):
+        announcements = Announcement.objects.all().order_by('-date_created')
+        serializer = AnnouncementSerializer(announcements, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def create_announcement(self, request):
+        serializer = AnnouncementSerializer(data=request.data)
+        if serializer.is_valid():
+            announcement = serializer.save(created_by=request.user)
+            Notification.objects.create(
+                message=f"New admin announcement created: {announcement.title}"
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'], url_path='delete_announcement')
+    def delete_announcement(self, request, pk=None):
+        try:
+            announcement = Announcement.objects.get(id=pk)
+            announcement.delete()
+            Notification.objects.create(
+                message=f"Admin deleted announcement ID: {pk}"
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Announcement.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    # Challenges
+    @action(detail=False, methods=['get'])
+    def challenges(self, request):
+        challenges = Challenge.objects.all().order_by('-date_created')
+        serializer = ChallengeSerializer(challenges, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def create_challenge(self, request):
+        serializer = ChallengeSerializer(data=request.data)
+        if serializer.is_valid():
+            challenge = serializer.save(created_by=request.user)
+            Notification.objects.create(
+                message=f"New admin challenge created: {challenge.title}"
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['delete'], url_path='delete_challenge')
+    def delete_challenge(self, request, pk=None):
+        try:
+            challenge = Challenge.objects.get(id=pk)
+            challenge.delete()
+            Notification.objects.create(
+                message=f"Admin deleted challenge ID: {pk}"
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Challenge.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    # Community Posts
+    @action(detail=False, methods=['get'])
+    def community_posts(self, request):
+        posts = Post.objects.all().order_by('-date_created')
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'], url_path='toggle_hide_post')
+    def toggle_hide_post(self, request, pk=None):
+        try:
+            post = Post.objects.get(id=pk)
+            post.hidden = not post.hidden
+            post.save()
+            serializer = PostSerializer(post)
+            return Response(serializer.data)
+        except Post.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        
+        
+        
+        
+        
+"""       
+    
+class CommunityListAPIView(generics.ListAPIView):
+    queryset = Community.objects.all()
+    serializer_class = CommunitySerializer
+
+class CommunityDetailAPIView(generics.RetrieveAPIView):
+    queryset = Community.objects.all()
+    serializer_class = CommunitySerializer
+    lookup_field = 'id'
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def join_challenge(request, community_id, challenge_id):
+    user = request.user
+    challenge = get_object_or_404(Challenge, id=challenge_id, community_id=community_id)
+    challenge.participants.add(user)
+    challenge.save()
+    return Response({'detail': 'Joined challenge successfully'}, status=status.HTTP_200_OK)
+        
+"""  
+        
+        
+        
+        
+        
+        
+  
+class AdminSupportViewSet(viewsets.ViewSet):
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    # Get all support tickets
+    @action(detail=False, methods=['get'])
+    def tickets(self, request):
+        tickets = SupportTicket.objects.all().order_by('-date_created')
+        serializer = SupportTicketSerializer(tickets, many=True)
+        return Response(serializer.data)
+
+    # Respond to a support ticket
+    @action(detail=True, methods=['post'], url_path='respond')
+    def respond(self, request, pk=None):
+        try:
+            ticket = SupportTicket.objects.get(id=pk)
+            response = TicketResponse(
+                ticket=ticket,
+                message=request.data.get('message', ''),
+                responder=request.user
+            )
+            response.save()
+            Notification.objects.create(
+                message=f"Admin responded to support ticket ID: {pk}"
+            )
+            serializer = TicketResponseSerializer(response)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except SupportTicket.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    # Close a support ticket
+    @action(detail=True, methods=['patch'], url_path='close')
+    def close(self, request, pk=None):
+        try:
+            ticket = SupportTicket.objects.get(id=pk)
+            ticket.status = 'closed'
+            ticket.save()
+            Notification.objects.create(
+                message=f"Admin closed support ticket ID: {pk}"
+            )
+            serializer = SupportTicketSerializer(ticket)
+            return Response(serializer.data)
+        except SupportTicket.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    # Get all FAQ categories
+    @action(detail=False, methods=['get', 'post'], url_path='faq-categories')
+    def faq_categories(self, request):
+        if request.method == 'GET':
+          categories = FAQCategory.objects.all()
+          serializer = FAQCategorySerializer(categories, many=True)
+          return Response(serializer.data)
+
+        elif request.method == 'POST':
+         serializer = FAQCategorySerializer(data=request.data)
+         if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=True, methods=['delete'], url_path='delete-faq')
+    def delete_faq(self, request,pk):
+        try:
+            faq = FAQ.objects.get(id=pk)
+            faq.delete()
+            Notification.objects.create(
+                message=f"Admin deleted FAQ ID: {pk}"
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except:
+         return Response(status=status.HTTP_404_NOT_FOUND)
+
+    # Create new FAQ
+    @action(detail=False, methods=['post'], url_path='faqs')
+    def create_faq(self, request):
+        serializer = FAQSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create new announcement (admin)
+    @action(detail=False, methods=['post'], url_path='announcements')
+    def create_announcement(self, request):
+        serializer = AnnouncementSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(created_by=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Get all announcements (authenticated users)
+    @action(detail=False, methods=['get'], url_path='announcements', permission_classes=[IsAuthenticated])
+    def get_announcements(self, request):
+        announcements = Announcement.objects.all().order_by('-date_created')
+        serializer = AnnouncementSerializer(announcements, many=True)
+        return Response(serializer.data)
+
+    
+
+class NotificationViewSet(viewsets.ViewSet):
+    """
+    ViewSet for managing notifications.
+    """
+
+    # Create a notification (Authenticated users)
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def create_notification(self, request):
+        message = request.data.get('message')
+        if not message:
+            return Response({"error": "Message field is required."}, status=status.HTTP_400_BAD_REQUEST)
+        notification = Notification.objects.create(user=request.user, message=message)
+
+        serializer = NotificationSerializer(notification)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    # Admin: Get recent notifications (latest 20)
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def admin_notifications(self, request):
+        print(f"Request user: {request.user}, is_staff: {request.user.is_staff}")
+        self.check_and_notify_expired_members()
+        notifications = Notification.objects.order_by('-created_at')[:30]
+        data = [
+            {
+                "id": n.id,
+                "message": n.message,
+                "created_at": n.created_at.isoformat(),
+                "is_read": n.is_read,
+            }
+            for n in notifications
+        ]
+        return Response({"notifications": data})
+     # Delete all notifications (Authenticated users)
+    @action(detail=False, methods=['delete'], permission_classes=[IsAuthenticated])
+    def delete_all(self, request):
+        Notification.objects.all().delete()
+        return Response({'detail': 'All notifications deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+
+    # Admin: Mark all notifications as read
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminUser])
+    def mark_all_read(self, request):
+        Notification.objects.filter(is_read=False).update(is_read=True)
+        return Response({'status': 'all marked as read'})
+
+    # Internal method to check and notify expired members
+    def check_and_notify_expired_members(self):
+        today = timezone.now().date()
+        with transaction.atomic():
+            expired_members = Member.objects.select_for_update().filter(expiry_date__lt=today, notified_expired=False)
+            for member in expired_members:
+                Notification.objects.create(
+                    message=f"Membership expired for: {member.first_name} {member.last_name}"
+                )
+                member.notified_expired = True
+                member.save()
+
+
+
+
+
+
+
+class UserListView(generics.ListAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser] 
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = (AllowAny,)
+    serializer_class = RegisterSerializer
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            "user": UserSerializer(user, context=self.get_serializer_context()).data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "token": str(refresh.access_token),  # Add this for frontend compatibility
+            "message": "User created successfully",
+        }, status=status.HTTP_201_CREATED)
+
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [permissions.AllowAny]  # Change to IsAuthenticated in production
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        try:
+            product_name = response.data.get('name', 'Unknown Product')
+            Notification.objects.create(
+                message=f"Product added successfully: {product_name}"
+            )
+        except Exception as e:
+            print(f"Failed to create product notification: {e}")
+        return response
+
+
+
+# TrainingViewSet
+class TrainingViewSet(viewsets.ModelViewSet):
+    queryset = Training.objects.all()
+    serializer_class = TrainingSerializer
+    permission_classes = [permissions.AllowAny]  # Change to IsAuthenticated in production
+    authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+
+
+    
+class AttendanceViewSet(viewsets.ModelViewSet):
+    queryset = Attendance.objects.all()
+    serializer_class = AttendanceSerializer
+
+    @action(detail=True, methods=['get'], url_path='history')
+    def history(self, request, pk=None):
+        today_only = request.query_params.get('today_only') == 'true'
+
+        # Filter attendance by member ID
+        if today_only:
+            data = Attendance.objects.filter(member_id=pk, date=date.today())
+        else:
+            data = Attendance.objects.filter(member_id=pk)
+
+        serializer = self.get_serializer(data, many=True)
+        return Response(serializer.data)
+   
+    @action(detail=False, methods=['get'], url_path='history')
+    def attendance_history_by_date(self, request):
+        date_str = request.query_params.get('date')
+        if not date_str:
+            return Response({'error': "Missing 'date' parameter"}, status=400)
+
+        parsed_date = parse_date(date_str)
+        if not parsed_date:
+            return Response({'error': "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+        records = Attendance.objects.filter(date=parsed_date)  # ✅ FIXED HERE
+        serializer = self.get_serializer(records, many=True)
+        return Response(serializer.data)
+
+
+
+
+
+
+
+
+
+
+def get_csrf_token(request):
+    return JsonResponse({'csrfToken': get_token(request)})
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def test_endpoint(request):
+    return Response({"message": "Test endpoint is working"})
+
+
+
     
 def test_view(request):
     """Simple test view to verify routing"""
     return JsonResponse({"status": "success", "message": "Test view is working"})
 
 
+
 def debug_urls(request):
-    """Display all registered URL patterns"""
-    from django.urls import get_resolver
+    """Display all registered URL patterns in a readable format"""
     resolver = get_resolver()
-    url_patterns = []
-    
+    url_list = []
+
+    def extract_view_name(callback):
+        try:
+            if hasattr(callback, 'cls'):
+                return callback.cls.__name__
+            elif hasattr(callback, '__name__'):
+                return callback.__name__
+            elif hasattr(callback, '__class__'):
+                return callback.__class__.__name__
+        except Exception:
+            return str(callback)
+        return 'UnknownView'
+
     def collect_urls(patterns, base=''):
         for pattern in patterns:
-            if hasattr(pattern, 'pattern'):
-                # This is a URLPattern
-                if hasattr(pattern, 'callback') and pattern.callback:
-                    callback_name = pattern.callback.__name__ if hasattr(pattern.callback, '__name__') else str(pattern.callback)
-                    url_patterns.append(f"{base}{pattern.pattern} -> {callback_name}")
-            
-            if hasattr(pattern, 'url_patterns'):
-                # This is a URLResolver with nested patterns
-                if hasattr(pattern, 'pattern'):
-                    new_base = f"{base}{pattern.pattern}"
-                    collect_urls(pattern.url_patterns, new_base)
-    
+            if isinstance(pattern, URLPattern):  # Simple URL
+                path = f"{base}{pattern.pattern}"
+                view_name = extract_view_name(pattern.callback)
+                url_list.append({
+                    "url": str(path),
+                    "view": view_name
+                })
+            elif isinstance(pattern, URLResolver):  # Nested include
+                nested_base = f"{base}{pattern.pattern}"
+                collect_urls(pattern.url_patterns, nested_base)
+
     collect_urls(resolver.url_patterns)
-    return JsonResponse({"urls": url_patterns})
 
-
-
-
-
-
-
-
-# users/views.py
-
-from django.shortcuts import get_object_or_404
-
-# ----- Community API Endpoints -----
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def get_community_posts(request):
-    try:
-        posts = Post.objects.all().order_by('-date_created')
-        serializer = PostSerializer(posts, many=True)
-        return Response(serializer.data)
-    except Exception as e:
-        print(f"Error getting posts: {str(e)}")
-        print(traceback.format_exc())
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def create_community_post(request):
-    member_id = request.data.get('memberID')
+    # Optional: Sort alphabetically by path
+    url_list.sort(key=lambda x: x["url"])
     
-    if not member_id:
-        return Response({'error': 'memberID is required'}, status=status.HTTP_400_BAD_REQUEST)
+    return JsonResponse({"urls": url_list}, json_dumps_params={"indent": 2})
     
-    try:
-        # Change from id to athlete_id based on the error message
-        member = Member.objects.get(athlete_id=member_id)
-        user = member.user
-        
-        data = {
-            'title': request.data.get('title'),
-            'content': request.data.get('content'),
-        }
-        
-        serializer = PostSerializer(data=data)
-        if serializer.is_valid():
-            post = serializer.save(author=user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except Member.DoesNotExist:
-        return Response({'error': 'Member not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"Error creating post: {str(e)}")
-        print(error_trace)
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def like_community_post(request, post_id):
-    try:
-        post = Post.objects.get(id=post_id)
-        post.likes += 1
-        post.save()
-        return Response({'status': 'success'}, status=status.HTTP_200_OK)
-    except Post.DoesNotExist:
-        return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        print(f"Error liking post: {str(e)}")
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def get_community_announcements(request):
-    try:
-        announcements = Announcement.objects.all().order_by('-date_created')
-        serializer = AnnouncementSerializer(announcements, many=True)
-        return Response(serializer.data)
-    except Exception as e:
-        print(f"Error getting announcements: {str(e)}")
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def get_community_challenges(request):
-    try:
-        challenges = Challenge.objects.all()
-        serializer = ChallengeSerializer(challenges, many=True)
-        return Response(serializer.data)
-    except Exception as e:
-        print(f"Error getting challenges: {str(e)}")
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def join_community_challenge(request, challenge_id):
-    try:
-        challenge = Challenge.objects.get(id=challenge_id)
-        member_id = request.data.get('memberID')
-        # Change from id to athlete_id
-        member = Member.objects.get(athlete_id=member_id)
-        user = member.user
-        challenge.participants.add(user)
-        return Response({'status': 'success'}, status=status.HTTP_200_OK)
-    except Challenge.DoesNotExist:
-        return Response({'error': 'Challenge not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Member.DoesNotExist:
-        return Response({'error': 'Member not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        print(f"Error joining challenge: {str(e)}")
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-# ----- Support API Endpoints -----
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def get_support_tickets(request):
-    member_id = request.query_params.get('memberID')
-    if not member_id:
-        return Response({'error': 'memberID parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        # Change from member_id to athlete_id
-        tickets = SupportTicket.objects.filter(member__athlete_id=member_id).order_by('-date_created')
-        serializer = SupportTicketSerializer(tickets, many=True)
-        return Response(serializer.data)
-    except Exception as e:
-        print(f"Error getting tickets: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def create_support_ticket(request):
-    member_id = request.data.get('memberID')
-    if not member_id:
-        return Response({'error': 'memberID is required'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        # Change from id to athlete_id
-        member = Member.objects.get(athlete_id=member_id)
-        data = {
-            'type': request.data.get('type', 'general'),
-            'subject': request.data.get('subject'),
-            'message': request.data.get('message'),
-            'member': member.athlete_id  # Adjust this if your serializer expects something different
-        }
-        serializer = SupportTicketSerializer(data=data)
-        if serializer.is_valid():
-            ticket = serializer.save(member=member)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except Member.DoesNotExist:
-        return Response({'error': 'Member not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        print(f"Error creating ticket: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def get_support_faqs(request):
-    try:
-        categories = FAQCategory.objects.all()
-        serializer = FAQCategorySerializer(categories, many=True)
-        return Response(serializer.data)
-    except Exception as e:
-        print(f"Error getting FAQs: {str(e)}")
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     
 
 
+class PurchaseViewSet(viewsets.ModelViewSet):
+    queryset = Purchase.objects.all()
+    serializer_class = PurchaseSerializer
+    permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+        purchase = serializer.save()
 
+        product_name = purchase.product.name
+        total_price = purchase.total_price
 
-
-
-    # In your views.py file
-
-# Admin Community Management Endpoints
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def get_admin_announcements(request):
-    """Get all announcements for admin management"""
-    announcements = Announcement.objects.all().order_by('-date_created')
-    serializer = AnnouncementSerializer(announcements, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def create_admin_announcement(request):
-    """Create a new announcement from admin"""
-    serializer = AnnouncementSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['DELETE'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def delete_admin_announcement(request, announcement_id):
-    """Delete an announcement"""
-    try:
-        announcement = Announcement.objects.get(id=announcement_id)
-        announcement.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    except Announcement.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def get_admin_challenges(request):
-    """Get all challenges for admin management"""
-    challenges = Challenge.objects.all().order_by('-date_created')
-    serializer = ChallengeSerializer(challenges, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def create_admin_challenge(request):
-    """Create a new challenge from admin"""
-    serializer = ChallengeSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['DELETE'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def delete_admin_challenge(request, challenge_id):
-    """Delete a challenge"""
-    try:
-        challenge = Challenge.objects.get(id=challenge_id)
-        challenge.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    except Challenge.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def get_admin_community_posts(request):
-    """Get all community posts for admin moderation"""
-    posts = Post.objects.all().order_by('-date_created')
-    serializer = PostSerializer(posts, many=True)
-    return Response(serializer.data)
-
-@api_view(['PATCH'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def hide_admin_community_post(request, post_id):
-    """Hide/unhide a community post"""
-    try:
-        post = Post.objects.get(id=post_id)
-        post.hidden = not post.hidden
-        post.save()
-        serializer = PostSerializer(post)
-        return Response(serializer.data)
-    except Post.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    
-
-
-
-
-    # Admin Support Management Endpoints
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def get_admin_support_tickets(request):
-    """Get all support tickets for admin management"""
-    tickets = SupportTicket.objects.all().order_by('-date_created')
-    serializer = SupportTicketSerializer(tickets, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def respond_to_support_ticket(request, ticket_id):
-    """Admin responds to a support ticket"""
-    try:
-        ticket = SupportTicket.objects.get(id=ticket_id)
-        response = TicketResponse(
-            ticket=ticket,
-            message=request.data.get('message', ''),
-            responder=request.user
+        # Create a sale notification
+        Notification.objects.create(
+            message=f"{product_name} sold for {total_price:.2f} AFN"
         )
-        response.save()
-        serializer = TicketResponseSerializer(response)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    except SupportTicket.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['PATCH'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def close_support_ticket(request, ticket_id):
-    """Close a support ticket"""
-    try:
-        ticket = SupportTicket.objects.get(id=ticket_id)
-        ticket.status = 'closed'
-        ticket.save()
-        serializer = SupportTicketSerializer(ticket)
-        return Response(serializer.data)
-    except SupportTicket.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def get_admin_faq_categories(request):
-    """Get all FAQ categories for admin management"""
-    categories = FAQCategory.objects.all()
-    serializer = FAQCategorySerializer(categories, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def create_admin_faq_category(request):
-    """Create a new FAQ category"""
-    serializer = FAQCategorySerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def create_admin_faq(request):
-    """Create a new FAQ"""
-    serializer = FAQSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def create_announcement(request):
-    """Create a new announcement from admin"""
-    serializer = AnnouncementSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-@api_view(['GET'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def get_announcements(request):
-    """Get all announcements"""
-    announcements = Announcement.objects.all().order_by('-date_created')
-    serializer = AnnouncementSerializer(announcements, many=True)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication, TokenAuthentication, SessionAuthentication])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def create_admin_announcement(request):
-    """Create a new announcement from admin"""
-    # Get the data from the request
-    data = request.data
-    
-    # Create a serializer with the data
-    serializer = AnnouncementSerializer(data=data)
-    
-    if serializer.is_valid():
-        # Save with the current user as created_by
-        serializer.save(created_by=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
-
-@api_view(['POST', 'PUT'])  # Accept both POST and PUT methods
-@permission_classes([IsAuthenticated])
-def reset_member_password(request):
-    """Reset a member's password"""
-    member_id = request.data.get('member_id')
-    new_password = request.data.get('new_password')
-    
-    if not member_id or not new_password:
-        return Response({'detail': 'Member ID and new password are required'}, status=400)
-        
-    try:
-        # Find the member
-        member = Member.objects.get(athlete_id=member_id)
-        
-        # Update the user's password if member has a user
-        if hasattr(member, 'user') and member.user:
-            user = member.user
-            user.password = make_password(new_password)
-            user.save()
-            
-            # Also store raw password for debugging
-            if hasattr(member, 'raw_password'):
-                member.raw_password = new_password
-                member.save()
-            
-            return Response({'detail': 'Password reset successful'})
-        else:
-            return Response({'detail': 'Member has no associated user account'}, status=404)
-            
-    except Member.DoesNotExist:
-        return Response({'detail': 'Member not found'}, status=404)
-    except Exception as e:
-        return Response({'detail': str(e)}, status=500)
-    
-
-    
-def send_welcome_sms(phone, name):
-    """Send a welcome SMS to the new member using Twilio."""
-    try:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-        message = f"Welcome to Atalan {name}, you have been registered successfully!"
-        client.messages.create(
-            body=message,
-            from_=settings.TWILIO_PHONE_NUMBER,
-            to=phone
-        )
-        print(f"Sent SMS to {phone}")
-    except Exception as e:
-        print(f"Failed to send SMS to {phone}: {e}")

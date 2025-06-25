@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-
+import { useEffect, useState } from 'react';
+import { FiChevronDown, FiChevronUp, FiEdit2, FiHelpCircle, FiMessageSquare, FiPlus, FiTrash2 } from 'react-icons/fi';
+import api from '../../utils/api';
 function AdminSupportManagement() {
   const [tickets, setTickets] = useState([]);
   const [faqCategories, setFaqCategories] = useState([]);
@@ -12,12 +12,14 @@ function AdminSupportManagement() {
   const [newFaqCategory, setNewFaqCategory] = useState('');
   const [newFaq, setNewFaq] = useState({ category: '', question: '', answer: '' });
   const [ticketFilter, setTicketFilter] = useState('all');
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const token = localStorage.getItem('token');
 
   useEffect(() => {
     fetchSupportData();
-    // eslint-disable-next-line
   }, []);
 
   const fetchSupportData = async () => {
@@ -28,12 +30,20 @@ function AdminSupportManagement() {
       };
 
       // Fetch all tickets
-      const ticketsResponse = await axios.get('http://127.0.0.1:8000/api/admin/support/tickets/', config);
+      const ticketsResponse = await api.get('admin-support/tickets/', config);
       setTickets(Array.isArray(ticketsResponse.data) ? ticketsResponse.data : []);
 
-      // Fetch FAQ categories
-      const faqCategoriesResponse = await axios.get('http://127.0.0.1:8000/api/admin/support/faq-categories/', config);
-      setFaqCategories(Array.isArray(faqCategoriesResponse.data) ? faqCategoriesResponse.data : []);
+      // Fetch FAQ categories with their FAQs
+      const faqCategoriesResponse = await api.get('admin-support/faq-categories/', config);
+      const categories = Array.isArray(faqCategoriesResponse.data) ? faqCategoriesResponse.data : [];
+      setFaqCategories(categories);
+      
+      // Initialize expanded state for categories
+      const initialExpanded = {};
+      categories.forEach(category => {
+        initialExpanded[category.id] = false;
+      });
+      setExpandedCategories(initialExpanded);
 
       setLoading(false);
     } catch (err) {
@@ -43,6 +53,13 @@ function AdminSupportManagement() {
     }
   };
 
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
   const handleTicketResponse = async (ticketId) => {
     if (!ticketResponse.trim()) {
       alert('Please enter a response message');
@@ -50,20 +67,23 @@ function AdminSupportManagement() {
     }
 
     try {
-      const response = await axios.post(`http://127.0.0.1:8000/api/admin/support/tickets/${ticketId}/respond/`, {
-        message: ticketResponse
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.post(
+        `admin-support/${ticketId}/respond/`,
+        { message: ticketResponse },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
 
       setTickets(tickets.map(ticket =>
         ticket.id === ticketId
-          ? { ...ticket, responses: [...(ticket.responses || []), response.data] }
+          ? { 
+              ...ticket, 
+              responses: [...(ticket.responses || []), response.data],
+              status: 'responded' 
+            }
           : ticket
       ));
 
       setTicketResponse('');
-      alert('Response sent successfully!');
     } catch (err) {
       console.error('Error sending response:', err);
       alert('Failed to send response. Please try again.');
@@ -71,20 +91,16 @@ function AdminSupportManagement() {
   };
 
   const handleCloseTicket = async (ticketId) => {
-    if (!window.confirm('Are you sure you want to close this ticket?')) {
-      return;
-    }
-
     try {
-      await axios.patch(`http://127.0.0.1:8000/api/admin/support/tickets/${ticketId}/close/`, {}, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await api.patch(
+        `admin-support/${ticketId}/close/`, 
+        {},
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
 
       setTickets(tickets.map(ticket =>
         ticket.id === ticketId ? { ...ticket, status: 'closed' } : ticket
       ));
-
-      alert('Ticket closed successfully!');
     } catch (err) {
       console.error('Error closing ticket:', err);
       alert('Failed to close ticket. Please try again.');
@@ -93,23 +109,19 @@ function AdminSupportManagement() {
 
   const handleCreateFaqCategory = async (e) => {
     e.preventDefault();
-
-    if (!newFaqCategory.trim()) {
-      alert('Please enter a category name');
-      return;
-    }
+    if (!newFaqCategory.trim()) return;
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/admin/support/faq-categories/create/', {
-        name: newFaqCategory
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.post(
+        'admin-support/faq-categories/',
+        { name: newFaqCategory },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
 
       setFaqCategories([...faqCategories, response.data]);
       setNewFaqCategory('');
-      setNewFaq({ ...newFaq, category: response.data.id });
-      alert('FAQ Category created successfully!');
+      setIsCreatingCategory(false);
+      setExpandedCategories(prev => ({ ...prev, [response.data.id]: true }));
     } catch (err) {
       console.error('Error creating FAQ category:', err);
       alert('Failed to create FAQ category. Please try again.');
@@ -118,36 +130,75 @@ function AdminSupportManagement() {
 
   const handleCreateFaq = async (e) => {
     e.preventDefault();
-
     if (!newFaq.category || !newFaq.question.trim() || !newFaq.answer.trim()) {
       alert('Please fill in all FAQ fields');
       return;
     }
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/admin/support/faqs/create/', newFaq, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
+      const response = await api.post(
+        'admin-support/faqs/',
+        newFaq,
+        { headers: { 'Authorization': `Bearer ${token}` 
+      ,'Content-Type': 'application/json'} }
+      );
+      console.log("FAQ created successfully!");
       setFaqCategories(faqCategories.map(category =>
         category.id === newFaq.category
-          ? { ...category, faqs: [...(category.faqs || []), response.data] }
+          ? { 
+              ...category, 
+              faqs: [...(category.faqs || []), response.data],
+              expanded: true 
+            }
           : category
       ));
 
       setNewFaq({ category: newFaq.category, question: '', answer: '' });
-      alert('FAQ created successfully!');
+      
     } catch (err) {
       console.error('Error creating FAQ:', err);
       alert('Failed to create FAQ. Please try again.');
     }
   };
 
-  // Ensure filteredTickets is always an array
+  const handleDeleteFaq = async (faqId, categoryId) => {
+    if (!window.confirm('Are you sure you want to delete this FAQ?')) return;
+
+    try {
+      await api.delete(
+        `admin-support/${faqId}/delete-faq/`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      setFaqCategories(faqCategories.map(category =>
+        category.id === categoryId
+          ? { 
+              ...category, 
+              faqs: category.faqs.filter(faq => faq.id !== faqId) 
+            }
+          : category
+      ));
+    } catch (err) {
+      console.error('Error deleting FAQ:', err);
+      alert('Failed to delete FAQ. Please try again.');
+    }
+  };
+
   const filteredTickets = Array.isArray(tickets)
-    ? (ticketFilter === 'all'
-        ? tickets
-        : tickets.filter(ticket => ticket.status === ticketFilter))
+    ? tickets.filter(ticket => {
+        if (ticketFilter === 'all') return true;
+        return ticket.status === ticketFilter;
+      })
+    : [];
+
+  const filteredCategories = Array.isArray(faqCategories)
+    ? faqCategories.filter(category => 
+        category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (category.faqs && category.faqs.some(faq => 
+          faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
+      )
     : [];
 
   if (loading) {
@@ -164,7 +215,7 @@ function AdminSupportManagement() {
         <div className="text-red-500 mb-4">{error}</div>
         <button
           onClick={fetchSupportData}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
         >
           Retry
         </button>
@@ -173,10 +224,10 @@ function AdminSupportManagement() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl">
+    <div className="container mx-auto p-4 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Support Management</h1>
-        <p className="text-gray-600">Manage support tickets and FAQs.</p>
+        <p className="text-gray-600">Manage support tickets and FAQs for your platform</p>
       </div>
 
       {/* Tabs */}
@@ -184,85 +235,119 @@ function AdminSupportManagement() {
         <nav className="flex space-x-8">
           <button
             onClick={() => setActiveTab('tickets')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
               activeTab === 'tickets'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Support Tickets
+            <FiMessageSquare className="h-5 w-5" />
+            <span>Support Tickets</span>
           </button>
           <button
             onClick={() => setActiveTab('faqs')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
               activeTab === 'faqs'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            FAQ Management
+            <FiHelpCircle className="h-5 w-5" />
+            <span>FAQ Management</span>
           </button>
         </nav>
       </div>
 
       {/* Content based on active tab */}
       {activeTab === 'tickets' && (
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Support Tickets</h2>
-            <div>
-              <select
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={ticketFilter}
-                onChange={(e) => setTicketFilter(e.target.value)}
-              >
-                <option value="all">All Tickets</option>
-                <option value="open">Open Tickets</option>
-                <option value="closed">Closed Tickets</option>
-              </select>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <h2 className="text-xl font-semibold text-gray-800">Support Tickets</h2>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative">
+                  <select
+                    className="appearance-none pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    value={ticketFilter}
+                    onChange={(e) => setTicketFilter(e.target.value)}
+                  >
+                    <option value="all">All Tickets</option>
+                    <option value="open">Open Tickets</option>
+                    <option value="closed">Closed Tickets</option>
+                    <option value="responded">Responded Tickets</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           {filteredTickets.length > 0 ? (
-            <div className="space-y-6">
+            <div className="divide-y divide-gray-200">
               {filteredTickets.map(ticket => (
                 <div
                   key={ticket.id}
-                  className={`bg-white rounded-lg shadow-md overflow-hidden ${
-                    activeTicket === ticket.id ? 'ring-2 ring-blue-500' : ''
+                  className={`transition-all duration-200 ${
+                    activeTicket === ticket.id ? 'bg-blue-50' : 'hover:bg-gray-50'
                   }`}
                 >
                   <div
-                    className={`p-4 cursor-pointer ${
-                      ticket.status === 'open' ? 'bg-blue-50 border-l-4 border-blue-500' :
-                      'bg-green-50 border-l-4 border-green-500'
+                    className={`p-6 cursor-pointer ${
+                      ticket.status === 'open' ? 'border-l-4 border-blue-500' :
+                      ticket.status === 'responded' ? 'border-l-4 border-yellow-500' :
+                      'border-l-4 border-green-500'
                     }`}
                     onClick={() => setActiveTicket(activeTicket === ticket.id ? null : ticket.id)}
                   >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-lg">{ticket.subject}</h3>
-                        <div className="flex text-sm text-gray-500 mt-1 space-x-4">
-                          <p>From: {ticket.member_name}</p>
-                          <p>Type: {ticket.type}</p>
-                          <p>Date: {new Date(ticket.date_created).toLocaleDateString()}</p>
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-start gap-3">
+                          <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
+                            ticket.status === 'open' ? 'bg-blue-100 text-blue-600' :
+                            ticket.status === 'responded' ? 'bg-yellow-100 text-yellow-600' :
+                            'bg-green-100 text-green-600'
+                          }`}>
+                            {ticket.status === 'open' ? (
+                              <FiMessageSquare className="h-5 w-5" />
+                            ) : ticket.status === 'responded' ? (
+                              <FiEdit2 className="h-5 w-5" />
+                            ) : (
+                              <FiTrash2 className="h-5 w-5" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-800">{ticket.subject}</h3>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
+                              <p>From: {ticket.member_name}</p>
+                              <p>Type: {ticket.type}</p>
+                              <p>Date: {new Date(ticket.date_created).toLocaleDateString()}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          ticket.status === 'open' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                          ticket.status === 'responded' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
                         }`}>
-                          {ticket.status === 'open' ? 'Open' : 'Closed'}
+                          {ticket.status === 'open' ? 'Open' : 
+                           ticket.status === 'responded' ? 'Responded' : 'Closed'}
                         </span>
-                        {ticket.status === 'open' && (
+                        {ticket.status !== 'closed' && (
                           <button
-                            onClick={e => {
+                            onClick={(e) => {
                               e.stopPropagation();
                               handleCloseTicket(ticket.id);
                             }}
-                            className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full hover:bg-red-200"
+                            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                            title="Close ticket"
                           >
-                            Close
+                            <FiTrash2 className="h-5 w-5" />
                           </button>
                         )}
                       </div>
@@ -270,40 +355,52 @@ function AdminSupportManagement() {
                   </div>
 
                   {activeTicket === ticket.id && (
-                    <div>
-                      <div className="p-4 border-b border-gray-200">
-                        <p className="text-gray-700">{ticket.message}</p>
+                    <div className="px-6 pb-6 pt-2 bg-white">
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-medium text-gray-700 mb-2">Original Message:</h4>
+                        <p className="text-gray-700 whitespace-pre-line">{ticket.message}</p>
                       </div>
 
                       {ticket.responses && ticket.responses.length > 0 && (
-                        <div className="p-4 bg-gray-50">
-                          <h4 className="font-medium text-sm mb-3">Responses:</h4>
+                        <div className="mt-6">
+                          <h4 className="font-medium text-gray-700 mb-3">Responses:</h4>
                           <div className="space-y-3">
                             {ticket.responses.map((response, index) => (
-                              <div key={index} className="bg-white p-3 rounded border border-gray-200">
-                                <div className="flex justify-between mb-1">
-                                  <p className="font-medium text-sm">{response.author}</p>
-                                  <p className="text-xs text-gray-500">{new Date(response.date_created).toLocaleDateString()}</p>
+                              <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+                                <div className="flex justify-between items-center mb-2">
+                                  <p className="font-medium text-sm text-gray-800">{response.author}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(response.date_created).toLocaleString()}
+                                  </p>
                                 </div>
-                                <p className="text-sm text-gray-700">{response.message}</p>
+                                <p className="text-gray-700 whitespace-pre-line">{response.message}</p>
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
 
-                      {ticket.status === 'open' && (
-                        <div className="p-4 bg-white border-t border-gray-200">
-                          <h4 className="font-medium text-sm mb-3">Add Response:</h4>
+                      {ticket.status !== 'closed' && (
+                        <div className="mt-6">
+                          <h4 className="font-medium text-gray-700 mb-3">Add Response:</h4>
                           <div className="space-y-3">
                             <textarea
-                              placeholder="Enter your response..."
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              rows="3"
+                              placeholder="Type your response here..."
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              rows="4"
                               value={ticketResponse}
                               onChange={e => setTicketResponse(e.target.value)}
                             ></textarea>
-                            <div className="text-right">
+                            <div className="flex justify-end gap-3">
+                              <button
+                                onClick={() => {
+                                  setTicketResponse('');
+                                  setActiveTicket(null);
+                                }}
+                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                              >
+                                Cancel
+                              </button>
                               <button
                                 onClick={() => handleTicketResponse(ticket.id)}
                                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -320,138 +417,217 @@ function AdminSupportManagement() {
               ))}
             </div>
           ) : (
-            <div className="text-center p-10 bg-white rounded-lg shadow">
-              <p className="text-gray-500">No tickets found matching the filter.</p>
+            <div className="p-10 text-center">
+              <div className="text-gray-400 mb-4">
+                <FiMessageSquare className="h-12 w-12 mx-auto" />
+              </div>
+              <p className="text-gray-500">No tickets found matching the selected filter.</p>
             </div>
           )}
         </div>
       )}
 
       {activeTab === 'faqs' && (
-        <div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Create FAQ Category */}
-            <div className="md:col-span-1">
-              <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-                <h3 className="font-medium text-gray-700 mb-3">Create Category</h3>
-                <form onSubmit={handleCreateFaqCategory}>
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      placeholder="New category name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={newFaqCategory}
-                      onChange={e => setNewFaqCategory(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    Add Category
-                  </button>
-                </form>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <h2 className="text-xl font-semibold text-gray-800">FAQ Management</h2>
+              <div className="relative w-full md:w-64">
+                <input
+                  type="text"
+                  placeholder="Search FAQs..."
+                  className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
               </div>
+            </div>
+          </div>
 
-              <div className="bg-white rounded-lg shadow-md p-4">
-                <h3 className="font-medium text-gray-700 mb-3">Categories</h3>
-                <ul className="space-y-2">
-                  {Array.isArray(faqCategories) && faqCategories.map(category => (
-                    <li key={category.id}>
-                      <div className="flex justify-between items-center px-3 py-2 bg-gray-100 rounded-md">
-                        <span>{category.name}</span>
-                        <span className="text-xs text-gray-500">{category.faqs?.length || 0} FAQs</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-6">
+            {/* Categories Column */}
+            <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-200">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-800">Categories</h3>
+                  <button
+                    onClick={() => setIsCreatingCategory(!isCreatingCategory)}
+                    className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                    title={isCreatingCategory ? 'Cancel' : 'Add category'}
+                  >
+                    <FiPlus className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {isCreatingCategory && (
+                  <form onSubmit={handleCreateFaqCategory} className="mb-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="New category name"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={newFaqCategory}
+                        onChange={e => setNewFaqCategory(e.target.value)}
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="space-y-2">
+                  {filteredCategories.length > 0 ? (
+                    filteredCategories.map(category => (
+                      <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div
+                          className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                          onClick={() => toggleCategory(category.id)}
+                        >
+                          <span className="font-medium text-gray-800">{category.name}</span>
+                          <span className="flex items-center">
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full mr-2">
+                              {category.faqs?.length || 0}
+                            </span>
+                            {expandedCategories[category.id] ? (
+                              <FiChevronUp className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <FiChevronDown className="h-4 w-4 text-gray-500" />
+                            )}
+                          </span>
+                        </div>
+                        {expandedCategories[category.id] && category.faqs && category.faqs.length > 0 && (
+                          <div className="border-t border-gray-200 divide-y divide-gray-200">
+                            {category.faqs.map(faq => (
+                              <div key={faq.id} className="p-3 bg-gray-50">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="font-medium text-gray-800">{faq.question}</p>
+                                    <p className="text-sm text-gray-500 line-clamp-2">{faq.answer}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDeleteFaq(faq.id, category.id)}
+                                    className="text-red-400 hover:text-red-600 transition-colors"
+                                    title="Delete FAQ"
+                                  >
+                                    <FiTrash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      No categories found matching your search.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Create FAQ */}
-            <div className="md:col-span-3">
-              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h2 className="text-lg font-semibold mb-4">Create New FAQ</h2>
-                <form onSubmit={handleCreateFaq}>
-                  <div className="mb-4">
-                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select
-                      id="category"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={newFaq.category}
-                      onChange={e => setNewFaq({ ...newFaq, category: e.target.value })}
-                      required
-                    >
-                      <option value="">Select a category</option>
-                      {Array.isArray(faqCategories) && faqCategories.map(category => (
-                        <option key={category.id} value={category.id}>{category.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="mb-4">
-                    <label htmlFor="question" className="block text-sm font-medium text-gray-700 mb-1">Question</label>
-                    <input
-                      id="question"
-                      type="text"
-                      placeholder="Enter question"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={newFaq.question}
-                      onChange={e => setNewFaq({ ...newFaq, question: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label htmlFor="answer" className="block text-sm font-medium text-gray-700 mb-1">Answer</label>
-                    <textarea
-                      id="answer"
-                      placeholder="Enter answer"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows="4"
-                      value={newFaq.answer}
-                      onChange={e => setNewFaq({ ...newFaq, answer: e.target.value })}
-                      required
-                    ></textarea>
-                  </div>
-                  <div className="text-right">
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      Add FAQ
-                    </button>
-                  </div>
-                </form>
-              </div>
+            {/* FAQ Creation Column */}
+            <div className="lg:col-span-2 p-6">
+              <h3 className="font-semibold text-gray-800 mb-4">Create New FAQ</h3>
+              <form onSubmit={handleCreateFaq} className="space-y-4">
+                <div>
+                  <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <select
+                    id="category-select"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={newFaq.category}
+                    onChange={e => setNewFaq({ ...newFaq, category: e.target.value })}
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    {faqCategories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* View/Edit Existing FAQs */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-semibold mb-4">Existing FAQs</h2>
-                {Array.isArray(faqCategories) && faqCategories.map(category => (
-                  <div key={category.id} className="mb-6 last:mb-0">
-                    <h3 className="text-md font-semibold mb-3 pb-2 border-b border-gray-200">{category.name}</h3>
-                    {category.faqs && category.faqs.length > 0 ? (
-                      <div className="space-y-4">
-                        {category.faqs.map((faq, index) => (
-                          <div key={index} className="border border-gray-200 rounded-md p-4">
-                            <h4 className="font-medium text-gray-800 mb-2">{faq.question}</h4>
-                            <p className="text-gray-600 text-sm">{faq.answer}</p>
-                            <div className="flex justify-end mt-2 space-x-2">
-                              <button className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200">
-                                Edit
-                              </button>
-                              <button className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded hover:bg-red-200">
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                <div>
+                  <label htmlFor="question" className="block text-sm font-medium text-gray-700 mb-1">
+                    Question
+                  </label>
+                  <input
+                    id="question"
+                    type="text"
+                    placeholder="What is...?"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={newFaq.question}
+                    onChange={e => setNewFaq({ ...newFaq, question: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="answer" className="block text-sm font-medium text-gray-700 mb-1">
+                    Answer
+                  </label>
+                  <textarea
+                    id="answer"
+                    placeholder="Provide a detailed answer..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[150px]"
+                    value={newFaq.answer}
+                    onChange={e => setNewFaq({ ...newFaq, answer: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewFaq({ category: '', question: '', answer: '' })}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Create FAQ
+                  </button>
+                </div>
+              </form>
+
+              {/* FAQ Preview */}
+              {newFaq.question && (
+                <div className="mt-8">
+                  <h3 className="font-semibold text-gray-800 mb-3">Preview</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h4 className="font-medium text-lg text-gray-800 mb-2">{newFaq.question}</h4>
+                    <div className="prose max-w-none text-gray-700">
+                      {newFaq.answer.split('\n').map((paragraph, i) => (
+                        <p key={i}>{paragraph}</p>
+                      ))}
+                    </div>
+                    {newFaq.category && (
+                      <div className="mt-3">
+                        <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                          {faqCategories.find(c => c.id === newFaq.category)?.name || 'Unknown Category'}
+                        </span>
                       </div>
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">No FAQs in this category yet.</p>
                     )}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

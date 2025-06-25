@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
+import api from '../utils/api';
 const LoginPage = () => {
   const [loginType, setLoginType] = useState('member');
   const [username, setUsername] = useState('');
@@ -21,29 +20,16 @@ const LoginPage = () => {
       let response;
 
       if (loginType === 'member') {
-        response = await axios.post(`${BACKEND_URL}/api/member-login/`, { username, password });
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('refreshToken', response.data.refresh || '');
+        response = await api.post(`members/login/`, { username, password });
+        localStorage.setItem('access_token', response.data.token);
         localStorage.setItem('userType', 'member');
         localStorage.setItem('memberId', response.data.member_id);
-        localStorage.setItem('memberID', response.data.member_id);
-        localStorage.setItem('userId', response.data.user_id);
         localStorage.setItem('name', response.data.name);
         localStorage.setItem('isAuthenticated', 'true');
         setTimeout(() => navigate('/member-dashboard'), 300);
-      } else if (loginType === 'trainer') {
-        response = await axios.post(`${BACKEND_URL}/api/trainer-login/`, { username, password });
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('refreshToken', response.data.refresh || '');
-        localStorage.setItem('userType', 'trainer');
-        localStorage.setItem('trainerId', response.data.trainer_id);
-        localStorage.setItem('userId', response.data.user_id);
-        localStorage.setItem('name', response.data.name);
-        localStorage.setItem('isAuthenticated', 'true');
-        setTimeout(() => navigate('/trainer-dashboard'), 300);
       } else if (loginType === 'admin') {
-        response = await axios.post(`${BACKEND_URL}/api/admin-login/`, { username, password });
-        localStorage.setItem('token', response.data.token);
+        response = await api.post(`admin-dashboard/login/`, { username, password });
+        localStorage.setItem('access_token', response.data.token);  // Changed from 'token' to 'access_token' for consistency
         localStorage.setItem('refreshToken', response.data.refresh || '');
         localStorage.setItem('userType', 'admin');
         localStorage.setItem('userId', response.data.user_id);

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
+import api from '../../utils/api';
 
 const MemberCredentials = () => {
   const [members, setMembers] = useState([]);
@@ -72,7 +73,7 @@ const MemberCredentials = () => {
       }
       
       // Use debug endpoint for fetching member credentials
-      const membersResponse = await axios.get('http://127.0.0.1:8000/api/debug/list-members/', {
+      const membersResponse = await api.get('debug/list-members/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -167,8 +168,8 @@ const handlePasswordReset = async (e) => {
     
     // Try API endpoint with PUT method instead of POST
     const response = await axios({
-      method: 'put', // Try PUT instead of POST
-      url: `http://127.0.0.1:8000/api/admin/reset-member-password/`,
+      method: 'api', // Try PUT instead of POST
+      url: `admin/reset-member-password/`,
       data: {
         member_id: resetMemberId,
         new_password: newPassword

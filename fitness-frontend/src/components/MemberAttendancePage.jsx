@@ -1,6 +1,6 @@
 // src/components/MemberAttendanceHistory.jsx
-import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
 
 const MemberAttendanceHistory = ({ memberId }) => {
   const [attendanceRecords, setAttendanceRecords] = useState([]);

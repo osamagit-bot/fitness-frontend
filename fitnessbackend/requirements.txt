@@ -1,6 +1,6 @@
-Django>=5.2,<6
-gunicorn
-djangorestframework
+channels
+channels-redis
+daphne
 djangorestframework-simplejwt
 django-cors-headers
 django-crontab

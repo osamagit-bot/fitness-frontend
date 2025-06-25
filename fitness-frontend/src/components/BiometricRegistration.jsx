@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import axios from 'axios';
 
 const BiometricRegistration = ({ memberId, onSuccess, onCancel }) => {
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
@@ -10,8 +9,8 @@ const BiometricRegistration = ({ memberId, onSuccess, onCancel }) => {
     setErrorMessage('');
     try {
       // 1. Get registration options from backend
-      const optionsRes = await axios.post(
-        'http://127.0.0.1:8000/api/biometrics/webauthn/register-options/',
+      const optionsRes = await api.post(
+        'biometrics/register-options/',
         { athlete_id: memberId },
         { withCredentials: true }
       );
@@ -40,8 +39,8 @@ const BiometricRegistration = ({ memberId, onSuccess, onCancel }) => {
         athlete_id: memberId,
       };
 
-      await axios.post(
-        'http://127.0.0.1:8000/api/biometrics/webauthn/register-complete/',
+      await api.post(
+        'biometrics/register-complete/',
         credentialData,
         { withCredentials: true }
       );

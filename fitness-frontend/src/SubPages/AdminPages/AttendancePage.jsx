@@ -1,9 +1,10 @@
 // src/pages/AttendancePage.jsx
-import React, { useState } from 'react';
-import { Tabs, Tab } from '@mantine/core';
+import { Tab, Tabs } from '@mantine/core';
+import { useState } from 'react';
+import AttendanceHistory from '../components/AttendanceHistory';
 import BiometricCheckIn from '../components/BiometricCheckIn';
 import BiometricRegistration from '../components/BiometricRegistration';
-import AttendanceHistory from '../components/AttendanceHistory';
+
 
 const AttendancePage = () => {
   const [refreshHistory, setRefreshHistory] = useState(false);

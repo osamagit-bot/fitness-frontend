@@ -3,8 +3,10 @@ from django.contrib.auth.models import BaseUserManager, AbstractUser, Group, Per
 from django.core.validators import MinLengthValidator
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.contrib.auth.models import User
 from django.conf import settings
 import uuid
+
 
 
 
@@ -34,6 +36,8 @@ class CustomUserManager(BaseUserManager):
             raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
+    
+    
 
 class CustomUser(AbstractUser):
     class Role(models.TextChoices):
@@ -60,6 +64,7 @@ class CustomUser(AbstractUser):
         max_length=150,
         blank=True,
         null=True,
+        unique=True,
         validators=[MinLengthValidator(4)],
         verbose_name=_('Username'),
         help_text=_('Optional. 4-150 characters.')
@@ -109,12 +114,16 @@ class CustomUser(AbstractUser):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
 
+
+
+
+
 class Member(models.Model):
     user = models.OneToOneField(
         CustomUser, 
         on_delete=models.CASCADE, 
         primary_key=True,
-        verbose_name=_('User Account')
+        verbose_name=_('User Account'),
     )
     athlete_id = models.CharField(
         max_length=20,
@@ -185,7 +194,7 @@ class Member(models.Model):
         help_text=_('Date when membership expires')
     )
     
-    # Adding new fields for box number and time slot
+   
     box_number = models.CharField(
         max_length=20,
         blank=True,
@@ -207,6 +216,8 @@ class Member(models.Model):
         verbose_name=_('Time Slot'),
         help_text=_('Preferred workout time')
     )
+    notified_expired = models.BooleanField(default=False)  
+    delete_requested = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = _('Member')
@@ -217,7 +228,9 @@ class Member(models.Model):
         return f"{self.first_name} {self.last_name} ({self.athlete_id})"
 
 
-# In models.py - add this with your existing models
+
+
+
 class Product(models.Model):
     product_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
@@ -236,7 +249,7 @@ class Product(models.Model):
             return self.image.url
         return None
     
-# Add this to your models.py
+
 
 
 
@@ -264,6 +277,7 @@ class Trainer(models.Model):
         return f"{self.first_name} {self.last_name} ({self.trainer_id})"
 
 
+
 class Training(models.Model):
     TRAINING_TYPES = [
         ('fitness', 'Fitness'),
@@ -283,19 +297,9 @@ class Training(models.Model):
     def __str__(self):
         return f"{self.get_type_display()} with {self.trainer.first_name} ({self.datetime.strftime('%Y-%m-%d %H:%M')})"
     
-    # Inside your models.py file (e.g., users/models.py)
 
-from django.db import models
-from django.contrib.auth.models import User
 
-# Add this to users/models.py - replace any existing Attendance model
 
-# In users/models.py
-
-# users/models.py - find your Attendance model and update it
-
-# users/models.py
-# Add this to users/models.py
 class Attendance(models.Model):
     member = models.ForeignKey(
         Member, 
@@ -336,6 +340,8 @@ class Attendance(models.Model):
 
 
 
+
+
 class WebAuthnCredential(models.Model):
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='webauthn_credentials')
     credential_id = models.CharField(max_length=255)
@@ -352,30 +358,47 @@ class WebAuthnCredential(models.Model):
     
 
 
-# In users/models.py
 
-# Add a Post model for the community feature
+
 class Post(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='posts')
-    date_created = models.DateTimeField(auto_now_add=True)
-    likes = models.IntegerField(default=0)
-    
+    date_created = models.DateTimeField(auto_now_add=True)  
+    hidden = models.BooleanField(default=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='posts')
+    likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked_posts', blank=True)  
     def __str__(self):
         return self.title
+    
+class Comment(models.Model):
+    post = models.ForeignKey('Post', related_name='comments', on_delete=models.CASCADE)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='comments', on_delete=models.CASCADE)  # or your Member model
+    content = models.TextField()
+    date_created = models.DateTimeField(auto_now_add=True)
 
-# Announcement model for gym announcements
+    def __str__(self):
+        return f"Comment by {self.author} on {self.post}"
+
+# Announcement 
 class Announcement(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
-    date_created = models.DateTimeField(auto_now_add=True)
+    date_created = models.DateTimeField(auto_now_add=True)  
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='announcements')
-    
+
     def __str__(self):
         return self.title
+    
+    
+    
+"""
 
-# Challenge model for fitness challenges
+class Community(models.Model):
+    name = models.CharField(max_length=100)
+"""
+
+
+# Challenge model 
 class Challenge(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -383,11 +406,12 @@ class Challenge(models.Model):
     end_date = models.DateField()
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_challenges')
     participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='challenges', blank=True)
-    
+    date_created = models.DateTimeField(auto_now_add=True)  # Add this!
+
     def __str__(self):
         return self.title
 
-# Now the Comment model will work
+# The Comment model 
 class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments')
@@ -397,7 +421,7 @@ class Comment(models.Model):
     def __str__(self):
         return f"Comment by {self.author.username} on {self.post.title}"
 
-# Support ticket model - this looks fine as is since it references Member directly
+# Support ticket model 
 class SupportTicket(models.Model):
     STATUS_CHOICES = (
         ('open', 'Open'),
@@ -410,6 +434,7 @@ class SupportTicket(models.Model):
         ('technical', 'Technical Issue'),
         ('billing', 'Billing Question'),
         ('feedback', 'Feedback'),
+        ('complaint', 'Complaint'),
     )
     
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='support_tickets')
@@ -422,7 +447,7 @@ class SupportTicket(models.Model):
     def __str__(self):
         return f"Ticket #{self.id}: {self.subject}"
 
-# Support ticket response
+# Support ticket 
 class TicketResponse(models.Model):
     ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='responses')
     responder = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ticket_responses')
@@ -432,7 +457,7 @@ class TicketResponse(models.Model):
     def __str__(self):
         return f"Response to ticket #{self.ticket.id}"
 
-# FAQ Category model - this is fine as is
+# FAQ Category model 
 class FAQCategory(models.Model):
     name = models.CharField(max_length=100)
     
@@ -442,7 +467,7 @@ class FAQCategory(models.Model):
     class Meta:
         verbose_name_plural = "FAQ Categories"
 
-# FAQ model - this is fine as is
+# FAQ model 
 class FAQ(models.Model):
     category = models.ForeignKey(FAQCategory, on_delete=models.CASCADE, related_name='faqs')
     question = models.CharField(max_length=255)
@@ -450,5 +475,45 @@ class FAQ(models.Model):
     
     def __str__(self):
         return self.question
+    
+class Purchase(models.Model):
+    member = models.ForeignKey(Member, on_delete=models.SET_NULL,null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='purchases')
+    quantity = models.PositiveIntegerField(default=1)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.member} bought {self.quantity} x {self.product.name} on {self.date.strftime('%Y-%m-%d %H:%M')}"
+    
+class Notification(models.Model):
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
+    message = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+  
+  
+  
+  
+  
+  
+class TrainingSchedule(models.Model):
+    member = models.OneToOneField(Member, on_delete=models.CASCADE, related_name='training_schedule')
+    monday = models.TextField(blank=True, default='')
+    tuesday = models.TextField(blank=True, default='')
+    wednesday = models.TextField(blank=True, default='')
+    thursday = models.TextField(blank=True, default='')
+    friday = models.TextField(blank=True, default='')
+    saturday = models.TextField(blank=True, default='')
+    sunday = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return f"{self.member}'s Training Schedule"
+    
+    
+    
+    
+    
+    
     
     

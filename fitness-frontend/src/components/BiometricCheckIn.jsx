@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { faCheck, faFingerprint, faSpinner, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFingerprint, faCheck, faTimes, faSpinner } from '@fortawesome/free-solid-svg-icons';
-
+import { useEffect, useState } from 'react';
+import api from '../../utils/api';
 // API base URL
-const API_BASE_URL = 'http://127.0.0.1:8000';
+
 
 // Helper functions for ArrayBuffer conversion
 const base64ToArrayBuffer = (base64) => {
@@ -49,7 +48,7 @@ const BiometricCheckIn = ({ memberId, onSuccess, onCancel }) => {
       console.log("Starting fingerprint verification for member ID:", memberId);
       
       // 1. Get authentication options from server
-      const optionsResponse = await axios.post(`${API_BASE_URL}/api/biometrics/webauthn/auth-options/`, {
+      const optionsResponse = await api.post(`biometrics/webauthn/auth-options/`, {
         athlete_id: memberId  // Use athlete_id as that's what the backend expects
       }, {
         headers: {
@@ -109,7 +108,7 @@ console.log("Set rpId to match current hostname:", options.publicKey.rpId);
       console.log("Transformed credential:", transformedCredential);
       
       // 4. Send the credential to the server for verification
-      const verificationResponse = await axios.post(`${API_BASE_URL}/api/biometrics/webauthn/check-in/`, {
+      const verificationResponse = await api.post(`biometrics/check-in/`, {
         athlete_id: memberId,
         credential: transformedCredential,
         rp_id: window.location.hostname // Add this line

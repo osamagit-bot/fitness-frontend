@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import BiometricRegistration from "../../components/BiometricRegistration.jsx";
+import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { motion, AnimatePresence } from 'framer-motion';
+import BiometricRegistration from "../../components/BiometricRegistration.jsx";
+import api from '../../utils/api';
+
 
 const MemberAttendancePage = () => {
   const [showBiometricModal, setShowBiometricModal] = useState(false);
@@ -40,7 +41,7 @@ const MemberAttendancePage = () => {
       }
       setMemberId(id);
       if (!id) throw new Error('No member ID found. Please log in again.');
-      const response = await axios.get(`${API_BASE_URL}/api/member-details/${id}/`);
+      const response = await api.get(`members/${id}/profile/`);
       setMemberData(response.data);
     } catch (err) {
       setError(err.message || 'Failed to load member information.');
@@ -51,7 +52,7 @@ const MemberAttendancePage = () => {
 
   const fetchAttendance = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/attendance/history/?member_id=${memberId}`);
+      const res = await api.get(`attendance/?member_id=${memberId}/history/`);
       let records = Array.isArray(res.data) ? res.data : res.data.attendance || [];
       setAttendance(records);
 

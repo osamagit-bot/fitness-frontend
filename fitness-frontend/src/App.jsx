@@ -1,52 +1,53 @@
-import { Route, Routes, Navigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
-// Pages and Components
-import LoginPage from './SubPages/Loginpage';
-import Register from './SubPages/Register';
-import Navbar from './components/Navbar';
-import Home from './SubPages/Home';
-import Hero from './components/Hero';
+// Components
 import About from './components/About';
-import Footer from './components/Footer';
-import TrainingSection from './components/Training';
-import Products from './components/Products';
 import ContactSection from './components/Contact';
-import Testimonials from './components/Testimonials';
 import FAQ from './components/FAQ';
-import HelpSupport from './components/Help&Support';
+import Footer from './components/Footer';
+import HelpSupport from './components/HelpSupport';
+import Hero from './components/Hero';
+import Navbar from './components/Navbar';
+import Products from './components/Products';
+import Testimonials from './components/Testimonials';
 import TrainerProfiles from './components/TrainerProfiles';
-import AdminDashboard from './components/AdminDashboard';
+import TrainingSection from './components/Training';
+
+// Public Pages
+import Home from './SubPages/Home';
+import LoginPage from './SubPages/Loginpage';
+
+import SchedulePage from './SubPages/Schedule';
 
 // Admin Pages
-import DashboardPage from './SubPages/DashboardPage';
-import RegisterPage from './SubPages/RegisterPage';
-import SchedulePage from './SubPages/Schedule';
-import ProductsPage from './SubPages/ProductsPage';
-import TrainingsPage from './SubPages/TrainingsPage';
-import AttendancePage from './SubPages/AttendancePage';
-import RevenuePage from './SubPages/RevenuePage';
-import MembersPage from './SubPages/MembersPage';
+import AttendancePage from './SubPages/AdminPages/AdminAttendancePage';
+import AdminCommunityManagement from './SubPages/AdminPages/AdminCommunityManagement';
+import AdminDashboard from './SubPages/AdminPages/AdminDashboard';
+import AdminSettingsPage from './SubPages/AdminPages/AdminSettingsPage';
+import AdminSupportManagement from './SubPages/AdminPages/AdminSupportManagement';
+import DashboardPage from './SubPages/AdminPages/DashboardPage';
+import MembersPage from './SubPages/AdminPages/MembersPage';
+import ProductsPage from './SubPages/AdminPages/ProductsPage';
+import RegisterPage from './SubPages/AdminPages/RegisterPage';
+import RevenuePage from './SubPages/AdminPages/RevenuePage';
+import TrainersPage from './SubPages/AdminPages/TrainersPage';
+import TrainingsPage from './SubPages/AdminPages/TrainingsPage';
 
-// Member Dashboard Pages
+// Member Pages
+import MemberAttendancePage from './SubPages/MemberPages/MemberAttendancePage';
+import MemberCommunityPage from './SubPages/MemberPages/MemberCommunityPage';
 import MemberDashboard from './SubPages/MemberPages/MemberDashboard';
 import MemberDashboardPage from './SubPages/MemberPages/MemberDashboardPage';
 import MemberProfilePage from './SubPages/MemberPages/MemberProfilePage';
-import MemberAttendancePage from './SubPages/MemberPages/MemberAttendancePage';
-import MemberTrainingSessionsPage from './SubPages/MemberPages/MemberTrainingSessionsPage';
-import ShopPage from './SubPages/MemberPages/ShopPage';
-import MemberCommunityPage from './SubPages/MemberPages/MemberCommunityPage';
+import MemberSettingsPage from './SubPages/MemberPages/MemberSettingsPage';
 import MemberSupportPage from './SubPages/MemberPages/MemberSupportPage';
+import MemberTrainingSessionsPage from './SubPages/MemberPages/MemberTrainingSessionsPage';
 
-// Admin Community & Support Pages
-import AdminCommunityManagement from './SubPages/AdminPages/AdminCommunityManagement';
-import AdminSupportManagement from './SubPages/AdminPages/AdminSupportManagement';
-
-// Trainer Dashboard
+// Trainer Pages
 import TrainerDashboard from './SubPages/TrainerPages/TrainerDashboard';
-import TrainersPage from './SubPages/TrainersPage';
 
 const ProtectedRoute = ({ children, userType }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('token') !== null;
@@ -80,7 +81,6 @@ const MemberRoute = ({ children }) => {
 
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('token') !== null;
   const userType = localStorage.getItem('userType');
-
   if (!isAuthenticated || userType !== 'member') return <Navigate to="/login" replace />;
   return children;
 };
@@ -141,13 +141,6 @@ function HomePage() {
     }
   }, []);
 
-  const toggleMenu = () => {
-    const menuList = document.getElementById("menuList");
-    if (menuList) {
-      menuList.style.maxHeight = menuList.style.maxHeight === "0px" ? "300px" : "0px";
-    }
-  };
-
   return (
     <>
       <Hero />
@@ -173,7 +166,7 @@ function App() {
         {/* Public */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<Register />} />
+       
         <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/helpandsupportpage" element={<HelpSupport />} />
 
@@ -194,6 +187,7 @@ function App() {
           <Route path="trainers" element={<TrainersPage />} />
           <Route path="community" element={<AdminCommunityManagement />} />
           <Route path="support" element={<AdminSupportManagement />} />
+          <Route path="adminsettings" element={<AdminSettingsPage />} />
         </Route>
 
         {/* Member */}
@@ -206,8 +200,9 @@ function App() {
           <Route path="profile" element={<MemberProfilePage />} />
           <Route path="attendance" element={<MemberAttendancePage />} />
           <Route path="trainings" element={<MemberTrainingSessionsPage />} />
-     <Route path="shop" element={<ShopPage />} />
+          <Route path="settings" element={<MemberSettingsPage />} />
           <Route path="community" element={<MemberCommunityPage />} />
+          <Route path="community/:communityId" element={<MemberCommunityPage />} />
           <Route path="support" element={<MemberSupportPage />} />
         </Route>
 
@@ -223,7 +218,7 @@ function App() {
           <Route path="members" element={<div className="p-4"><h1 className="text-2xl font-bold">My Members</h1></div>} />
         </Route>
 
-        {/* Redirect fallback */}
+        {/* Fallbacks */}
         <Route path="/debug-member-dashboard" element={<Navigate to="/member-dashboard" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import api from '../../utils/api';
 
 function MemberSupportPage() {
   const [tickets, setTickets] = useState([]);
@@ -16,67 +16,73 @@ function MemberSupportPage() {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    // Fetch support data
     const fetchSupportData = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        const memberID = localStorage.getItem('memberID');
+        const memberID = localStorage.getItem('athleteID');
         if (!memberID) {
           setError('Member ID not found. Please login again.');
           setLoading(false);
           return;
         }
-        try {
-          const config = {
-            headers: { 'Authorization': `Bearer ${token}` }
-          };
-          const faqResponse = await axios.get('http://127.0.0.1:8000/api/support/faqs/', config);
-          setFaqCategories(Array.isArray(faqResponse.data) ? faqResponse.data : []);
-          if (Array.isArray(faqResponse.data) && faqResponse.data.length > 0) {
-            setActiveCategory(faqResponse.data[0].id);
-          }
-          // Then fetch tickets with memberID
-          const ticketsConfig = {
-            headers: { 'Authorization': `Bearer ${token}` },
-            params: { memberID }
-          };
-          const ticketsResponse = await axios.get('http://127.0.0.1:8000/api/support/tickets/', ticketsConfig);
-          setTickets(Array.isArray(ticketsResponse.data) ? ticketsResponse.data : []);
-        } catch (err) {
-          console.error("Error fetching support data:", err);
-          setError('Failed to load support content. Please try again later.');
+  
+        const config = {
+          headers: { 'Authorization': `Bearer ${token}` }
+        };
+  
+        // Fetch FAQ categories
+        const faqResponse = await api.get('faq-categories/faqs/', config);
+        const categories = Array.isArray(faqResponse.data) ? faqResponse.data : [];
+        setFaqCategories(categories);
+        if (categories.length > 0) {
+          setActiveCategory(categories[0].id);
         }
-        setLoading(false);
+  
+        // Fetch tickets with memberID as query param
+        const ticketsResponse = await api.get('admin-support/tickets/', {
+          headers: { 'Authorization': `Bearer ${token}` },
+          params: { memberID }
+        });
+        setTickets(Array.isArray(ticketsResponse.data) ? ticketsResponse.data : []);
+  
       } catch (err) {
-        console.error('Error fetching support data:', err);
+        console.error("Error fetching support data:", err);
         setError('Failed to load support content. Please try again later.');
+      } finally {
         setLoading(false);
       }
     };
+  
     fetchSupportData();
-  }, [memberID, token]);
-
+  }, []);
   const submitFeedback = async (e) => {
     e.preventDefault();
+  
+    const memberID = localStorage.getItem("memberID"); // ✅ correct key
+  
+    console.log("DEBUG: memberID =", memberID);
+  
     if (!feedback.subject.trim() || !feedback.message.trim()) {
       alert('Please fill in both subject and message');
       return;
     }
+  
+    if (!memberID) {
+      alert('Member ID not found. Please login again.');
+      return;
+    }
+  
     try {
-      if (!memberID) {
-        alert('Member ID not found. Please login again.');
-        return;
-      }
-      // Submit ticket to API
-      const response = await axios.post('http://127.0.0.1:8000/api/support/tickets/create/', {
+      const response = await api.post('support/tickets/create/', {
         type: feedback.type,
         subject: feedback.subject,
         message: feedback.message,
-        memberID
+        memberID: memberID // ✅ correct format
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+  
       setTickets([response.data, ...(Array.isArray(tickets) ? tickets : [])]);
       setFeedback({ type: 'general', subject: '', message: '' });
       alert('Your ticket has been submitted. We will respond as soon as possible.');
@@ -85,6 +91,7 @@ function MemberSupportPage() {
       alert('Failed to submit ticket. Please try again.');
     }
   };
+  
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
