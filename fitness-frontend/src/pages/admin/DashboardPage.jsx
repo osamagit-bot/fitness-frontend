@@ -298,6 +298,10 @@ function EnhancedDashboardPage() {
       let memberList = Array.isArray(response.data)
         ? response.data.slice(0, 5)
         : response.data.results?.slice(0, 5) || [];
+      
+      // Debug: Log the member data structure
+      console.log("Member data structure:", memberList[0]);
+      
       setRecentMembers(memberList);
     } catch (error) {
       console.error("Error fetching recent members:", error);
@@ -1063,7 +1067,7 @@ function EnhancedDashboardPage() {
                                 {member.first_name} {member.last_name}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {member.email || "No email"}
+                                {member.user_email || member.email || "No email"}
                               </div>
                             </div>
                           </div>
@@ -1080,7 +1084,7 @@ function EnhancedDashboardPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(member.registration_date) || "Recent"}
+                        {formatDate(member.start_date) || formatDate(member.registration_date) || "Recent"}
                         </td>
                       </motion.tr>
                     ))}
