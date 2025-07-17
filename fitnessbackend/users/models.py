@@ -116,6 +116,20 @@ class CustomUser(AbstractUser):
 
 
 
+# models.py
+
+class MembershipPayment(models.Model):
+    member = models.ForeignKey('Member', on_delete=models.SET_NULL, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    member_name = models.CharField(max_length=255, null=True) 
+    paid_on = models.DateField(auto_now_add=True)
+    description = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        if self.member:
+            return f"{self.member} paid {self.amount} on {self.paid_on}"
+        return f"Deleted Member paid {self.amount} on {self.paid_on}"
+
 
 
 class Member(models.Model):
@@ -125,6 +139,7 @@ class Member(models.Model):
         primary_key=True,
         verbose_name=_('User Account'),
     )
+    is_active = models.BooleanField(default=True)
     athlete_id = models.CharField(
         max_length=20,
         unique=True,
@@ -225,8 +240,7 @@ class Member(models.Model):
         ordering = ['-start_date']
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.athlete_id})"
-
+     return f"{self.first_name} {self.last_name}" + (" (Inactive)" if not self.is_active else "")
 
 
 
@@ -363,6 +377,7 @@ class WebAuthnCredential(models.Model):
 class Post(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
+    
     date_created = models.DateTimeField(auto_now_add=True)  
     hidden = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='posts')
@@ -384,12 +399,14 @@ class Announcement(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
     date_created = models.DateTimeField(auto_now_add=True)  
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='announcements')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, default='1', related_name='announcements')
 
     def __str__(self):
         return self.title
     
     
+    
+
     
 """
 
@@ -410,6 +427,23 @@ class Challenge(models.Model):
 
     def __str__(self):
         return self.title
+    
+    
+    
+    
+# New ChallengeParticipant model
+class ChallengeParticipant(models.Model):
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('challenge', 'member')
+
+    def __str__(self):
+        return f"{self.member.first_name} joined {self.challenge.title}"
+    
+    
 
 # The Comment model 
 class Comment(models.Model):

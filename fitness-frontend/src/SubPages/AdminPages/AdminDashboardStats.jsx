@@ -26,11 +26,14 @@ const AdminDashboardStats = () => {
       if (!token) return;
       
       // Fetch data in parallel
-      const [membersRes, trainersRes] = await Promise.all([
+      const [membersRes, trainersRes, purchasesRes] = await Promise.all([
         api.get('members/', {
           headers: {'Authorization': `Bearer ${token}`}
         }),
         api.get('trainers/', {
+          headers: {'Authorization': `Bearer ${token}`}
+        }),
+        api.get('purchases/', {
           headers: {'Authorization': `Bearer ${token}`}
         })
       ]);
@@ -38,6 +41,7 @@ const AdminDashboardStats = () => {
       // Process data
       const members = Array.isArray(membersRes.data) ? membersRes.data : (membersRes.data.results || []);
       const trainers = Array.isArray(trainersRes.data) ? trainersRes.data : (trainersRes.data.results || []);
+      const purchases = Array.isArray(purchasesRes.data) ? purchasesRes.data : (purchasesRes.data.results || []);
       
       // Calculate revenue
       let revenue = 0;
@@ -47,12 +51,17 @@ const AdminDashboardStats = () => {
           if (!isNaN(fee)) revenue += fee;
         }
       });
+      let purchaseRevenue = 0;
+      purchases.forEach(purchase => {
+        const price = parseFloat(purchase.total_price);
+        if (!isNaN(price)) purchaseRevenue += price;
+      });
       
       // Update and save stats
       const newStats = {
         totalMembers: members.length,
         activeTrainers: trainers.length,
-        monthlyRevenue: revenue,
+        monthlyRevenue: revenue + purchaseRevenue,
         pendingTasks: 5,
         isLoading: false
       };
@@ -66,7 +75,7 @@ const AdminDashboardStats = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+    <div className="grid ju grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
       {/* Total Members Card */}
       <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start">
@@ -112,31 +121,6 @@ const AdminDashboardStats = () => {
             <div 
               className="h-full bg-blue-300"
               style={{ width: `${Math.min(100, (stats.activeTrainers / 20) * 100)}%` }}
-            ></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly Revenue Card */}
-      <div className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-sm text-gray-500">Monthly Revenue</p>
-            {stats.isLoading ? (
-              <div className="animate-pulse h-8 w-16 bg-gray-200 rounded mt-1"></div>
-            ) : (
-              <p className="text-2xl font-bold mt-1">{stats.monthlyRevenue.toFixed(2)} AFN</p>
-            )}
-          </div>
-          <div className="p-3 rounded-lg bg-green-100 text-green-600">
-            <i className="bx bx-dollar text-xl"></i>
-          </div>
-        </div>
-        <div className="mt-4">
-          <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-green-300"
-              style={{ width: `${Math.min(100, (stats.monthlyRevenue / 10000) * 100)}%` }}
             ></div>
           </div>
         </div>

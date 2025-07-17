@@ -1,8 +1,7 @@
-import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
-import HisabPayCheckout from '../components/HisabPayCheckout';
-import PaymentSuccess from '../components/PaymentSuccess';
-
+import HisabPayCheckout from './payment/HisabPayCheckout';
+import PaymentSuccess from './payment/PaymentSuccess';
+import api from '../services/api';
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -28,10 +27,10 @@ export default function Products() {
   // Fetch member PK after login (or on mount if token exists)
   useEffect(() => {
     const fetchMemberPK = async () => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("access_token");
       if (!token) return;
       try {
-        const res = await axios.get("http://127.0.0.1:8000/api/get-member-pk/", {
+        const res = await api.get(`get-member-pk/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMemberId(res.data.member_pk);
@@ -89,7 +88,7 @@ export default function Products() {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/products/');
+      const response = await api.get(`products/`);
       const productsData = response.data.results || response.data;
       const productsArray = Array.isArray(productsData) ? productsData : [];
       setProducts(productsArray);
@@ -172,7 +171,7 @@ export default function Products() {
 
   // --- CREATE PURCHASE LOGIC ---
   const createPurchase = async (cartItems) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("access_token");
   for (const item of cartItems) {
     const purchaseData = {
       product: item.product_id || item.id,
@@ -184,8 +183,8 @@ export default function Products() {
       purchaseData.member = memberId;
     }
     try {
-      await axios.post(
-        "http://127.0.0.1:8000/api/purchases/",
+      await api.post(
+        "purchases/",
         purchaseData,
         token ? { headers: { Authorization: `Bearer ${token}` } } : {}
       );
@@ -215,8 +214,8 @@ export default function Products() {
     for (const item of cart) {
       const message = `${item.name} sold out for ${parseFloat(item.price * item.quantity).toFixed(2)} AFN`;
       try {
-        await axios.post(
-          "http://127.0.0.1:8000/api/create-notification/",
+        await api.post(
+          `create-notification/`,
           { message },
           token ? { headers: { Authorization: `Bearer ${token}` } } : {}
         );

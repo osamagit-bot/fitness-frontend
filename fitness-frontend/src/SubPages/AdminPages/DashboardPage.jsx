@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../utils/api';
-
 import { Bar, BarChart, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import api from '../../utils/api';
 
 function DashboardPage() {
   const [stats, setStats] = useState({
@@ -11,7 +10,7 @@ function DashboardPage() {
     upcomingTrainings: 0,
     presentMembers: 0,
     totalAttendance: 0,
-    revenueGrowth: 5.2 // Default placeholder
+    revenueGrowth: 5.2
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,8 +20,8 @@ function DashboardPage() {
   const [attendanceTrend, setAttendanceTrend] = useState([]);
   const [memberFrequency, setMemberFrequency] = useState([]);
   const [topActiveMembers, setTopActiveMembers] = useState([]);
-const [shopRevenue, setShopRevenue] = useState(0);
-  // Colors for charts
+  const [shopRevenue, setShopRevenue] = useState(0);
+
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   useEffect(() => {
@@ -31,95 +30,67 @@ const [shopRevenue, setShopRevenue] = useState(0);
     generateMemberInsights();
   }, []);
 
-  // Generate analytics and insights from member data
   const generateMemberInsights = async () => {
     try {
-      // Fetch all members for analysis
       const membersResponse = await api.get('members/');
-      
       let membersList = [];
       if (Array.isArray(membersResponse.data)) {
         membersList = membersResponse.data;
       } else if (membersResponse.data.results && Array.isArray(membersResponse.data.results)) {
         membersList = membersResponse.data.results;
       }
-      
-      // Calculate membership type distribution
+
+      // Membership type distribution
       const membershipTypes = {};
       membersList.forEach(member => {
         const type = member.membership_type || 'Unknown';
         membershipTypes[type] = (membershipTypes[type] || 0) + 1;
       });
-      
-      const membershipData = Object.keys(membershipTypes).map(type => ({
-        name: type,
-        value: membershipTypes[type]
-      }));
-      setMembershipStats(membershipData);
-      
-      // Calculate gender distribution
+      setMembershipStats(Object.keys(membershipTypes).map(type => ({ name: type, value: membershipTypes[type] })));
+
+      // Gender distribution
       const genderCount = { Male: 0, Female: 0, Other: 0 };
       membersList.forEach(member => {
         const gender = member.gender || 'Other';
-        if (gender in genderCount) {
-          genderCount[gender]++;
-        } else {
-          genderCount.Other++;
-        }
+        if (gender in genderCount) genderCount[gender]++;
+        else genderCount.Other++;
       });
-      
-      const genderData = Object.keys(genderCount).map(gender => ({
-        name: gender,
-        value: genderCount[gender]
-      }));
-      setGenderDistribution(genderData);
-      
-      // Get attendance records for all members
+      setGenderDistribution(Object.keys(genderCount).map(gender => ({ name: gender, value: genderCount[gender] })));
+
+      // Attendance records & insights
       try {
         const attendanceResponse = await api.get('attendance/history/?today_only=true');
-        
-        // Map of member IDs to attendance counts
         const memberAttendanceCounts = {};
-        
+
         if (Array.isArray(attendanceResponse.data)) {
-          // Create attendance trend data (mock for now, would need more data)
-          const last7Days = Array(7).fill(0).map((_, index) => {
+          // Mock attendance trend data for 7 days
+          const last7Days = Array(7).fill(0).map((_, i) => {
             const date = new Date();
-            date.setDate(date.getDate() - (6 - index));
+            date.setDate(date.getDate() - (6 - i));
             return {
               day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-              count: Math.floor(Math.random() * 25) + 5 // Random data for demonstration
+              count: Math.floor(Math.random() * 25) + 5
             };
           });
           setAttendanceTrend(last7Days);
-          
-          // Count attendance per member
+
           attendanceResponse.data.forEach(record => {
             const memberId = record.member_id || record.athlete_id;
             if (!memberId) return;
-            
             memberAttendanceCounts[memberId] = (memberAttendanceCounts[memberId] || 0) + 1;
           });
-          
-          // Find top active members based on attendance
+
+          // Top active members
           const memberAttendanceArray = Object.entries(memberAttendanceCounts)
             .map(([id, count]) => {
-              const member = membersList.find(m => 
-                m.id === id || m.athlete_id === id || String(m.id) === id || String(m.athlete_id) === id
-              );
-              
-              return {
-                id,
-                name: member ? `${member.first_name} ${member.last_name}` : `Member #${id}`,
-                count
-              };
+              const member = membersList.find(m => m.id === id || m.athlete_id === id || String(m.id) === id || String(m.athlete_id) === id);
+              return { id, name: member ? `${member.first_name} ${member.last_name}` : `Member #${id}`, count };
             })
             .sort((a, b) => b.count - a.count)
             .slice(0, 5);
-          
           setTopActiveMembers(memberAttendanceArray);
-          
-          // Create frequency distribution
+
+          // Frequency distribution
           const frequencyGroups = {
             'Frequent (10+)': 0,
             'Regular (5-9)': 0,
@@ -127,59 +98,33 @@ const [shopRevenue, setShopRevenue] = useState(0);
             'Rare (1)': 0,
             'Inactive (0)': 0
           };
-          
-          // Count members in each frequency group
           Object.values(memberAttendanceCounts).forEach(count => {
             if (count >= 10) frequencyGroups['Frequent (10+)']++;
             else if (count >= 5) frequencyGroups['Regular (5-9)']++;
             else if (count >= 2) frequencyGroups['Occasional (2-4)']++;
             else if (count === 1) frequencyGroups['Rare (1)']++;
           });
-          
-          // Add inactive members count
           frequencyGroups['Inactive (0)'] = membersList.length - Object.keys(memberAttendanceCounts).length;
-          
-          // Convert to array format for chart
-          const frequencyData = Object.keys(frequencyGroups).map(key => ({
-            name: key,
-            value: frequencyGroups[key]
-          }));
-          
-          setMemberFrequency(frequencyData);
+          setMemberFrequency(Object.keys(frequencyGroups).map(key => ({ name: key, value: frequencyGroups[key] })));
         }
-      } catch (error) {
-        console.error('Error fetching attendance for insights:', error);
+      } catch (err) {
+        console.error('Error fetching attendance for insights:', err);
       }
-      
-    } catch (error) {
-      console.error('Error generating member insights:', error);
+    } catch (err) {
+      console.error('Error generating member insights:', err);
     }
-  };
-
-  // Function to convert time to local timezone
-  const convertToLocalTime = (timeString) => {
-    if (!timeString) return '';
-    
-    // Parse the time string (format: "HH:MM:SS")
-    const [hours, minutes, seconds] = timeString.split(':').map(Number);
-    
-    // Create a new date object with today's date
-    const date = new Date();
-    date.setHours(hours, minutes, seconds);
-    
-    // Format the time in local timezone
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
   const fetchStats = async () => {
     setLoading(true);
     try {
-      // Fetch members
+      // Fetch members (for count)
       const membersResponse = await api.get('members/');
-  
-      // Fetch purchases
+      // Fetch purchases (shop revenue)
       const purchasesResponse = await api.get('purchases/');
-  
+      // Fetch membership payments sum from backend (dynamic revenue)
+      const paymentsResponse = await api.get('members/payments_summary/');
+
       // Calculate shop revenue
       let shopRevenueTotal = 0;
       let purchasesList = [];
@@ -191,128 +136,84 @@ const [shopRevenue, setShopRevenue] = useState(0);
       purchasesList.forEach(purchase => {
         if (purchase && purchase.total_price) {
           const price = parseFloat(purchase.total_price);
-          if (!isNaN(price)) {
-            shopRevenueTotal += price;
-          }
+          if (!isNaN(price)) shopRevenueTotal += price;
         }
       });
       setShopRevenue(shopRevenueTotal);
-        
-        // Calculate members count - handle both array and paginated response formats
-        let membersCount = 0;
-        let membersList = [];
-        
-        if (Array.isArray(membersResponse.data)) {
-          // Direct array response
-          membersCount = membersResponse.data.length;
-          membersList = membersResponse.data;
-        } else if (membersResponse.data.results && Array.isArray(membersResponse.data.results)) {
-          // Paginated response
-          membersList = membersResponse.data.results;
-          membersCount = membersResponse.data.results.length;
-          // If there's a count field, use that for total
-          if (membersResponse.data.count !== undefined) {
-            membersCount = membersResponse.data.count;
-          }
-        }
-        
-        console.log('Calculated members count:', membersCount);
-        
-        // Calculate total revenue from member monthly fees
-        let totalRevenue = 0;
-        
-        // Calculate from actual member data
-        membersList.forEach(member => {
-          if (member && member.monthly_fee) {
-            const fee = parseFloat(member.monthly_fee);
-            if (!isNaN(fee)) {
-              totalRevenue += fee;
-            }
-          }
-        });
-        
-        console.log('Calculated total revenue:', totalRevenue);
-        
-        // Get attendance data for present count (skip if it's causing errors)
-        let presentCount = 0;
-        let totalAttendance = 0;
-        
-        try {
-          // Get today's attendance for present members count - using the correct endpoint
-          const today = new Date().toISOString().substr(0, 10);
-          const attendanceResponse = await api.get(`attendance/history/?today_only=true`);
-          
-          if (Array.isArray(attendanceResponse.data)) {
-            // Count members who are checked in but not checked out
-            presentCount = attendanceResponse.data.filter(record => 
-              record.check_in_time && !record.check_out_time
-            ).length;
-            
-            // Simply use the length for total attendance
-            totalAttendance = attendanceResponse.data.length;
-          }
-        } catch (attendanceError) {
-          console.error('Error fetching attendance:', attendanceError);
-          // Continue with zeros for these metrics
-        }
-        
-        // Update the stats state with the fetched data
-        setStats({
-          totalRevenue: totalRevenue,
-          activeMembers: membersCount,
-          upcomingTrainings: 0, // Default value
-          presentMembers: presentCount,
-          totalAttendance: totalAttendance,
-          revenueGrowth: 5.2 // Placeholder value
-        });
-        
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-        
-        if (error.response) {
-          console.error('Error data:', error.response.data);
-          console.error('Error status:', error.response.status);
-          setError(`Failed to load statistics: Server responded with ${error.response.status}`);
-        } else if (error.request) {
-          console.error('Error request:', error.request);
-          setError('Failed to load statistics: No response from server.');
-        } else {
-          console.error('Error message:', error.message);
-          setError(`Failed to load statistics: ${error.message}`);
-        }
-      } finally {
-        setLoading(false);
+
+      // Calculate members count - handle array and paginated response
+      let membersList = [];
+      if (Array.isArray(membersResponse.data)) {
+        membersList = membersResponse.data;
+      } else if (membersResponse.data.results && Array.isArray(membersResponse.data.results)) {
+        membersList = membersResponse.data.results;
       }
-    };
-  
+
+      // Only count active members (is_active !== false)
+      const activeMembersList = membersList.filter(
+        m => m.is_active !== false
+      );
+      const membersCount = activeMembersList.length;
+
+      // Total revenue from membership payments (dynamic)
+      const totalRevenue = paymentsResponse.data.monthly_payments || 0;
+
+      // Attendance data for present count & total attendance
+      let presentCount = 0;
+      let totalAttendance = 0;
+      try {
+        const attendanceResponse = await api.get(`attendance/history/?today_only=true`);
+        if (Array.isArray(attendanceResponse.data)) {
+          presentCount = attendanceResponse.data.filter(r => r.check_in_time && !r.check_out_time).length;
+          totalAttendance = attendanceResponse.data.length;
+        }
+      } catch (attendanceError) {
+        console.error('Error fetching attendance:', attendanceError);
+      }
+
+      setStats({
+        totalRevenue: totalRevenue,
+        activeMembers: membersCount,
+        upcomingTrainings: 0,
+        presentMembers: presentCount,
+        totalAttendance: totalAttendance,
+        revenueGrowth: 5.2
+      });
+
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      if (error.response) {
+        setError(`Failed to load statistics: Server responded with ${error.response.status}`);
+      } else if (error.request) {
+        setError('Failed to load statistics: No response from server.');
+      } else {
+        setError(`Failed to load statistics: ${error.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchRecentMembers = async () => {
     try {
-      // Get latest 5 members
       const response = await api.get('members/');
-      
       let memberList = [];
       if (Array.isArray(response.data)) {
         memberList = response.data.slice(0, 5);
       } else if (response.data.results && Array.isArray(response.data.results)) {
         memberList = response.data.results.slice(0, 5);
       }
-      
       setRecentMembers(memberList);
     } catch (error) {
       console.error('Error fetching recent members:', error);
-      // Don't set error state here to avoid overriding main stats errors
     }
   };
-  
-  // Format currency in AFN
-  const formatAfn = (amount) => {
-    return `${parseFloat(amount).toFixed(2)} AFN`;
-  };
 
-  // Get membership status style
+  const formatAfn = (amount) => `${parseFloat(amount).toFixed(2)} AFN`;
+
   const getMembershipStatusStyle = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'active':
         return 'bg-green-100 text-green-800';
       case 'expired':
@@ -324,11 +225,9 @@ const [shopRevenue, setShopRevenue] = useState(0);
     }
   };
 
-  // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
@@ -343,8 +242,7 @@ const [shopRevenue, setShopRevenue] = useState(0);
           </h1>
           <p className="text-gray-600">Welcome to your fitness club management dashboard</p>
         </div>
-        
-        <button 
+        <button
           onClick={() => {
             fetchStats();
             fetchRecentMembers();
@@ -358,9 +256,7 @@ const [shopRevenue, setShopRevenue] = useState(0);
           {loading ? 'Refreshing...' : 'Refresh Dashboard'}
         </button>
       </div>
-      
 
-      
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md shadow-sm">
           <div className="flex items-center">
@@ -372,7 +268,7 @@ const [shopRevenue, setShopRevenue] = useState(0);
           <p className="mt-2 text-sm">The dashboard will continue to function with available data.</p>
         </div>
       )}
-      
+
       {/* Main Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Total Revenue Card */}
@@ -402,29 +298,29 @@ const [shopRevenue, setShopRevenue] = useState(0);
             </div>
           </div>
         </div>
-              {/* Shop Revenue Card */}
-<div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-1 duration-200">
-  <div className="flex justify-between items-start">
-    <div>
-      <p className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">Shop Revenue</p>
-      {loading ? (
-        <div className="animate-pulse h-8 bg-gray-200 rounded w-32 mb-1"></div>
-      ) : (
-        <p className="text-2xl font-bold text-gray-900">{formatAfn(shopRevenue)}</p>
-      )}
-      <div className="flex items-center mt-2">
-        <span className="text-green-500 flex items-center text-sm font-medium">
-          {/* You can add a growth % here if you want */}
-        </span>
-      </div>
-    </div>
-    <div className="p-3 bg-green-50 rounded-lg">
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    </div>
-  </div>
-</div>
+        {/* Shop Revenue Card */}
+        <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-1 duration-200">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">Shop Revenue</p>
+              {loading ? (
+                <div className="animate-pulse h-8 bg-gray-200 rounded w-32 mb-1"></div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900">{formatAfn(shopRevenue)}</p>
+              )}
+              <div className="flex items-center mt-2">
+                <span className="text-green-500 flex items-center text-sm font-medium">
+                  {/* You can add a growth % here if you want */}
+                </span>
+              </div>
+            </div>
+            <div className="p-3 bg-green-50 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
         {/* Active Members Card */}
         <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-1 duration-200">
           <div className="flex justify-between items-start">
@@ -444,7 +340,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
             </div>
           </div>
         </div>
-
         {/* Present Members Card */}
         <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-1 duration-200">
           <div className="flex justify-between items-start">
@@ -464,7 +359,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
             </div>
           </div>
         </div>
-
         {/* Total Attendance Card */}
         <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow transform hover:-translate-y-1 duration-200">
           <div className="flex justify-between items-start">
@@ -485,11 +379,10 @@ const [shopRevenue, setShopRevenue] = useState(0);
           </div>
         </div>
       </div>
-      
+
       {/* Member Analytics Section */}
       <div className="mb-8">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Member Analytics</h2>
-        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Membership Distribution Chart */}
           <div className="bg-white p-6 rounded-xl shadow-md">
@@ -523,7 +416,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
               </div>
             )}
           </div>
-          
           {/* Member Attendance Trend */}
           <div className="bg-white p-6 rounded-xl shadow-md">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Weekly Attendance Trend</h3>
@@ -545,7 +437,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
               </div>
             )}
           </div>
-
           {/* Member Attendance Frequency */}
           <div className="bg-white p-6 rounded-xl shadow-md">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Member Attendance Frequency</h3>
@@ -567,7 +458,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
               </div>
             )}
           </div>
-          
           {/* Gender Distribution Chart */}
           <div className="bg-white p-6 rounded-xl shadow-md">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Gender Distribution</h3>
@@ -614,7 +504,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
             </svg>
           </Link>
         </div>
-        
         {loading ? (
           <div className="animate-pulse space-y-4">
             {[...Array(5)].map((_, i) => (
@@ -651,7 +540,7 @@ const [shopRevenue, setShopRevenue] = useState(0);
           </div>
         )}
       </div>
-      
+
       {/* Recent Members */}
       <div className="bg-white rounded-xl shadow-md p-6 mb-8">
         <div className="flex justify-between items-center mb-4">
@@ -663,7 +552,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
             </svg>
           </Link>
         </div>
-        
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
@@ -677,7 +565,6 @@ const [shopRevenue, setShopRevenue] = useState(0);
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
-                // Loading placeholders
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -744,7 +631,7 @@ const [shopRevenue, setShopRevenue] = useState(0);
           </table>
         </div>
       </div>
-      
+
       {/* Quick Actions */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>

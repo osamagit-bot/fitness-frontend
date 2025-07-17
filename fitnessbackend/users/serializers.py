@@ -297,7 +297,9 @@ class ChallengeSerializer(serializers.ModelSerializer):
         read_only_fields = ['date_created']
 
     def get_participants(self, obj):
-        return obj.participants.count()
+        # Count participants from ChallengeParticipant model instead of ManyToManyField
+        from .models import ChallengeParticipant
+        return ChallengeParticipant.objects.filter(challenge=obj).count()
 
 
 class TicketResponseSerializer(serializers.ModelSerializer):
@@ -404,7 +406,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'post', 'author', 'content', 'date_created']
-        read_only_fields = ['id', 'author', 'date_created']
+        read_only_fields = ['id', 'author','post', 'date_created']
 
     def get_author(self, obj):
         return obj.author.username if obj.author else "Anonymous"

@@ -2,60 +2,71 @@ import AOS from 'aos';
 import 'aos/dist/aos.css';
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useSmartAuth } from './features/auth';
 
 // Components
 import About from './components/About';
 import ContactSection from './components/Contact';
 import FAQ from './components/FAQ';
-import Footer from './components/Footer';
 import Hero from './components/Hero';
-import Navbar from './components/Navbar';
 import Products from './components/Products';
+import { Footer, Navbar } from './components/shared';
 import Testimonials from './components/Testimonials';
 import TrainerProfiles from './components/TrainerProfiles';
 import TrainingSection from './components/Training';
-import HelpSupport from './SubPages/HelpSupport';
-
 // Public Pages
-import Home from './SubPages/Home';
-import LoginPage from './SubPages/Loginpage';
+import {
+  HelpSupportPage as HelpSupport,
+  HomePage as Home,
+  LoginPage,
+  SchedulePage,
+  SmartLoginPage
+} from './pages/public';
 
-import SchedulePage from './SubPages/Schedule';
+// Layouts
+import { AdminLayout, MemberLayout } from './layouts';
 
 // Admin Pages
-import AttendancePage from './SubPages/AdminPages/AdminAttendancePage';
-import AdminCommunityManagement from './SubPages/AdminPages/AdminCommunityManagement';
-import AdminDashboard from './SubPages/AdminPages/AdminDashboard';
-import AdminSettingsPage from './SubPages/AdminPages/AdminSettingsPage';
-import AdminSupportManagement from './SubPages/AdminPages/AdminSupportManagement';
-import DashboardPage from './SubPages/AdminPages/DashboardPage';
-import MembersPage from './SubPages/AdminPages/MembersPage';
-import ProductsPage from './SubPages/AdminPages/ProductsPage';
-import RegisterPage from './SubPages/AdminPages/RegisterPage';
-import RevenuePage from './SubPages/AdminPages/RevenuePage';
-import TrainersPage from './SubPages/AdminPages/TrainersPage';
-import TrainingsPage from './SubPages/AdminPages/TrainingsPage';
+import {
+  CommunityPage as AdminCommunityManagement,
+  SettingsPage as AdminSettingsPage,
+  SupportPage as AdminSupportManagement,
+
+  DashboardPage,
+  MembersPage,
+  ProductsPage,
+  MemberRegistrationPage as RegisterPage,
+  RevenuePage,
+  TrainersPage,
+  TrainingsPage
+} from './pages/admin';
 
 // Member Pages
-import MemberAttendancePage from './SubPages/MemberPages/MemberAttendancePage';
-import MemberCommunityPage from './SubPages/MemberPages/MemberCommunityPage';
-import MemberDashboard from './SubPages/MemberPages/MemberDashboard';
-import MemberDashboardPage from './SubPages/MemberPages/MemberDashboardPage';
-import MemberProfilePage from './SubPages/MemberPages/MemberProfilePage';
-import MemberSettingsPage from './SubPages/MemberPages/MemberSettingsPage';
-import MemberSupportPage from './SubPages/MemberPages/MemberSupportPage';
-import MemberTrainingSessionsPage from './SubPages/MemberPages/MemberTrainingSessionsPage';
+import {
+  CommunityPage as MemberCommunityPage,
+  DashboardPage as MemberDashboardPage,
+  ProfilePage as MemberProfilePage,
+  SettingsPage as MemberSettingsPage,
+  SupportPage as MemberSupportPage,
+  TrainingSessionsPage as MemberTrainingSessionsPage
+} from './pages/member';
 
 
 
 const ProtectedRoute = ({ children, userType }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('access_token') !== null;
-  const currentUserType = localStorage.getItem('userType');
+  const { isAuthenticated, userType: currentUserType, loading, environment } = useSmartAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (userType && userType !== currentUserType) {
     if (currentUserType === 'member') return <Navigate to="/member-dashboard" replace />;
-    
     if (currentUserType === 'admin') return <Navigate to="/admin/dashboard" replace />;
     return <Navigate to="/login" replace />;
   }
@@ -64,13 +75,23 @@ const ProtectedRoute = ({ children, userType }) => {
 };
 
 const AdminRoute = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('access_token') !== null;
-  const userType = localStorage.getItem('userType');
+  const { isAuthenticated, userType, loading, environment } = useSmartAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated || userType !== 'admin') return <Navigate to="/login" replace />;
   return children;
 };
 
 const MemberRoute = ({ children }) => {
+  const { isAuthenticated, userType, loading, environment } = useSmartAuth();
+
   useEffect(() => {
     const memberID = localStorage.getItem('memberID');
     const memberId = localStorage.getItem('memberId');
@@ -78,48 +99,29 @@ const MemberRoute = ({ children }) => {
     else if (memberId && !memberID) localStorage.setItem('memberID', memberId);
   }, []);
 
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true' || localStorage.getItem('access_token') !== null;
-  const userType = localStorage.getItem('userType');
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated || userType !== 'member') return <Navigate to="/login" replace />;
   return children;
 };
 
 
 
-const DebugLoginState = () => {
-  useEffect(() => {
-    const memberID = localStorage.getItem('memberID');
-    const memberId = localStorage.getItem('memberId');
-    if (memberID && !memberId) {
-      localStorage.setItem('memberId', memberID);
-      console.log("DebugLoginState: Copied memberID to memberId");
-    } else if (memberId && !memberID) {
-      localStorage.setItem('memberID', memberId);
-      console.log("DebugLoginState: Copied memberId to memberID");
-    }
-  }, []);
 
-  useEffect(() => {
-    const memberId = localStorage.getItem('memberId') || localStorage.getItem('memberID');
-    console.log("Current login state:", {
-      isAuthenticated: localStorage.getItem('isAuthenticated'),
-      token: localStorage.getItem('access_token') ? "exists" : "missing",
-      userType: localStorage.getItem('userType'),
-      userId: localStorage.getItem('userId'),
-      memberId,
-     
-    });
-  }, []);
-
-  return null;
-};
 
 
 function NavbarHandler() {
   const location = useLocation();
   if (
     location.pathname.startsWith('/admin') ||
-    location.pathname.startsWith('/member-dashboard') 
+    location.pathname.startsWith('/member-dashboard') ||
+    location.pathname === '/login'
   ) {
     return null;
   }
@@ -154,12 +156,12 @@ function HomePage() {
 function App() {
   return (
     <>
-      <DebugLoginState />
       <NavbarHandler />
       <Routes>
         {/* Public */}
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<SmartLoginPage />} />
+        <Route path="/old-login" element={<LoginPage />} />
        
         <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/helpandsupportpage" element={<HelpSupport />} />
@@ -167,7 +169,7 @@ function App() {
         {/* Admin Routes */}
         <Route path="/admin/*" element={
           <AdminRoute>
-            <AdminDashboard />
+            <AdminLayout />
           </AdminRoute>
         }>
           <Route index element={<DashboardPage />} />
@@ -175,7 +177,7 @@ function App() {
           <Route path="register" element={<RegisterPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="trainings" element={<TrainingsPage />} />
-          <Route path="attendance" element={<AttendancePage />} />
+         
           <Route path="revenue" element={<RevenuePage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="trainers" element={<TrainersPage />} />
@@ -187,12 +189,12 @@ function App() {
         {/* Member Routes */}
         <Route path="/member-dashboard/*" element={
           <MemberRoute>
-            <MemberDashboard />
+            <MemberLayout />
           </MemberRoute>
         }>
           <Route index element={<MemberDashboardPage />} />
           <Route path="profile" element={<MemberProfilePage />} />
-          <Route path="attendance" element={<MemberAttendancePage />} />
+        
           <Route path="trainings" element={<MemberTrainingSessionsPage />} />
           <Route path="settings" element={<MemberSettingsPage />} />
           <Route path="community" element={<MemberCommunityPage />} />
