@@ -69,7 +69,24 @@ export const authenticateUser = async (credentials, loginType) => {
     return { success: true, sessionData };
   } catch (error) {
     console.error('🚨 Authentication failed:', error);
-    return { success: false, error: error.message };
+    
+    // Check if it's a maintenance mode error
+    if (error.response?.status === 503 && error.response?.data?.maintenance_mode) {
+      return { 
+        success: false, 
+        error: error.response.data.user_message || 'Sorry! The system is under maintenance mode. We will be back online shortly!',
+        maintenanceMode: true,
+        maintenanceMessage: error.response.data.user_message
+      };
+    }
+    
+    // Pass through the error for specific handling in the UI
+    return { 
+      success: false, 
+      error: error.response?.data?.detail || error.message,
+      status: error.response?.status,
+      response: error.response
+    };
   }
 };
 

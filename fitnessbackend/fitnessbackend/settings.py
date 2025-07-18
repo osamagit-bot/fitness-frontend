@@ -8,14 +8,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load secret key and debug mode from environment variables for security
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-please-change')
 
-DEBUG = True  # Always False in production!
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
 
-# Allow your backend Render URL and any others here
-ALLOWED_HOSTS = [
-   # 'fitness-frontend-0ri3.onrender.com',
-    '*'
-    # 'your-backend-domain.onrender.com',  # Replace with your actual backend domain on Render
-]
+# Dynamic ALLOWED_HOSTS for production
+if os.environ.get('DJANGO_ENVIRONMENT') == 'production':
+    ALLOWED_HOSTS = [
+        os.environ.get('BACKEND_DOMAIN', 'localhost'),
+        os.environ.get('FRONTEND_DOMAIN', 'localhost'),
+        '127.0.0.1',
+        'localhost'
+    ]
+else:
+    ALLOWED_HOSTS = ['*']  # Allow all for development
 
 # Application definition
 INSTALLED_APPS = [
@@ -49,6 +53,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'users.middleware.MaintenanceModeMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -156,15 +161,26 @@ DATABASES = {
 }
 
 
-    # Redis as the channel layer backend
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],  # Redis must be running
+    # Channel layer backend - dynamic based on environment
+import os
+
+if os.environ.get('DJANGO_ENVIRONMENT') == 'production':
+    # Production: Use Redis for scalability
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')],
+            },
         },
-    },
-}
+    }
+else:
+    # Development: Use in-memory for simplicity
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},

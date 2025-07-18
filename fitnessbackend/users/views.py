@@ -149,6 +149,99 @@ class AdminDashboardViewSet(viewsets.ViewSet):
         else:
             return Response({"detail": "User is not an admin"}, status=403)
 
+    @action(detail=False, methods=["get", "post"], url_path="maintenance-mode")
+    def maintenance_mode(self, request):
+        """Handle maintenance mode toggle"""
+        if not request.user.is_staff:
+            return Response({"detail": "Admin access required"}, status=403)
+        
+        if request.method == "GET":
+            # Get current maintenance mode status
+            from django.conf import settings
+            import os
+            
+            # Check if maintenance mode file exists
+            maintenance_file = os.path.join(settings.BASE_DIR, '.maintenance_mode')
+            is_enabled = os.path.exists(maintenance_file)
+            
+            return Response({"enabled": is_enabled})
+        
+        elif request.method == "POST":
+            # Toggle maintenance mode
+            from django.conf import settings
+            import os
+            
+            enabled = request.data.get("enabled", False)
+            maintenance_file = os.path.join(settings.BASE_DIR, '.maintenance_mode')
+            
+            try:
+                if enabled:
+                    # Create maintenance mode file
+                    with open(maintenance_file, 'w') as f:
+                        f.write(f"Maintenance mode enabled at {timezone.now()}")
+                else:
+                    # Remove maintenance mode file
+                    if os.path.exists(maintenance_file):
+                        os.remove(maintenance_file)
+                
+                return Response({"enabled": enabled, "message": f"Maintenance mode {'enabled' if enabled else 'disabled'}"})
+            
+            except Exception as e:
+                return Response({"error": str(e)}, status=500)
+
+    @action(detail=False, methods=["get"], url_path="export-members")
+    def export_members(self, request):
+        """Export all member data to CSV"""
+        if not request.user.is_staff:
+            return Response({"detail": "Admin access required"}, status=403)
+        
+        try:
+            import csv
+            from django.http import HttpResponse
+            
+            # Create CSV response
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="members_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+            
+            writer = csv.writer(response)
+            
+            # Write header
+            writer.writerow([
+                'Athlete ID', 'First Name', 'Last Name', 'Username', 'Email', 
+                'Phone', 'Membership Type', 'Start Date', 'Expiry Date',
+                'Is Active', 'Monthly Fee', 'Time Slot', 'Box Number'
+            ])
+            
+            # Write member data
+            members = Member.objects.all().order_by('athlete_id')
+            for member in members:
+                try:
+                    writer.writerow([
+                        member.athlete_id,
+                        member.first_name,
+                        member.last_name,
+                        getattr(member.user, 'username', '') if hasattr(member, 'user') and member.user else '',
+                        getattr(member.user, 'email', '') if hasattr(member, 'user') and member.user else '',
+                        getattr(member, 'phone', '') or '',
+                        getattr(member, 'membership_type', '') or '',
+                        member.start_date.strftime('%Y-%m-%d') if getattr(member, 'start_date', None) else '',
+                        member.expiry_date.strftime('%Y-%m-%d') if getattr(member, 'expiry_date', None) else '',
+                        getattr(member, 'is_active', True),
+                        getattr(member, 'monthly_fee', '') or '',
+                        getattr(member, 'time_slot', '') or '',
+                        getattr(member, 'box_number', '') or ''
+                    ])
+                except Exception as field_error:
+                    print(f"Error processing member {member.athlete_id}: {field_error}")
+                    continue
+            
+            return response
+            
+        except Exception as e:
+            print(f"Export error: {str(e)}")
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)
+
 
 class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.all()

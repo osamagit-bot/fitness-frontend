@@ -1,6 +1,6 @@
 // hooks/useSmartAuth.js - Smart authentication hook
 import { useState, useEffect } from 'react';
-import smartAuth from '../utils/smartAuth';
+import smartAuth from '../features/auth/smartAuth';
 
 export const useSmartAuth = () => {
   const [authState, setAuthState] = useState({

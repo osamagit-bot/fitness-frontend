@@ -1,6 +1,6 @@
 // components/SessionSwitcher.jsx
 import { useState, useEffect } from 'react';
-import { switchToMemberSession, switchToAdminSession, getAvailableSessions, getCurrentSession } from '../utils/sessionManager';
+import { switchToMemberSession, switchToAdminSession, getAvailableSessions, getCurrentSession } from '../../features/auth/sessionManager';
 
 const SessionSwitcher = () => {
   const [availableSessions, setAvailableSessions] = useState({ member: false, admin: false });

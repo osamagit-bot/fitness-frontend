@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 import 'boxicons/css/boxicons.min.css';
+import { useRef } from 'react';
 
 const getNotifStyle = (message) => {
   const lower = message.toLowerCase();
@@ -40,8 +41,12 @@ const MemberDashboardPage = () => {
   const [userData, setUserData] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [notificationError, setNotificationError] = useState(null);
 
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
 
   const memberId = localStorage.getItem('memberId') || '';
 
@@ -111,47 +116,121 @@ const MemberDashboardPage = () => {
           setAuthChecked(true);
           fetchNotifications();
 
-          // WebSocket setup for notifications
+          // WebSocket setup for notifications with auto-reconnect
           const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-          // Use backend server URL for WebSocket connection
-          const backendHost = 'localhost:8001'; // Change this if your backend runs on a different host/port
+          const backendHost = import.meta.env.VITE_BACKEND_WS_HOST || 'localhost:8001';
           const token = localStorage.getItem('access_token');
-          const wsUrl = `${protocol}://${backendHost}/ws/notifications/?token=${token}`;
-          console.log('Connecting to WebSocket URL:', wsUrl);
-          const socket = new WebSocket(wsUrl);
+          
+          if (!token) {
+            console.warn('No authentication token found for WebSocket connection');
+            return;
+        }
 
+          const wsUrl = `${protocol}://${backendHost}/ws/notifications/?token=${token}`;
+          let socket;
+          let reconnectAttempts = 0;
+          const maxReconnectAttempts = 5;
+          const reconnectDelay = 1000; // Start with 1 second delay
+        let heartbeatInterval;
+
+          const connectWebSocket = () => {
+          try {
+          socket = new WebSocket(wsUrl);
+          
           socket.onopen = () => {
-            console.log('WebSocket connection opened');
+          console.log('WebSocket connection opened');
+          reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+          
+          // Start heartbeat to keep connection alive
+          heartbeatInterval = setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({
+                type: 'ping',
+                timestamp: Date.now()
+              }));
+            }
+          }, 30000); // Send ping every 30 seconds
           };
 
           socket.onmessage = (event) => {
-            console.log('WebSocket message received:', event.data);
-            try {
-              const data = JSON.parse(event.data);
+          try {
+          const data = JSON.parse(event.data);
+          
+          switch (data.type) {
+          case 'connection_established':
+          console.log('WebSocket connection established:', data.message);
+          break;
+          case 'notification':
               if (data.notification) {
-                setNotifications((prevNotifs) => {
+                  setNotifications((prevNotifs) => {
                   const all = [data.notification, ...prevNotifs];
-                  const unique = Array.from(new Map(all.map(n => [n.id, n])).values());
-                  return unique;
-                });
+                    const unique = Array.from(new Map(all.map(n => [n.id, n])).values());
+                      return unique;
+                      });
+                    }
+                    break;
+                  case 'pong':
+                    console.log('Received pong from server');
+                    break;
+                  case 'error':
+                    console.error('WebSocket error message:', data.message);
+                    break;
+                  default:
+                    // Legacy support for old format
+                    if (data.notification) {
+                      setNotifications((prevNotifs) => {
+                        const all = [data.notification, ...prevNotifs];
+                        const unique = Array.from(new Map(all.map(n => [n.id, n])).values());
+                        return unique;
+                      });
+                    }
+                }
+              } catch (err) {
+                console.error('Error parsing WebSocket message:', err);
               }
-            } catch (err) {
-              console.error('Error parsing WebSocket message:', err);
-            }
-          };
+            };
 
-          socket.onclose = (event) => {
-            console.log('WebSocket connection closed:', event);
-          };
+              socket.onclose = (event) => {
+              console.log('WebSocket connection closed:', event.code, event.reason);
+              
+              // Clear heartbeat interval
+              if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+              }
+              
+              // Attempt to reconnect if not manually closed
+              if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttempts), 30000); // Exponential backoff, max 30 seconds
+                console.log(`Attempting to reconnect in ${delay}ms... (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+                
+                setTimeout(() => {
+                  reconnectAttempts++;
+                  connectWebSocket();
+                }, delay);
+              }
+            };
 
-          socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-          };
+            socket.onerror = (error) => {
+              console.error('WebSocket error:', error);
+            };
+          } catch (error) {
+            console.error('Error creating WebSocket connection:', error);
+          }
+        };
 
-          // Cleanup on unmount
-          return () => {
-            socket.close();
-          };
+        // Initial connection
+        connectWebSocket();
+
+        // Cleanup on unmount
+        return () => {
+          if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
+          }
+          if (socket) {
+            socket.close(1000, 'Component unmounting'); // Normal closure
+          }
+        };
         } catch (error) {
           console.error('Error parsing user data:', error);
           navigate('/login');
@@ -185,10 +264,76 @@ const MemberDashboardPage = () => {
     setMemberNotifications(notifications);
   }, [notifications, memberData]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
+
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('memberId');
     navigate('/login');
+  };
+
+  const handleBellClick = () => {
+    setShowNotifications((prev) => !prev);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setIsMarkingRead(true);
+    setNotificationError(null);
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await api.post(
+        'notifications/mark_all_read/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.status === 200) {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setMemberNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      }
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+      setNotificationError('Failed to mark notifications as read');
+    } finally {
+      setIsMarkingRead(false);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    setIsDeleting(true);
+    setNotificationError(null);
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await api.delete(
+        'notifications/delete_all/',
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.status === 204) {
+        setNotifications([]);
+        setMemberNotifications([]);
+      }
+    } catch (err) {
+      console.error('Failed to delete all notifications', err);
+      setNotificationError('Failed to delete notifications');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const getMembershipStatus = () => {
@@ -264,39 +409,109 @@ const MemberDashboardPage = () => {
   const daysSinceJoining = getDaysSinceJoining();
   const statusColorClass = getStatusColorClass(membershipStatus);
 
+  const unreadCount = memberNotifications.filter(n => !n.is_read).length;
+
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Logout Button */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg shadow"
-        >
-          Logout
-        </button>
-      </div>
+      {/* Top Navigation Bar */}
+      <div className="bg-white shadow-sm rounded-lg mb-6">
+        <div className="flex justify-between items-center p-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              Elite Fitness Club
+            </h1>
+            <p className="text-sm text-gray-600">Member Portal</p>
+          </div>
+          <div className="flex items-center space-x-4 relative">
+            {/* Notification Bell */}
+            <button
+              className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors relative"
+              onClick={handleBellClick}
+            >
+              <i className="bx bx-bell text-xl"></i>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
 
-      {/* Notifications UI */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Notifications</h2>
-        {memberNotifications.length === 0 ? (
-          <p className="text-gray-600">No new notifications</p>
-        ) : (
-          <ul className="max-h-48 overflow-y-auto border border-gray-300 rounded p-2 bg-white">
-            {memberNotifications.map((notif) => (
-              <li
-                key={notif.id}
-                className={`flex items-start gap-3 p-2 border-b ${getNotifStyle(notif.message)} ${!notif.is_read ? 'font-semibold' : ''}`}
-              >
-                <i className={`bx ${getNotifIcon(notif.message)} text-xl mt-1`}></i>
-                <div className="flex-1">
-                  <div>{notif.message}</div>
-                  <div className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleString()}</div>
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="mt-4 md:mt-0 flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition"
+            >
+              <i className="bx bx-log-out"></i>
+              Logout
+            </button>
+
+            {/* Notification Dropdown */}
+            {showNotifications && (
+              <div ref={dropdownRef} className="absolute right-0 top-14 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200 overflow-hidden">
+                <div className="sticky top-0 bg-white z-10 p-4 border-b font-semibold text-gray-700 flex justify-between items-center">
+                  Notifications
+                  <button
+                    onClick={() => setShowNotifications(false)}
+                    className="text-gray-400 hover:text-gray-700"
+                    aria-label="Close notifications"
+                  >
+                    <i className="bx bx-x text-lg"></i>
+                  </button>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
+
+                <div className="p-3 border-b flex justify-between">
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    className="text-xs px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                    disabled={unreadCount === 0 || isMarkingRead}
+                  >
+                    {isMarkingRead ? 'Processing...' : 'Mark all as read'}
+                  </button>
+
+                  <button
+                    onClick={handleDeleteAll}
+                    className="text-xs px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                    disabled={memberNotifications.length === 0 || isDeleting}
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete all'}
+                  </button>
+                </div>
+
+                {notificationError && (
+                  <div className="p-3 bg-red-50 text-red-600 text-sm">
+                    {notificationError}
+                  </div>
+                )}
+
+                <div className="max-h-64 overflow-y-auto">
+                  {notifLoading ? (
+                    <div className="animate-pulse p-4 space-y-2">
+                      <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  ) : memberNotifications.length === 0 ? (
+                    <div className="p-4 text-gray-500">No notifications</div>
+                  ) : (
+                    memberNotifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`flex items-start gap-3 p-4 border-b ${getNotifStyle(notif.message)} ${!notif.is_read ? 'font-semibold' : ''}`}
+                      >
+                        <i className={`bx ${getNotifIcon(notif.message)} text-xl mt-1`}></i>
+                        <div className="flex-1">
+                          <div>{notif.message}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(notif.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {loading ? (
