@@ -17,7 +17,7 @@ function MemberSidebar({ isOpen: externalIsOpen, closeSidebar: externalCloseSide
   const menuItems = [
     { path: '/member-dashboard', icon: <i className='bx bx-home-alt text-xl'></i>, label: 'Dashboard' },
     { path: '/member-dashboard/profile', icon: <i className='bx bx-user text-xl'></i>, label: 'My Profile' },
-    { path: '/member-dashboard/attendance', icon: <i className='bx bx-calendar-check text-xl'></i>, label: 'Attendance & QR' },
+    { path: '/member-dashboard/attendance', icon: <i className='bx bx-calendar-check text-xl'></i>, label: 'Attendance' },
     { path: '/member-dashboard/trainings', icon: <i className='bx bx-dumbbell text-xl'></i>, label: 'Training Sessions' },
     { path: '/member-dashboard/community', icon: <i className='bx bx-group text-xl'></i>, label: 'Community' },
     { path: '/member-dashboard/support', icon: <i className='bx bx-help-circle text-xl'></i>, label: 'Support & Feedback' },

@@ -7,6 +7,7 @@ import api from "../services/api";
 
 const getNotifStyle = (message) => {
   const lower = message.toLowerCase();
+  if (lower.includes('posted:')) return 'bg-cyan-50 border-l-4 border-cyan-400 text-cyan-800';
   if (lower.includes('new member registered')) return 'bg-green-50 border-l-4 border-green-400 text-green-800';
   if (lower.includes('membership expired')) return 'bg-red-50 border-l-4 border-red-400 text-red-800';
   if (lower.includes('membership renewed')) return 'bg-indigo-50 border-l-4 border-indigo-400 text-indigo-800';
@@ -18,6 +19,7 @@ const getNotifStyle = (message) => {
 
 const getNotifIcon = (message) => {
   const lower = message.toLowerCase();
+  if (lower.includes('posted:')) return 'bx-message-square-dots';
   if (lower.includes('new member registered')) return 'bx-user-plus';
   if (lower.includes('membership expired')) return 'bx-error-circle';
   if (lower.includes('membership renewed')) return 'bx-refresh';
@@ -362,27 +364,35 @@ function AdminDashboard() {
                       <div className="p-4 text-gray-500">No notifications</div>
                     ) : (
                       notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`flex items-start gap-3 p-4 border-b ${getNotifStyle(notif.message)} ${!notif.is_read ? 'font-semibold' : ''}`}
-                        >
-                          <i className={`bx ${getNotifIcon(notif.message)} text-xl mt-1`}></i>
+                      <div
+                      key={notif.id}
+                      className={`flex items-start gap-3 p-4 border-b ${getNotifStyle(notif.message)} ${!notif.is_read ? 'font-semibold' : ''}`}
+                      >
+                      <i className={`bx ${getNotifIcon(notif.message)} text-xl mt-1`}></i>
                           <div className="flex-1">
-                            <div>
-                              {notif.message}
-                              {notif.message.toLowerCase().includes('support') && (
-                                <button
-                                  onClick={() => navigate('/admin/support')}
-                                  className="ml-2 text-blue-600 underline hover:text-blue-800 text-sm"
+                          <div>
+                          {notif.message}
+                          {notif.message.toLowerCase().includes('support') && (
+                          <button
+                          onClick={() => navigate('/admin/support')}
+                          className="ml-2 text-blue-600 underline hover:text-blue-800 text-sm"
+                          >
+                          View Ticket
+                          </button>
+                          )}
+                            {notif.message.toLowerCase().includes('posted:') && (
+                              <button
+                              onClick={() => navigate('/admin/community')}
+                                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm transition-colors"
                                 >
-                                  View Ticket
-                                </button>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {new Date(notif.created_at).toLocaleString()}
-                            </div>
-                          </div>
+                                   View Community
+                                 </button>
+                               )}
+                             </div>
+                             <div className="text-xs text-gray-500 mt-1">
+                               {new Date(notif.created_at).toLocaleString()}
+                             </div>
+                           </div>
                         </div>
                       ))
                     )}

@@ -1,3 +1,4 @@
+export { default as AttendancePage } from './AttendancePage.jsx';
 export { default as DashboardPage } from './DashboardPage.jsx';
 export { default as MembersPage } from './MembersPage.jsx';
 

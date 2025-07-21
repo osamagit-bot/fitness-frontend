@@ -125,7 +125,7 @@ function MemberSettingsPage() {
       toast.error("Password must be at least 8 characters long");
       return;
     }
-    
+    console.log('memberid', memberId);
     setLoading(true);
     try {
       await api.post(

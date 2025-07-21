@@ -124,6 +124,7 @@ class MembershipPayment(models.Model):
     member_name = models.CharField(max_length=255, null=True) 
     paid_on = models.DateField(auto_now_add=True)
     description = models.CharField(max_length=255, blank=True)
+    
 
     def __str__(self):
         if self.member:
@@ -146,20 +147,10 @@ class Member(models.Model):
         verbose_name=_('Athlete ID'),
         help_text=_('Unique identifier for the athlete')
     )
-    biometric_data = models.TextField(
-    null=True, 
-    blank=True,
-    verbose_name=_('Biometric Data'),
-    help_text=_('Base64 encoded biometric template')
-)
-    biometric_registered = models.BooleanField(
-    default=False,
-    verbose_name=_('Biometric Registered'),
-    help_text=_('Whether member has registered their biometrics')
-)
-    biometric_data = models.TextField(null=True, blank=True)
-    biometric_hash = models.CharField(max_length=255, null=True, blank=True)
+
+    biometric_hash = models.CharField(max_length=255, null=True, blank=True, unique=True)
     biometric_registered = models.BooleanField(default=False)
+
     
     first_name = models.CharField(
         max_length=150,

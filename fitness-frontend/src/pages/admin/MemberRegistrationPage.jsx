@@ -321,7 +321,7 @@ const RegisterPage = () => {
 
       return {
         athlete_id: originalAthleteId || "",
-        first_name: queryParams.get("firstName") || "",
+        first_name: queryParams.get("member_name") || "",
         last_name: queryParams.get("lastName") || "",
         monthly_fee: queryParams.get("monthlyFee") || "",
         membership_type: queryParams.get("membershipType") || "gym",

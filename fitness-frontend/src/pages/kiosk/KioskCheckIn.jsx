@@ -1,0 +1,698 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import "../../styles/kiosk.css";
+// --- CHANGE: Import both api and publicApi ---
+import { publicApi } from "../../utils/api";
+import { isWebAuthnSupported, kioskAuthenticate } from "../../utils/webauthn";
+
+const KioskCheckIn = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isListening, setIsListening] = useState(true); // This state is not used, can be removed
+  const [recentCheckIns, setRecentCheckIns] = useState([]);
+  const [welcomeMessage, setWelcomeMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [stats, setStats] = useState({ todayCount: 0, totalMembers: 0 });
+  const [isAutoMode, setIsAutoMode] = useState(() => {
+    const saved = localStorage.getItem("kioskAutoMode");
+    return saved === "true";
+  });
+  const intervalRef = useRef(null);
+  const checkInTimeoutRef = useRef(null);
+  const authTimeoutRef = useRef(null);
+  const isAuthenticatingRef = useRef(false);
+  const abortControllerRef = useRef(null);
+  const lastCancelTimeRef = useRef(null);
+  const cancelCountRef = useRef(0);
+
+  useEffect(() => {
+    // Update time every second
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    // Initialize kiosk (fetch data only)
+    initializeKiosk();
+
+    return () => {
+      clearInterval(timeInterval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (checkInTimeoutRef.current) clearTimeout(checkInTimeoutRef.current);
+      if (authTimeoutRef.current) clearTimeout(authTimeoutRef.current);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      isAuthenticatingRef.current = false;
+    };
+  }, []);
+
+  // Effect to start/stop continuous authentication when isAutoMode changes
+  useEffect(() => {
+    if (isAutoMode) {
+      console.log("Auto mode enabled. Starting continuous authentication...");
+      // Start continuous authentication with the current auto mode state
+      startContinuousAuthentication(false, true);
+    } else {
+      console.log("Auto mode disabled. Stopping continuous authentication...");
+      // Clear any pending authentication
+      clearAuthState();
+    }
+  }, [isAutoMode]);
+
+  const initializeKiosk = async () => {
+    try {
+      // Fetch recent check-ins
+      await fetchRecentCheckIns();
+      // Fetch today's stats
+      await fetchTodayStats();
+    } catch (error) {
+      console.error("Failed to initialize kiosk:", error);
+    }
+  };
+
+  const fetchRecentCheckIns = async () => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      // --- CHANGE: Use publicApi ---
+      const response = await publicApi.get(
+        `attendance_history/?date=${today}&limit=5`
+      );
+      setRecentCheckIns(response.data.slice(0, 5));
+    } catch (error) {
+      console.error("Error fetching recent check-ins:", error);
+    }
+  };
+
+  const fetchTodayStats = async () => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const [attendanceResponse, membersResponse] = await Promise.all([
+        // --- CHANGE: Use publicApi for attendance history ---
+        publicApi.get(`attendance_history/?date=${today}`),
+        // --- CHANGE: Use publicApi for members (assuming this endpoint is public or you have a public alternative for count) ---
+        // NOTE: If 'members/' endpoint requires authentication, you might need a separate public endpoint for total member count.
+        // For now, assuming it's okay to use publicApi here.
+        publicApi.get("members/"),
+      ]);
+
+      setStats({
+        todayCount: attendanceResponse.data.length,
+        totalMembers: membersResponse.data.length,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  const checkWebAuthnSupport = () => {
+    if (!isWebAuthnSupported()) {
+      setErrorMessage(
+        "Fingerprint authentication not supported on this device"
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const startAutomaticAuthentication = async (autoModeOverride = null) => {
+    const effectiveAutoMode =
+      autoModeOverride !== null ? autoModeOverride : isAutoMode;
+    console.log("startAutomaticAuthentication called", {
+      effectiveAutoMode,
+      autoModeOverride,
+    });
+
+    // Check WebAuthn support first
+    if (!checkWebAuthnSupport()) {
+      console.log("WebAuthn not supported");
+      return;
+    }
+
+    // Don't start if already processing, welcome message showing, or auto mode disabled
+    if (
+      isAuthenticatingRef.current ||
+      isProcessing ||
+      welcomeMessage ||
+      !effectiveAutoMode
+    ) {
+      console.log("Skipping authentication - conditions not met", {
+        isAuthenticating: isAuthenticatingRef.current,
+        isProcessing,
+        welcomeMessage: !!welcomeMessage,
+        effectiveAutoMode,
+      });
+      return;
+    }
+
+    // Check if user recently cancelled - if so, disable auto mode
+    const now = Date.now();
+    if (lastCancelTimeRef.current && now - lastCancelTimeRef.current < 30000) {
+      // 30 seconds cooldown
+      console.log("Recent cancellation detected, staying in manual mode");
+      return;
+    }
+
+    try {
+      isAuthenticatingRef.current = true;
+      setIsProcessing(true);
+      setErrorMessage(null);
+
+      // Create new AbortController for this request
+      abortControllerRef.current = new AbortController();
+
+      // Use simplified kiosk authentication (prompts for any registered fingerprint)
+      const assertion = await kioskAuthenticate(
+        abortControllerRef.current.signal
+      );
+
+      // Send assertion to backend for member identification
+      // --- CHANGE: Use publicApi ---
+      const response = await publicApi.post("webauthn/kiosk/checkin/", {
+        assertion: assertion,
+      });
+
+      handleSuccessfulCheckIn(response.data);
+      // Reset cancel count on successful authentication
+      cancelCountRef.current = 0;
+    } catch (error) {
+      // Handle different types of errors gracefully
+      if (error.name === "NotAllowedError") {
+        console.log("User cancelled or denied fingerprint authentication");
+        // Track cancellation but keep auto mode active
+        lastCancelTimeRef.current = Date.now();
+        cancelCountRef.current++;
+        showTemporaryError("Authentication cancelled - Auto mode still active");
+      } else if (error.name === "AbortError") {
+        console.log("Authentication was aborted");
+        // Don't restart if manually aborted
+      } else if (
+        error.name === "InvalidStateError" ||
+        error.message?.includes("already pending")
+      ) {
+        console.log("Authentication request already pending");
+        // Don't retry immediately for pending requests
+      } else {
+        console.error("Fingerprint detection error:", error);
+
+        if (error.response?.status === 404) {
+          showTemporaryError(
+            "Fingerprint not recognized. Please register first."
+          );
+        } else if (error.response?.data?.error) {
+          showTemporaryError(error.response.data.error);
+        } else {
+          showTemporaryError("Check-in failed. Please try again.");
+        }
+
+        // Don't disable auto mode for other errors - let it continue trying
+      }
+    } finally {
+      setIsProcessing(false);
+      isAuthenticatingRef.current = false;
+      abortControllerRef.current = null;
+    }
+  };
+
+  const enableAutoMode = () => {
+    console.log("Enabling auto mode...");
+    setIsAutoMode(true);
+    localStorage.setItem("kioskAutoMode", "true");
+    setErrorMessage(null);
+    // The useEffect for isAutoMode will now handle starting continuous authentication
+  };
+
+  const disableAutoMode = () => {
+    console.log("Disabling auto mode...");
+    setIsAutoMode(false);
+    localStorage.setItem("kioskAutoMode", "false");
+    setErrorMessage(null);
+    // The useEffect for isAutoMode will now handle stopping continuous authentication
+  };
+
+  const startContinuousAuthentication = async (
+    forceStart = false,
+    autoModeOverride = null
+  ) => {
+    const effectiveAutoMode =
+      autoModeOverride !== null ? autoModeOverride : isAutoMode;
+    console.log(
+      "startContinuousAuthentication called, forceStart:",
+      forceStart,
+      "isAutoMode:",
+      isAutoMode,
+      "effectiveAutoMode:",
+      effectiveAutoMode
+    );
+
+    // Only run if auto mode is enabled (or forced) and we're not already processing
+    if (
+      (!effectiveAutoMode && !forceStart) ||
+      isAuthenticatingRef.current ||
+      isProcessing ||
+      welcomeMessage
+    ) {
+      console.log("Skipping authentication - conditions not met");
+      return;
+    }
+
+    // Check for recent cancellations - just wait, don't disable auto mode
+    const now = Date.now();
+    if (lastCancelTimeRef.current && now - lastCancelTimeRef.current < 5000) {
+      console.log("Recent cancellation detected, waiting before retry");
+      // Schedule next attempt after the cooldown period
+      authTimeoutRef.current = setTimeout(
+        () => startContinuousAuthentication(false, effectiveAutoMode),
+        5000
+      );
+      return;
+    }
+
+    console.log("Calling startAutomaticAuthentication...");
+    await startAutomaticAuthentication(effectiveAutoMode); // Pass effectiveAutoMode to ensure consistency
+
+    // If auto mode is still enabled, retry after a short delay
+    if (effectiveAutoMode) {
+      // Check effectiveAutoMode directly
+      console.log("Scheduling next authentication in 3 seconds...");
+      authTimeoutRef.current = setTimeout(
+        () => startContinuousAuthentication(false, effectiveAutoMode),
+        3000
+      );
+    }
+  };
+
+  const handleFingerprintClick = async () => {
+    // Check WebAuthn support first
+    if (!checkWebAuthnSupport()) {
+      return;
+    }
+
+    // Prevent multiple concurrent authentication requests
+    if (isAuthenticatingRef.current || isProcessing) {
+      console.log("Authentication already in progress, skipping...");
+      return;
+    }
+
+    // Cancel any existing authentication request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    try {
+      isAuthenticatingRef.current = true;
+      setIsProcessing(true);
+      setErrorMessage(null);
+
+      // Create new AbortController for this request
+      abortControllerRef.current = new AbortController();
+
+      // Use simplified kiosk authentication (prompts for any registered fingerprint)
+      const assertion = await kioskAuthenticate(
+        abortControllerRef.current.signal
+      );
+
+      // Send assertion to backend for member identification
+      // --- CHANGE: Use publicApi ---
+      const response = await publicApi.post("webauthn/kiosk/checkin/", {
+        assertion: assertion,
+      });
+
+      handleSuccessfulCheckIn(response.data);
+    } catch (error) {
+      // Handle different types of errors gracefully
+      if (error.name === "NotAllowedError") {
+        console.log("User cancelled or denied fingerprint authentication");
+        // Don't show error for user cancellation - just stop processing
+      } else if (error.name === "AbortError") {
+        console.log("Authentication was aborted");
+        // Don't show error for abort - just stop processing
+      } else if (
+        error.name === "InvalidStateError" ||
+        error.message?.includes("already pending")
+      ) {
+        console.log("Authentication request already pending, skipping...");
+        // Don't show error for pending requests
+      } else {
+        console.error("Fingerprint detection error:", error);
+        console.error("Error details:", error.response?.data);
+
+        if (error.response?.status === 404) {
+          showTemporaryError(
+            "Fingerprint not recognized. Please register first."
+          );
+        } else if (error.response?.data?.error) {
+          showTemporaryError(error.response.data.error);
+        } else {
+          showTemporaryError("Check-in failed. Please try again.");
+        }
+      }
+    } finally {
+      setIsProcessing(false);
+      isAuthenticatingRef.current = false;
+      abortControllerRef.current = null;
+    }
+  };
+
+  const clearAuthState = () => {
+    // Clear any existing timeout
+    if (authTimeoutRef.current) {
+      clearTimeout(authTimeoutRef.current);
+      authTimeoutRef.current = null;
+    }
+
+    // Cancel any existing authentication request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleSuccessfulCheckIn = (data) => {
+    const { member, already_checked_in } = data;
+
+    if (already_checked_in) {
+      setWelcomeMessage({
+        type: "already_checked_in",
+        member: member,
+        message: `Welcome back, ${member.name}!`,
+        submessage: "You already checked in today",
+      });
+    } else {
+      setWelcomeMessage({
+        type: "success",
+        member: member,
+        message: `Welcome, ${member.name}!`,
+        submessage: "Check-in successful",
+      });
+    }
+
+    // Refresh data
+    fetchRecentCheckIns();
+    fetchTodayStats();
+
+    // Clear any pending authentication while showing message
+    clearAuthState();
+
+    // Clear message after 4 seconds and restart automatic authentication if in auto mode
+    checkInTimeoutRef.current = setTimeout(() => {
+      setWelcomeMessage(null);
+      // Only restart continuous authentication if auto mode is still enabled
+      if (isAutoMode) {
+        // Check isAutoMode state directly
+        startContinuousAuthentication(false, true); // Pass true to ensure it restarts in auto mode
+      }
+    }, 4000);
+  };
+
+  const showTemporaryError = (message) => {
+    // Clear any pending authentication while showing error
+    clearAuthState();
+
+    setErrorMessage(message);
+    setTimeout(() => {
+      setErrorMessage(null);
+    }, 3000);
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kabul", // Ensure correct timezone display
+    });
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Asia/Kabul",
+    });
+  };
+
+  return (
+    <div className="kiosk-container min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 text-white overflow-hidden">
+      {/* Header */}
+      <div className="kiosk-header bg-black bg-opacity-30 px-8 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Elite Fitness Club</h1>
+            <p className="text-blue-200">Attendance Kiosk</p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold">{formatTime(currentTime)}</div>
+            <div className="text-blue-200">{formatDate(currentTime)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="kiosk-main flex min-h-[calc(100vh-100px)] h-auto">
+        {/* Left Side - Check-in Area */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
+          <AnimatePresence mode="wait">
+            {welcomeMessage ? (
+              <motion.div
+                key="welcome"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="text-center"
+              >
+                <div className="w-32 h-32 mx-auto mb-6 bg-green-500 rounded-full flex items-center justify-center">
+                  <i className="bx bx-check text-6xl text-white"></i>
+                </div>
+                <h2 className="text-4xl font-bold mb-2 text-green-400">
+                  {welcomeMessage.message}
+                </h2>
+                <p className="text-xl text-green-200">
+                  {welcomeMessage.submessage}
+                </p>
+                <div className="mt-4 text-gray-300">
+                  <p>Member ID: {welcomeMessage.member.athlete_id}</p>
+                </div>
+              </motion.div>
+            ) : errorMessage ? (
+              <motion.div
+                key="error"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="text-center"
+              >
+                <div className="w-32 h-32 mx-auto mb-6 bg-red-500 rounded-full flex items-center justify-center">
+                  <i className="bx bx-x text-6xl text-white"></i>
+                </div>
+                <h2 className="text-3xl font-bold mb-2 text-red-400">Error</h2>
+                <p className="text-xl text-red-200">{errorMessage}</p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="waiting"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="text-center"
+              >
+                <motion.div
+                  animate={
+                    isProcessing
+                      ? { scale: [1, 1.1, 1] }
+                      : { scale: [1, 1.05, 1] }
+                  }
+                  transition={{
+                    repeat: Infinity,
+                    duration: isProcessing ? 1.5 : 3,
+                  }}
+                  onClick={() =>
+                    !isProcessing && !isAutoMode && handleFingerprintClick()
+                  }
+                  className={`w-40 h-40 mx-auto mb-8 rounded-full flex items-center justify-center ${
+                    isProcessing
+                      ? "bg-yellow-500 shadow-lg shadow-yellow-500/50"
+                      : "bg-blue-500 shadow-lg shadow-blue-500/50"
+                  } ${
+                    !isProcessing && !isAutoMode
+                      ? "cursor-pointer hover:bg-blue-600"
+                      : ""
+                  }`}
+                >
+                  <i
+                    className={`bx bx-fingerprint text-8xl text-white ${
+                      isProcessing ? "animate-pulse" : ""
+                    }`}
+                  ></i>
+                </motion.div>
+
+                <h2 className="text-5xl font-bold mb-4">
+                  {isProcessing ? "Processing..." : "Touch to Check In"}
+                </h2>
+                <p className="text-2xl text-gray-300">
+                  {isProcessing
+                    ? "Verifying your fingerprint..."
+                    : "Place your finger on the sensor to check in"}
+                </p>
+
+                {/* Always show disable button when auto mode is active */}
+                {isAutoMode && isProcessing && (
+                  <motion.div className="text-center mt-4 mb-4">
+                    <motion.button
+                      onClick={disableAutoMode}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl text-base sm:text-lg font-semibold shadow-lg transition-colors"
+                    >
+                      <i className="bx bx-x text-lg sm:text-xl mr-1 sm:mr-2"></i>
+                      <span className="hidden sm:inline">
+                        Disable Auto Mode
+                      </span>
+                      <span className="sm:hidden">Stop Auto</span>
+                    </motion.button>
+                  </motion.div>
+                )}
+
+                {!isProcessing ? (
+                  <motion.div className="mt-4 sm:mt-8 mb-8">
+                    {isAutoMode ? (
+                      <motion.div className="text-center">
+                        <motion.div
+                          animate={{ opacity: [0.7, 1, 0.7] }}
+                          transition={{ repeat: Infinity, duration: 2 }}
+                          className="mb-4"
+                        >
+                          <i className="bx bx-wifi text-3xl text-green-400 mb-2"></i>
+                          <p className="text-lg text-green-400 font-semibold">
+                            Auto mode - Listening for fingerprint...
+                          </p>
+                        </motion.div>
+                        <motion.button
+                          onClick={disableAutoMode}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl text-base sm:text-lg font-semibold shadow-lg transition-colors"
+                        >
+                          <i className="bx bx-x text-lg sm:text-xl mr-1 sm:mr-2"></i>
+                          <span className="hidden sm:inline">
+                            Disable Auto Mode
+                          </span>
+                          <span className="sm:hidden">Stop Auto</span>
+                        </motion.button>
+                      </motion.div>
+                    ) : (
+                      <motion.div className="text-center">
+                        <motion.button
+                          onClick={enableAutoMode}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl text-xl font-semibold shadow-lg transition-colors mb-4"
+                        >
+                          <i className="bx bx-fingerprint text-2xl mr-2"></i>
+                          Enable Auto Sensor
+                        </motion.button>
+                        <p className="text-sm text-gray-400">
+                          or manually touch the sensor above
+                        </p>
+                      </motion.div>
+                    )}
+
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ repeat: Infinity, duration: 3, delay: 1 }}
+                      className="mt-6"
+                    >
+                      <i className="bx bx-down-arrow-alt text-4xl text-blue-300"></i>
+                    </motion.div>
+                  </motion.div>
+                ) : null}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Right Side - Stats & Recent Check-ins */}
+        <div className="w-96 bg-black bg-opacity-30 p-6">
+          {/* Today's Stats */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold mb-4 text-blue-200">
+              Today's Stats
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="bg-blue-600 bg-opacity-50 rounded-lg p-4">
+                <div className="text-2xl font-bold">{stats.todayCount}</div>
+                <div className="text-blue-200">Check-ins Today</div>
+              </div>
+              <div className="bg-purple-600 bg-opacity-50 rounded-lg p-4">
+                <div className="text-2xl font-bold">{stats.totalMembers}</div>
+                <div className="text-purple-200">Total Members</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Check-ins */}
+          <div>
+            <h3 className="text-xl font-bold mb-4 text-blue-200">
+              Recent Check-ins
+            </h3>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {recentCheckIns.length === 0 ? (
+                <div className="text-gray-400 text-center py-8">
+                  <i className="bx bx-time text-3xl mb-2"></i>
+                  <p>No check-ins yet today</p>
+                </div>
+              ) : (
+                recentCheckIns.map((checkIn, index) => (
+                  <motion.div
+                    key={checkIn.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-gray-800 bg-opacity-50 rounded-lg p-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{checkIn.member_name}</div>
+                        <div className="text-sm text-gray-400">
+                          ID: {checkIn.member_id}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">
+                          {new Date(checkIn.check_in_time).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                              timeZone: "Asia/Kabul",
+                            }
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {checkIn.verification_method}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="kiosk-footer bg-black bg-opacity-30 px-8 py-2 text-center">
+        <p className="text-gray-400">
+          Kiosk Mode Active • WebAuthn Fingerprint Authentication •
+          {isProcessing ? " Processing..." : " Ready for Check-in"}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default KioskCheckIn;

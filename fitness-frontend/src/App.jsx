@@ -23,11 +23,15 @@ import {
   SmartLoginPage
 } from './pages/public';
 
+// Kiosk Pages
+import KioskCheckIn from './pages/kiosk/KioskCheckIn';
+
 // Layouts
 import { AdminLayout, MemberLayout } from './layouts';
 
 // Admin Pages
 import {
+  AttendancePage as AdminAttendancePage,
   CommunityPage as AdminCommunityManagement,
   SettingsPage as AdminSettingsPage,
   SupportPage as AdminSupportManagement,
@@ -43,6 +47,7 @@ import {
 
 // Member Pages
 import {
+  AttendancePage as MemberAttendancePage,
   CommunityPage as MemberCommunityPage,
   DashboardPage as MemberDashboardPage,
   ProfilePage as MemberProfilePage,
@@ -121,7 +126,8 @@ function NavbarHandler() {
   if (
     location.pathname.startsWith('/admin') ||
     location.pathname.startsWith('/member-dashboard') ||
-    location.pathname === '/login'
+    location.pathname === '/login' ||
+    location.pathname.startsWith('/kiosk')
   ) {
     return null;
   }
@@ -165,6 +171,9 @@ function App() {
        
         <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/helpandsupportpage" element={<HelpSupport />} />
+        
+        {/* Kiosk Route (Public - No Auth Required) */}
+        <Route path="/kiosk" element={<KioskCheckIn />} />
 
         {/* Admin Routes */}
         <Route path="/admin/*" element={
@@ -177,7 +186,7 @@ function App() {
           <Route path="register" element={<RegisterPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="trainings" element={<TrainingsPage />} />
-         
+          <Route path="attendance" element={<AdminAttendancePage />} />
           <Route path="revenue" element={<RevenuePage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="trainers" element={<TrainersPage />} />
@@ -194,7 +203,7 @@ function App() {
         }>
           <Route index element={<MemberDashboardPage />} />
           <Route path="profile" element={<MemberProfilePage />} />
-        
+          <Route path="attendance" element={<MemberAttendancePage />} />
           <Route path="trainings" element={<MemberTrainingSessionsPage />} />
           <Route path="settings" element={<MemberSettingsPage />} />
           <Route path="community" element={<MemberCommunityPage />} />

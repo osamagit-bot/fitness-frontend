@@ -309,9 +309,9 @@ class MemberViewSet(viewsets.ModelViewSet):
                 message__icontains=f"Membership expired for: {instance.first_name} {instance.last_name}",
                 is_read=False,
             ).delete()
-            Notification.objects.create(
-                message=f"Membership renewed for: {instance.first_name} {instance.last_name}"
-            )
+            # Membership renewal notification handled by service layer
+            from .services import notification_service
+            notification_service.membership_renewed(instance)
         return Response(serializer.data)
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.AllowAny])
@@ -341,9 +341,7 @@ class MemberViewSet(viewsets.ModelViewSet):
 
             MembershipPayment.objects.create(member=member, amount=member.monthly_fee, description="Registration fee")
 
-            Notification.objects.create(
-                message=f"New member registered: {member.first_name} {member.last_name}"
-            )
+            # Member registration notification handled automatically by signals
             return Response(
                 {
                     "message": "Member registered successfully",
@@ -442,14 +440,12 @@ class MemberViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(member, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            Notification.objects.create(
-                message=f"Member Profile Updated For: {member.first_name} {member.last_name}"
-            )
+            # Member profile update notification handled automatically by signals
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
     @action(detail=True, methods=["post"])
-    def change_password(self, request, pk=None):
+    def change_password(self, request, athlete_id=None):
         member = self.get_object()
         current_password = request.data.get("current_password")
         new_password = request.data.get("new_password")
@@ -507,8 +503,11 @@ class MemberViewSet(viewsets.ModelViewSet):
             member.delete_requested = True
             member.save()
 
-            Notification.objects.create(
-                user=user, message=f"Member \'{user.username}\' has requested account deletion."
+            # Member account deletion request notification
+            from .services import notification_service
+            notification_service.create_notification(
+                f"Member '{user.username}' has requested account deletion.",
+                user_id=user.id
             )
             return Response({"detail": "Member account deletion request sent."}, status=status.HTTP_200_OK)
 
@@ -551,9 +550,9 @@ class MemberViewSet(viewsets.ModelViewSet):
 
         print(f"After save, expiry date is {member.expiry_date}")
 
-        Notification.objects.create(
-            message=f"Membership renewed for: {member.first_name} {member.last_name} (New Expiry: {new_expiry})"
-        )
+        # Membership renewal notification handled by service layer
+        from .services import notification_service
+        notification_service.membership_renewed(member)
 
         return Response({"detail": f"Membership renewed until {new_expiry}", "expiry_date": member.expiry_date})
 
@@ -637,7 +636,7 @@ class TrainerViewSet(viewsets.ModelViewSet):
                 start_date=data.get("start_date"),
             )
 
-            Notification.objects.create(message=f"New trainer registered: {trainer.first_name} {trainer.last_name}")
+            # Trainer registration notification handled automatically by signals
 
             response_data = {
                 "id": trainer.id,
@@ -803,9 +802,7 @@ class CommunityViewSet(viewsets.ViewSet):
             serializer = PostSerializer(data=data)
             if serializer.is_valid():
                 post = serializer.save(created_by=user)
-                Notification.objects.create(
-                    message=f"New community post created by {member.first_name} {member.last_name}"
-                )
+                # Community post creation notification handled automatically by signals
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -977,8 +974,10 @@ class SupportViewSet(viewsets.ViewSet):
             serializer = SupportTicketSerializer(data=data)
             if serializer.is_valid():
                 ticket = serializer.save(member=member)
-                Notification.objects.create(
-                    message=f"New community post created by {member.first_name} {member.last_name}"
+                # Support ticket creation notification
+                from .services import notification_service
+                notification_service.create_notification(
+                    f"New support ticket created by {member.first_name} {member.last_name}"
                 )
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
@@ -1019,9 +1018,7 @@ class AdminCommunityViewSet(viewsets.ViewSet):
         serializer = AnnouncementSerializer(data=request.data)
         if serializer.is_valid():
             announcement = serializer.save(created_by=request.user)
-            Notification.objects.create(
-                message=f"New admin announcement created: {announcement.title}"
-            )
+            # Announcement creation notification handled automatically by signals
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1030,7 +1027,7 @@ class AdminCommunityViewSet(viewsets.ViewSet):
         try:
             announcement = Announcement.objects.get(id=pk)
             announcement.delete()
-            Notification.objects.create(message=f"Admin deleted announcement ID: {pk}")
+            # Announcement deletion notification handled automatically by signals
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Announcement.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -1046,7 +1043,7 @@ class AdminCommunityViewSet(viewsets.ViewSet):
         serializer = ChallengeSerializer(data=request.data)
         if serializer.is_valid():
             challenge = serializer.save(created_by=request.user)
-            Notification.objects.create(message=f"New admin challenge created: {challenge.title}")
+            # Challenge creation notification handled automatically by signals
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1055,7 +1052,7 @@ class AdminCommunityViewSet(viewsets.ViewSet):
         try:
             challenge = Challenge.objects.get(id=pk)
             challenge.delete()
-            Notification.objects.create(message=f"Admin deleted challenge ID: {pk}")
+            # Challenge deletion notification handled automatically by signals
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Challenge.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -1094,7 +1091,9 @@ class AdminSupportViewSet(viewsets.ViewSet):
             ticket = SupportTicket.objects.get(id=pk)
             response = TicketResponse(ticket=ticket, message=request.data.get("message", ""), responder=request.user)
             response.save()
-            Notification.objects.create(message=f"Admin responded to support ticket ID: {pk}")
+            # Support ticket response notification handled by service layer
+            from .services import notification_service
+            notification_service.support_ticket_responded(pk)
             serializer = TicketResponseSerializer(response)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except SupportTicket.DoesNotExist:
@@ -1106,7 +1105,9 @@ class AdminSupportViewSet(viewsets.ViewSet):
             ticket = SupportTicket.objects.get(id=pk)
             ticket.status = "closed"
             ticket.save()
-            Notification.objects.create(message=f"Admin closed support ticket ID: {pk}")
+            # Support ticket close notification handled by service layer
+            from .services import notification_service
+            notification_service.support_ticket_closed(pk)
             serializer = SupportTicketSerializer(ticket)
             return Response(serializer.data)
         except SupportTicket.DoesNotExist:
@@ -1131,7 +1132,9 @@ class AdminSupportViewSet(viewsets.ViewSet):
         try:
             faq = FAQ.objects.get(id=pk)
             faq.delete()
-            Notification.objects.create(message=f"Admin deleted FAQ ID: {pk}")
+            # FAQ deletion notification handled by service layer
+            from .services import notification_service
+            notification_service.faq_deleted(pk)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -1165,7 +1168,10 @@ class NotificationViewSet(viewsets.ViewSet):
         message = request.data.get("message")
         if not message:
             return Response({"error": "Message field is required."}, status=status.HTTP_400_BAD_REQUEST)
-        notification = Notification.objects.create(user=request.user, message=message)
+        
+        # Manual notification creation using service layer
+        from .services import notification_service
+        notification = notification_service.create_notification(message, user_id=request.user.id)
 
         serializer = NotificationSerializer(notification)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -1201,8 +1207,10 @@ class NotificationViewSet(viewsets.ViewSet):
         with transaction.atomic():
             expired_members = Member.objects.select_for_update().filter(expiry_date__lt=today, notified_expired=False)
             for member in expired_members:
-                Notification.objects.create(
-                    message=f"Membership expired for: {member.first_name} {member.last_name}"
+                # Membership expiry notification handled by service layer
+                from .services import notification_service
+                notification_service.create_notification(
+                    f"Membership expired for: {member.first_name} {member.last_name}"
                 )
                 member.notified_expired = True
                 member.save()
@@ -1249,7 +1257,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         response = super().create(request, *args, **kwargs)
         try:
             product_name = response.data.get("name", "Unknown Product")
-            Notification.objects.create(message=f"Product added successfully: {product_name}")
+            # Product creation notification handled by service layer
+            from .services import notification_service
+            notification_service.create_notification(f"Product added successfully: {product_name}")
         except Exception as e:
             print(f"Failed to create product notification: {e}")
         return response
@@ -1351,7 +1361,9 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         product_name = purchase.product.name
         total_price = purchase.total_price
 
-        Notification.objects.create(message=f"{product_name} sold for {total_price:.2f} AFN")
+        # Product purchase notification handled by service layer
+        from .services import notification_service
+        notification_service.create_notification(f"{product_name} sold for {total_price:.2f} AFN")
 
 
 @api_view(["GET"])

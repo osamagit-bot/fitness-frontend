@@ -1,0 +1,180 @@
+/* Kiosk-specific styles */
+.kiosk-container {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: default;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Hide scrollbars in kiosk mode */
+.kiosk-container::-webkit-scrollbar {
+  display: none;
+}
+
+.kiosk-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Disable text selection and context menu */
+.kiosk-container * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Disable right-click context menu */
+.kiosk-container {
+  -webkit-context-menu: none;
+  context-menu: none;
+}
+
+/* Fullscreen styles */
+.kiosk-header {
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.kiosk-main {
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.1) 0%, 
+    rgba(147, 51, 234, 0.1) 50%, 
+    rgba(79, 70, 229, 0.1) 100%);
+}
+
+.kiosk-footer {
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Fingerprint animation */
+@keyframes fingerprint-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.fingerprint-pulse {
+  animation: fingerprint-pulse 2s ease-in-out infinite;
+}
+
+/* Success animation */
+@keyframes success-bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -30px, 0);
+  }
+  70% {
+    transform: translate3d(0, -15px, 0);
+  }
+  90% {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+.success-bounce {
+  animation: success-bounce 1s ease-in-out;
+}
+
+/* Glow effects */
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5), 0 0 40px rgba(34, 197, 94, 0.3);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(239, 68, 68, 0.3);
+}
+
+.glow-yellow {
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.5), 0 0 40px rgba(234, 179, 8, 0.3);
+}
+
+/* Custom scrollbar for recent check-ins */
+.recent-checkins::-webkit-scrollbar {
+  width: 4px;
+}
+
+.recent-checkins::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.recent-checkins::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.recent-checkins::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive adjustments for different screen sizes */
+@media (max-width: 1024px) {
+  .kiosk-container {
+    font-size: 14px;
+  }
+  
+  .kiosk-main .text-5xl {
+    font-size: 3rem;
+  }
+  
+  .kiosk-main .text-4xl {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .kiosk-main {
+    flex-direction: column;
+  }
+  
+  .kiosk-main .w-96 {
+    width: 100%;
+    max-width: 400px;
+  }
+}
+
+/* Touch-friendly buttons and interactions */
+.kiosk-container button,
+.kiosk-container .touchable {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Prevent double-tap zoom */
+.kiosk-container {
+  touch-action: pan-x pan-y;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .kiosk-container {
+    filter: contrast(1.2);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-container *,
+  .kiosk-container *::before,
+  .kiosk-container *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

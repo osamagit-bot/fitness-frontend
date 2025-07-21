@@ -14,6 +14,10 @@ from .views import (
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import payments_views
 from .api.notifications_views import MemberNotificationsView
+from .biometric_views import (
+    webauthn_register_options, webauthn_register_complete, 
+    webauthn_check_in, attendance_history, kiosk_authentication_options, kiosk_checkin
+)
 
 # Main router
 router = DefaultRouter()
@@ -55,7 +59,7 @@ urlpatterns = [
     path('token/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('users/', views.UserListView.as_view(), name='user-list'),
-   
+    
    
     path('test/', views.test_view, name='test-view'),
     path('debug-urls/', views.debug_urls, name='debug-urls'),
@@ -68,5 +72,15 @@ urlpatterns = [
 
     # Member notifications
     path('member/notifications/', MemberNotificationsView.as_view(), name='member-notifications'),
+    
+    # WebAuthn/Biometric endpoints
+    path('webauthn/register/options/', webauthn_register_options, name='webauthn-register-options'),
+    path('webauthn/register/complete/', webauthn_register_complete, name='webauthn-register-complete'),
+    path('webauthn/check_in/', webauthn_check_in, name='webauthn-check-in'),
+    path('attendance_history/', attendance_history, name='attendance-history'),
+    
+    # Kiosk endpoints
+    path('webauthn/kiosk/options/', kiosk_authentication_options, name='kiosk-auth-options'),
+    path('webauthn/kiosk/checkin/', kiosk_checkin, name='kiosk-checkin'),
 ]
 

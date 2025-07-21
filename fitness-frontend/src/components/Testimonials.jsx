@@ -1,4 +1,3 @@
-import React from 'react';
 
 const Testimonials = () => {
   const testimonials = [
@@ -6,21 +5,21 @@ const Testimonials = () => {
       id: 1,
       name: "Ahmad Seyar",
       quote: "After 6 months, I've lost 30lbs and gained so much confidence. The trainers here are amazing!",
-      image: "./images/man.jpg", // Replace with actual image path
+      image: "./images/man.jpg", 
       transformation: "Lost 30lbs in 6 months"
     },
     {
       id: 2,
       name: "Qais Ahmad",
       quote: "The personalized training program helped me build muscle and improve my overall strength. Best decision ever!",
-      image: "./images/man.jpg", // Replace with actual image path
+      image: "./images/man.jpg",
       transformation: "Gained 15lbs of muscle"
     },
     {
       id: 3,
       name: "Tamim Yousufi",
       quote: "I never thought I could enjoy working out until I joined this gym. The community here is so supportive!",
-      image: "./images/boost.jpg", // Replace with actual image path
+      image: "./images/boost.jpg", 
       transformation: "Improved fitness and energy levels"
     }
   ];

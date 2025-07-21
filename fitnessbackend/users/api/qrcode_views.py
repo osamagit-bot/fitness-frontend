@@ -172,7 +172,7 @@ class AttendanceHistoryView(APIView):
                 attendance_data.append({
                     'id': attendance.id,
                     'member_id': attendance.member.id,
-                    'member_name': attendance.member.user.username,
+                    'member_name': f"{attendance.member.first_name} {attendance.member.last_name}",
                     'date': str(attendance.date),
                     'check_in_time': attendance.check_in_time.strftime('%H:%M:%S')
                 })
