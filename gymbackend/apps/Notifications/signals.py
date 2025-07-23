@@ -19,16 +19,14 @@ channel_layer = get_channel_layer()
 
 @receiver(post_save, sender=Member)
 def member_created_notification(sender, instance, created, **kwargs):
-    """Send notification when a new member is registered"""
+    """Send notification when a new member is created"""
     if created:
-        print(f"🔔 SIGNAL TRIGGERED: New member created - {instance.first_name} {instance.last_name}")
-        
         message = f"New member registered: {instance.first_name} {instance.last_name}"
         
         # Create in-app notification
         notification = Notification.objects.create(message=message)
         
-        # Send email notification
+        # Send email notification only to admins with email notifications enabled
         from .email_service import EmailNotificationService
         email_service = EmailNotificationService()
         
@@ -41,7 +39,8 @@ def member_created_notification(sender, instance, created, **kwargs):
                    f"Membership Type: {instance.get_membership_type_display()}\n"
                    f"Monthly Fee: ${instance.monthly_fee}\n"
                    f"Start Date: {instance.start_date}\n"
-                   f"Expiry Date: {instance.expiry_date}"
+                   f"Expiry Date: {instance.expiry_date}",
+            check_preferences=True  # Enable preference checking
         )
         
         print(f"📧 Email notification sent: {email_success}")
@@ -230,7 +229,7 @@ def member_checkin_notification(sender, instance, created, **kwargs):
         kabul_tz = pytz.timezone('Asia/Kabul')
         local_time = instance.check_in_time.astimezone(kabul_tz)
         
-        # Send email notification
+        # Send email notification only to admins with email notifications enabled
         from .email_service import EmailNotificationService
         email_service = EmailNotificationService()
         
@@ -243,16 +242,16 @@ def member_checkin_notification(sender, instance, created, **kwargs):
                    f"Membership Type: {member.get_membership_type_display()}\n"
                    f"Check-in Time: {local_time.strftime('%Y-%m-%d %I:%M:%S %p')} (Afghanistan Time)\n"
                    f"Time Slot: {member.get_time_slot_display()}\n"
-                   f"Verification Method: {getattr(instance, 'verification_method', 'Biometric')}"
+                   f"Verification Method: {getattr(instance, 'verification_method', 'Biometric')}",
+            check_preferences=True  # Enable preference checking
         )
         
-        print(f"📧 Email sent: {email_success}")
-        print(f"🕐 UTC: {instance.check_in_time}")
-        print(f"🕐 Afghanistan: {local_time.strftime('%I:%M:%S %p')}")
+        print(f"📧 Email notification sent: {email_success}")
         
         # Send real-time WebSocket notification
         send_realtime_notification(message, notification.id)
         logger.info(f"Member check-in notification sent: {message}")
+
 
 
 

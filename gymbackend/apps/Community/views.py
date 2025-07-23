@@ -73,7 +73,8 @@ class CommunityViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"], url_path="announcements")
     def get_community_announcements(self, request):
         try:
-            announcements = Announcement.objects.all().order_by("-date_created")
+            # Add explicit ordering
+            announcements = Announcement.objects.all().order_by("-date_created", "-id")
             serializer = AnnouncementSerializer(announcements, many=True)
             return Response(serializer.data)
         except Exception as e:
@@ -288,7 +289,7 @@ class AdminCommunityViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"])
     def announcements(self, request):
-        announcements = Announcement.objects.all().order_by("-date_created")
+        announcements = Announcement.objects.all().order_by("-date_created", "-id")
         serializer = AnnouncementSerializer(announcements, many=True)
         return Response(serializer.data)
 
@@ -360,7 +361,7 @@ class AdminSupportViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"])
     def tickets(self, request):
-        tickets = SupportTicket.objects.all().order_by("-date_created")
+        tickets = SupportTicket.objects.all().order_by("-date_created", "-id")
         serializer = SupportTicketSerializer(tickets, many=True)
         return Response(serializer.data)
 

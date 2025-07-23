@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
-      host: 'localhost',  // Use IP instead of localhost
+      host: 'localhost',  
       open: true,
     },
     preview: {

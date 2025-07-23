@@ -9,7 +9,7 @@ const MemberDashboard = () => {
       <MemberSidebar />
       
       {/* Main Content */}
-      <div className="flex-1 p-4 lg:ml-44 overflow-auto">
+      <div className="flex-1 p-4 lg:ml-64 overflow-auto pt-20 lg:pt-4">
         <Outlet />
       </div>
     </div>

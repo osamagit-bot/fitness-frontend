@@ -2,7 +2,7 @@ import "boxicons/css/boxicons.min.css";
 import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import PageTransitionWrapper from "../components/ui/PageTransitionWrapper";
-import api from "../services/api";
+import api from "../utils/api";
 
 // Utility functions for notifications
 const getNotifStyle = (message) => {
@@ -587,7 +587,7 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
         }

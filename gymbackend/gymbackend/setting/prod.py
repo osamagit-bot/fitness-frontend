@@ -97,7 +97,7 @@ MESSAGEBIRD_API_KEY = env('MESSAGEBIRD_API_KEY', default='')
 WHATSAPP_ACCESS_TOKEN = env('WHATSAPP_ACCESS_TOKEN', default='')
 WHATSAPP_PHONE_NUMBER_ID = env('WHATSAPP_PHONE_NUMBER_ID', default='')
 
-# Logging Configuration
+# Add proper logging configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -121,15 +121,8 @@ LOGGING = {
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['file', 'console'],
         'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
     },
 }
 
@@ -165,3 +158,4 @@ HISAB_PAY_API_URL = os.environ.get('HISAB_PAY_API_URL', 'https://api.hisabpay.co
 if not HISAB_PAY_API_KEY or not HISAB_PAY_MERCHANT_ID:
     import warnings
     warnings.warn("HisabPay credentials not configured. Payment system will run in simulation mode.")
+

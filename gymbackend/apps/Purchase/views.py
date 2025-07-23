@@ -5,7 +5,14 @@ from rest_framework.authentication import TokenAuthentication, SessionAuthentica
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from apps.Member.models import Member
 from .models import Product,Purchase
+import logging
+
+logger = logging.getLogger(__name__)
+
+from django.utils import timezone
 from .serializers import ProductSerializer,PurchaseSerializer
+
+
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -31,7 +38,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         try:
             product_name = response.data.get("name", "Unknown Product")
             # Product creation notification handled by service layer
-            from Notifications.services import notification_service
+            from apps.Notifications.services import notification_service  # ✅ Fixed import
             notification_service.create_notification(f"Product added successfully: {product_name}")
         except Exception as e:
             print(f"Failed to create product notification: {e}")
@@ -70,10 +77,15 @@ class PurchaseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         purchase = serializer.save()
-
         product_name = purchase.product.name
         total_price = purchase.total_price
 
         # Product purchase notification handled by service layer
-        from Notifications.services import notification_service
-        notification_service.create_notification(f"{product_name} sold for {total_price:.2f} AFN")
+        try:
+            from apps.Notifications.services import notification_service
+            notification_service.create_notification(f"{product_name} sold for {total_price:.2f} AFN")
+        except ImportError as e:
+            logger.error(f"Failed to create notification: {e}")
+
+
+

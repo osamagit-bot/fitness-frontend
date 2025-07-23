@@ -18,7 +18,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
-import api from "../../services/api";
+import api from "../../utils/api";
 const ConfirmationPrompt = ({
   isOpen,
   onClose,

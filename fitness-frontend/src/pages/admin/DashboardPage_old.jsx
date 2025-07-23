@@ -35,7 +35,7 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import api from "../../services/api";
+import api from "../../utils/api";
 import { formatDate, formatDateTime } from "../../utils/dateUtils";
 
 function EnhancedDashboardPage() {

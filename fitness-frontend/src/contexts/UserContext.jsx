@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSmartAuth } from '../features/auth/useSmartAuth';
-import api from '../services/api';
+import api from '../utils/api';
 
 // Create the context
 const UserContext = createContext();

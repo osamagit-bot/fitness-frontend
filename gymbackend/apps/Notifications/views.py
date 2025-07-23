@@ -13,8 +13,6 @@ from .whatsapp_service import WhatsAppNotificationService
 
 
 
-
-
 class NotificationViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
@@ -83,10 +81,9 @@ class NotificationViewSet(viewsets.ViewSet):
         try:
             email_enabled = request.data.get('email_enabled', True)
             
-            # Store preference in user profile or settings
-            # For now, we'll store it in the user's profile or create a settings model
-            request.user.profile.email_notifications = email_enabled
-            request.user.profile.save()
+            # Update user's email notification preference
+            request.user.email_notifications = email_enabled
+            request.user.save()
             
             return Response({
                 'message': 'Email preferences updated successfully',
@@ -232,21 +229,38 @@ class NotificationViewSet(viewsets.ViewSet):
     
     @action(detail=False, methods=["post"], permission_classes=[IsAdminUser])
     def update_whatsapp_preferences(self, request):
-        """Update WhatsApp notification preferences"""
+        """Update admin WhatsApp notification preferences"""
         try:
             whatsapp_enabled = request.data.get('whatsapp_enabled', False)
             
-            # Here you could save to database or just return success
-            # For now, we'll just return the current state
+            # Update user's WhatsApp notification preference
+            request.user.whatsapp_notifications = whatsapp_enabled
+            request.user.save()
             
             return Response({
                 'message': 'WhatsApp preferences updated successfully',
-                'whatsapp_enabled': whatsapp_enabled,
-                'status': 'success'
+                'whatsapp_enabled': whatsapp_enabled
             })
-            
         except Exception as e:
             return Response(
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAdminUser])
+    def get_preferences(self, request):
+        """Get admin notification preferences"""
+        try:
+            return Response({
+                'email_enabled': request.user.email_notifications,
+                'whatsapp_enabled': request.user.whatsapp_notifications,
+                'message': 'Preferences retrieved successfully'
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+

@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import api from "../../services/api";
-import { showToast } from '../../utils/toast';
 import AppToastContainer from '../../components/ui/ToastContainer';
+import api from "../../utils/api";
+import { showToast } from '../../utils/toast';
 
 function MemberProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -163,7 +163,7 @@ function MemberProfilePage() {
   if (loading) {
     return (
       <motion.div
-        className="p-4 lg:ml-20"
+        className="p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -180,7 +180,7 @@ function MemberProfilePage() {
   if (error) {
     return (
       <motion.div
-        className="p-4 mt-5 lg:ml-20"
+        className="p-4 mt-5"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -206,7 +206,7 @@ function MemberProfilePage() {
   if (!member) {
     return (
       <motion.div
-        className="p-4 mt-5 lg:ml-20"
+        className="p-4 mt-5"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -229,7 +229,7 @@ function MemberProfilePage() {
     <>
       <AppToastContainer />
       <motion.div
-        className="p-4 mt-5 lg:ml-20"
+        className="p-4 mt-5"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -246,7 +246,7 @@ function MemberProfilePage() {
 
       {/* Debug Data */}
       <motion.div
-        className="mb-4 mt-5 lg:ml-20 p-2 bg-gray-100 rounded text-xs"
+        className="mb-4 mt-5 p-2 bg-gray-100 rounded text-xs"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
@@ -283,7 +283,7 @@ function MemberProfilePage() {
 
       {/* Personal Information */}
       <motion.div
-        className="bg-white p-6 lg:ml-5 rounded-lg shadow mb-6"
+        className="bg-white p-6 rounded-lg shadow mb-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}

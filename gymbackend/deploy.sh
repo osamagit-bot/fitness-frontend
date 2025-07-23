@@ -26,6 +26,13 @@ pip install -r requirements.txt
 echo "🗄️ Running database migrations..."
 python manage.py migrate --settings=gymbackend.setting.prod
 
+# Add migration check
+echo "🔍 Checking for pending migrations..."
+python manage.py showmigrations --plan | grep '\[ \]' && {
+    echo "❌ Pending migrations found!"
+    exit 1
+} || echo "✅ All migrations applied"
+
 # Collect static files
 echo "📁 Collecting static files..."
 python manage.py collectstatic --noinput --settings=gymbackend.setting.prod

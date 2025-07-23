@@ -6,7 +6,7 @@ const getBaseURL = () => {
   const baseURL = import.meta.env.VITE_API_BASE_URL;
   if (!baseURL) {
     console.warn('VITE_API_BASE_URL not set, falling back to localhost');
-    return 'http://127.0.0.1:8000/api/';  // Changed back to 8000
+    return import.meta.env.PROD ? 'https://your-production-api.com/api/' : 'http://127.0.0.1:8000/api/';
   }
   return baseURL.endsWith('/') ? baseURL : `${baseURL}/`;
 };
@@ -146,6 +146,7 @@ publicApi.interceptors.response.use(
 // Export both instances
 export { api, publicApi };
 export default api; // Default export (for backward compatibility)
+
 
 
 

@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import LastMemberCredentials from '../../components/LastMemberCredentials';
-import api from "../../services/api";
+import api from "../../utils/api";
 
 function MemberRegistrationLogicPage() {
   const navigate = useNavigate();

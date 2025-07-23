@@ -20,6 +20,11 @@ class Post(models.Model):
     def __str__(self):
         return self.title
     
+    class Meta:
+        ordering = ['-date_created', '-id']  # Default ordering
+        verbose_name = "Post"
+        verbose_name_plural = "Posts"
+    
     
 # Announcement 
 class Announcement(models.Model):
@@ -31,8 +36,13 @@ class Announcement(models.Model):
     def __str__(self):
         return self.title
 
-
-
+    class Meta:
+        ordering = ['-date_created', '-id']  # Default ordering
+        verbose_name = "Announcement"
+        verbose_name_plural = "Announcements"
+    
+    
+    
 # Challenge model 
 class Challenge(models.Model):
     title = models.CharField(max_length=200)
@@ -100,6 +110,11 @@ class SupportTicket(models.Model):
     def __str__(self):
         return f"Ticket #{self.id}: {self.subject}"
 
+    class Meta:
+        ordering = ['-date_created', '-id']  # Default ordering
+        verbose_name = "Support Ticket"
+        verbose_name_plural = "Support Tickets"
+    
 # Support ticket 
 class TicketResponse(models.Model):
     ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='responses')

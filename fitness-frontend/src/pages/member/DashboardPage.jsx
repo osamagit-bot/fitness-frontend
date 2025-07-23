@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api from '../../utils/api';
 
 import 'boxicons/css/boxicons.min.css';
 import { useRef } from 'react';

@@ -1,7 +1,7 @@
 // SubPages/ProductsPage.jsx
 import { useEffect, useState } from "react";
 import AppToastContainer from "../../components/ui/ToastContainer";
-import api from "../../services/api";
+import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 
 // Icons (using inline SVGs)

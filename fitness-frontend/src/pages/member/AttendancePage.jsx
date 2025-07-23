@@ -232,7 +232,7 @@ const registerFingerprint = async () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto ml-0 lg:pl-24">
+    <div className="p-6 max-w-6xl mx-auto ml-0">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

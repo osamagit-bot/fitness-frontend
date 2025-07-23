@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../services/api";
+import api from "../utils/api";
 import { staticTrainers } from "../utils/staticData";
 
 const TrainerProfiles = () => {
@@ -43,6 +43,15 @@ const TrainerProfiles = () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Check if user is authenticated before making API call
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        console.log('No token found, using static data');
+        setTrainers(staticTrainers);
+        setIsLoading(false);
+        return;
+      }
+
       const response = await api.get('trainers/');
       const trainersData = response.data.results || response.data;
       setTrainers(Array.isArray(trainersData) ? trainersData : []);
@@ -357,3 +366,5 @@ const TrainerProfiles = () => {
 };
 
 export default TrainerProfiles;
+
+

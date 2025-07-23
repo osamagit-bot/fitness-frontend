@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import AppToastContainer from "../../components/ui/ToastContainer";
-import api from "../../services/api";
+import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 
 function MembersPage() {

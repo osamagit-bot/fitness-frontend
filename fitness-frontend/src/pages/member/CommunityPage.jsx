@@ -2,10 +2,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import api from "../../services/api";
 import AppToastContainer from "../../components/ui/ToastContainer";
+import api from "../../utils/api";
+import { formatDate, getDateFromObject } from "../../utils/dateUtils";
 import { showToast } from "../../utils/toast";
-import { formatDate, formatDateTime, getDateFromObject } from "../../utils/dateUtils";
 
 function MemberCommunityPage() {
   const { communityId } = useParams();

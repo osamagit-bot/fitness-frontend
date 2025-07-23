@@ -112,6 +112,10 @@ class CustomUser(AbstractUser):
         related_query_name="user",
     )
     
+    # Add notification preferences
+    email_notifications = models.BooleanField(default=True, verbose_name=_('Email Notifications'))
+    whatsapp_notifications = models.BooleanField(default=False, verbose_name=_('WhatsApp Notifications'))
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     objects = CustomUserManager()

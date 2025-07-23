@@ -1,5 +1,5 @@
 // utils/smartAuth.js - Production-ready with development compatibility
-import api from '../../services/api';
+import api from '../../utils/api';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';

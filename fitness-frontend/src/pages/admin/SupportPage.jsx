@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { FiChevronDown, FiChevronUp, FiEdit2, FiHelpCircle, FiMessageSquare, FiPlus, FiTrash2 } from 'react-icons/fi';
-import api from "../../services/api";
 import AppToastContainer from "../../components/ui/ToastContainer";
-import { showToast } from "../../utils/toast";
+import api from "../../utils/api";
 import { formatDate, formatDateTime } from "../../utils/dateUtils";
+import { showToast } from "../../utils/toast";
 function AdminSupportManagement() {
   const [tickets, setTickets] = useState([]);
   const [faqCategories, setFaqCategories] = useState([]);

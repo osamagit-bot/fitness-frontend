@@ -65,12 +65,18 @@ class NotificationService:
     def _send_email_notification(self, message):
         """Send email notification to admins if email notifications are enabled"""
         try:
-            # Check if email notifications are enabled (you can store this in settings or database)
+            # Check if email notifications are enabled globally
             from django.conf import settings
-            if getattr(settings, 'EMAIL_NOTIFICATIONS_ENABLED', True):
-                subject = "System Notification"
-                return self.email_service.send_admin_notification_email(subject, message)
-            return False
+            if not getattr(settings, 'EMAIL_NOTIFICATIONS_ENABLED', True):
+                return False
+            
+            # Send email with preference checking enabled
+            subject = "System Notification"
+            return self.email_service.send_admin_notification_email(
+                subject, 
+                message, 
+                check_preferences=True  # Enable preference checking
+            )
         except Exception as e:
             logger.error(f"Failed to send email notification: {str(e)}")
             return False
@@ -94,7 +100,7 @@ class NotificationService:
         # Create in-app notification
         notification = self.create_notification(message)
         
-        # Send email notification
+        # Send email notification only to admins with email notifications enabled
         self.email_service.send_admin_notification_email(
             subject="Member Membership Renewed",
             message=f"A member has renewed their membership:\n\n"
@@ -105,7 +111,8 @@ class NotificationService:
                    f"Monthly Fee: ${member.monthly_fee}\n"
                    f"New Start Date: {member.start_date}\n"
                    f"New Expiry Date: {member.expiry_date}\n"
-                   f"Renewal Date: {timezone.now().date()}"
+                   f"Renewal Date: {timezone.now().date()}",
+            check_preferences=True  # Enable preference checking
         )
         
         return notification
@@ -161,7 +168,7 @@ class NotificationService:
         # Create in-app notification
         notification = self.create_notification(message)
         
-        # Send email notification with correct timezone
+        # Send email notification only to admins with email notifications enabled
         self.email_service.send_admin_notification_email(
             subject="Member Check-in",
             message=f"A member has checked in today:\n\n"
@@ -170,13 +177,15 @@ class NotificationService:
                    f"Email: {member.user.email if member.user else 'N/A'}\n"
                    f"Membership Type: {member.get_membership_type_display()}\n"
                    f"Check-in Time: {local_time.strftime('%Y-%m-%d %I:%M:%S %p')} (Afghanistan Time)\n"
-                   f"Time Slot: {member.get_time_slot_display()}"
+                   f"Time Slot: {member.get_time_slot_display()}",
+            check_preferences=True  # Enable preference checking
         )
         
         return notification
 
 # Global notification service instance
 notification_service = NotificationService()
+
 
 
 

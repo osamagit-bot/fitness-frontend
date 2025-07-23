@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FiActivity,
   FiAward,
@@ -69,6 +69,14 @@ const DashboardPage = () => {
   const [revenueData, setRevenueData] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
 
+  // Add loading states to prevent duplicate calls
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [revenueLoading, setRevenueLoading] = useState(false);
+  const [memberInsightsLoading, setMemberInsightsLoading] = useState(false);
+
+  // Add ref to track initialization
+  const initializingRef = useRef(false);
+
   // Enhanced color schemes
   const CHART_COLORS = {
     primary: ["#667eea", "#764ba2", "#f093fb", "#f5576c", "#4facfe", "#00f2fe"],
@@ -90,33 +98,68 @@ const DashboardPage = () => {
   ];
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchRecentMembers();
-    generateMemberInsights();
-    generateRevenueData();
+    const initializeDashboard = async () => {
+      // Prevent multiple simultaneous initializations
+      if (initializingRef.current) return;
+      initializingRef.current = true;
+
+      try {
+        // Call functions in sequence to avoid race conditions
+        await fetchDashboardData();
+        await fetchRecentMembers();
+        await generateMemberInsights();
+        await generateRevenueData();
+        await generateAttendanceTrend();
+      } finally {
+        initializingRef.current = false;
+      }
+    };
+
+    initializeDashboard();
 
     // Set up auto-refresh every 5 minutes
     const interval = setInterval(() => {
-      fetchDashboardData();
-      setLastUpdate(new Date());
+      if (!initializingRef.current) {
+        fetchDashboardData();
+        generateRevenueData();
+        setLastUpdate(new Date());
+      }
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Empty dependency array to run only once
 
-  const generateRevenueData = () => {
-    // Generate last 6 months revenue data
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-    const data = months.map((month, index) => ({
-      month,
-      revenue: Math.floor(Math.random() * 30000) + 20000,
-      target: 45000,
-      growth: Math.floor(Math.random() * 20) + 5,
-    }));
-    setRevenueData(data);
+  const generateRevenueData = async () => {
+    if (revenueLoading) return; // Prevent duplicate calls
+    
+    setRevenueLoading(true);
+    try {
+      const response = await api.get("admin-dashboard/revenue-trend/");
+      if (response.data.status === 'success') {
+        setRevenueData(response.data.revenue_trend);
+      } else {
+        throw new Error('Failed to fetch revenue trend');
+      }
+    } catch (error) {
+      console.error("Error fetching revenue trend:", error);
+      // Fallback to mock data
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+      const data = months.map((month) => ({
+        month,
+        revenue: Math.floor(Math.random() * 30000) + 20000,
+        target: 45000,
+        growth: Math.floor(Math.random() * 20) + 5,
+      }));
+      setRevenueData(data);
+    } finally {
+      setRevenueLoading(false);
+    }
   };
 
   const generateMemberInsights = async () => {
+    if (memberInsightsLoading) return; // Prevent duplicate calls
+    
+    setMemberInsightsLoading(true);
     try {
       const membersResponse = await api.get("members/");
       let membersList = [];
@@ -158,26 +201,7 @@ const DashboardPage = () => {
         }))
       );
 
-      // Enhanced attendance trend (last 7 days)
-      const last7Days = Array(7)
-        .fill(0)
-        .map((_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - (6 - i));
-          return {
-            day: date.toLocaleDateString("en-US", { weekday: "short" }),
-            date: date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            }),
-            attendance: Math.floor(Math.random() * 40) + 15,
-            capacity: 60,
-            percentage: Math.floor(Math.random() * 30) + 60,
-          };
-        });
-      setAttendanceTrend(last7Days);
-
-      // Attendance-based insights
+      // Attendance-based insights - use single API call
       try {
         const attendanceResponse = await api.get(
           "attendance_history/?today_only=true"
@@ -222,6 +246,8 @@ const DashboardPage = () => {
       }
     } catch (err) {
       console.error("Error generating member insights:", err);
+    } finally {
+      setMemberInsightsLoading(false);
     }
   };
 
@@ -494,6 +520,73 @@ const DashboardPage = () => {
     );
   };
 
+  const generateAttendanceTrend = async () => {
+    if (attendanceLoading) return; // Prevent duplicate calls
+    
+    setAttendanceLoading(true);
+    try {
+      // Get last 7 days attendance data in a single batch call
+      const promises = [];
+      const dates = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateString = date.toISOString().split('T')[0];
+        dates.push(dateString);
+        promises.push(
+          api.get(`attendance_history/?date=${dateString}`)
+            .catch(error => {
+              console.error(`Error fetching attendance for ${dateString}:`, error);
+              return { data: [] }; // Return empty array on error
+            })
+        );
+      }
+      
+      // Execute all calls in parallel
+      const responses = await Promise.all(promises);
+      
+      const attendanceData = responses.map((response, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - index));
+        const dayAttendance = Array.isArray(response.data) ? response.data.length : 0;
+        
+        return {
+          day: date.toLocaleDateString("en-US", { weekday: "short" }),
+          date: date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+          attendance: dayAttendance,
+          capacity: 60,
+          percentage: Math.floor((dayAttendance / 60) * 100),
+        };
+      });
+      
+      setAttendanceTrend(attendanceData);
+    } catch (error) {
+      console.error("Error generating attendance trend:", error);
+      // Fallback to mock data
+      const last7Days = Array(7).fill(0).map((_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return {
+          day: date.toLocaleDateString("en-US", { weekday: "short" }),
+          date: date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+          attendance: Math.floor(Math.random() * 40) + 15,
+          capacity: 60,
+          percentage: Math.floor(Math.random() * 30) + 60,
+        };
+      });
+      setAttendanceTrend(last7Days);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-gray-150 via-blue-50 to-indigo-50 -m-6 min-h-screen">
       {/* Header section with title and refresh */}
@@ -518,19 +611,31 @@ const DashboardPage = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                fetchStats();
-                fetchRecentMembers();
-                generateMemberInsights();
-                setLastUpdate(new Date());
+              onClick={async () => {
+                // Prevent if already loading or initializing
+                if (loading || attendanceLoading || revenueLoading || memberInsightsLoading || initializingRef.current) return;
+                
+                initializingRef.current = true;
+                setLoading(true);
+                try {
+                  await fetchDashboardData();
+                  await fetchRecentMembers();
+                  await generateMemberInsights();
+                  await generateRevenueData();
+                  await generateAttendanceTrend();
+                  setLastUpdate(new Date());
+                } finally {
+                  setLoading(false);
+                  initializingRef.current = false;
+                }
               }}
-              disabled={loading}
+              disabled={loading || attendanceLoading || revenueLoading || memberInsightsLoading}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 text-sm sm:text-base"
             >
               <FiRefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${loading || attendanceLoading || revenueLoading || memberInsightsLoading ? "animate-spin" : ""}`}
               />
-              {loading ? "Refreshing..." : "Refresh"}
+              {loading || attendanceLoading || revenueLoading || memberInsightsLoading ? "Refreshing..." : "Refresh"}
             </motion.button>
           </div>
         </div>
@@ -1188,3 +1293,23 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

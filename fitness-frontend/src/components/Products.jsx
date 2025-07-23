@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import api from '../services/api';
+import api from '../utils/api';
+import { staticProducts } from '../utils/staticData';
 import HisabPayCheckout from './payment/HisabPayCheckout';
 import PaymentSuccess from './payment/PaymentSuccess';
-import { staticProducts } from '../utils/staticData';
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -47,23 +47,7 @@ export default function Products() {
   };
 
   // Fetch member PK after login (or on mount if token exists)
-  useEffect(() => {
-    const fetchMemberPK = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) return;
-      try {
-        const res = await api.get(`get-member-pk/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setMemberId(res.data.member_pk);
-        // Optionally store in localStorage for other components
-        localStorage.setItem("memberId", res.data.member_pk);
-      } catch (err) {
-        console.error("Failed to fetch member PK:", err.response?.data || err.message);
-      }
-    };
-    fetchMemberPK();
-  }, []);
+  
 
   useEffect(() => {
     fetchProducts();
@@ -232,23 +216,8 @@ export default function Products() {
     setShowHisabPay(false);
     setShowPaymentSuccess(true);
 
-    // Save purchases to backend
+    // Save purchases to backend (notifications are created automatically)
     await createPurchase(cart);
-
-    // Create notifications for each purchased product
-    const token = localStorage.getItem("token");
-    for (const item of cart) {
-      const message = `${item.name} sold out for ${parseFloat(item.price * item.quantity).toFixed(2)} AFN`;
-      try {
-        await api.post(
-          `create-notification/`,
-          { message },
-          token ? { headers: { Authorization: `Bearer ${token}` } } : {}
-        );
-      } catch (err) {
-        console.error("Failed to create notification:", err.response?.data || err.message);
-      }
-    }
 
     // Clear cart after successful payment
     setCart([]);
@@ -746,6 +715,7 @@ export default function Products() {
     </section>
   );
 }
+
 
 
 

@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import api from "../../services/api";
+import api from "../../utils/api";
 function AdminSettingsPage() {
   const token = localStorage.getItem("access_token");
   const [loading, setLoading] = useState(false);
@@ -195,21 +195,26 @@ function AdminSettingsPage() {
     }
   };
 
-  // Load maintenance mode status on component mount
+  // Load maintenance mode status and notification preferences
   useEffect(() => {
-    const loadMaintenanceMode = async () => {
+    const loadNotificationPreferences = async () => {
       try {
-        const response = await api.get("/admin-dashboard/maintenance-mode/", {
+        const response = await api.get("/notifications/get_preferences/", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setMaintenanceMode(response.data.enabled);
+        
+        setNotifications(prev => ({
+          ...prev,
+          email: response.data.email_enabled || false,
+          whatsapp: response.data.whatsapp_enabled || false,
+        }));
       } catch (error) {
-        console.error("Error loading maintenance mode status:", error);
+        console.error("Error loading notification preferences:", error);
       }
     };
 
     if (token) {
-      loadMaintenanceMode();
+      loadNotificationPreferences();
     }
   }, [token]);
 
@@ -694,74 +699,10 @@ function AdminSettingsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">App Push Notifications</p>
-                  <p className="text-sm text-gray-500">
-                    Receive app notifications
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={notifications.app}
-                    onChange={() =>
-                      setNotifications((prev) => ({ ...prev, app: !prev.app }))
-                    }
-                  />
-                  <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition"></div>
-                  <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5"></div>
-                </label>
-              </div>
+             
+             
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Member Alerts</p>
-                  <p className="text-sm text-gray-500">
-                    Get notified about member activities
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={notifications.memberAlerts}
-                    onChange={() =>
-                      setNotifications((prev) => ({
-                        ...prev,
-                        memberAlerts: !prev.memberAlerts,
-                      }))
-                    }
-                  />
-                  <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition"></div>
-                  <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">System Updates</p>
-                  <p className="text-sm text-gray-500">
-                    Receive technical notifications
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={notifications.systemUpdates}
-                    onChange={() =>
-                      setNotifications((prev) => ({
-                        ...prev,
-                        systemUpdates: !prev.systemUpdates,
-                      }))
-                    }
-                  />
-                  <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition"></div>
-                  <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5"></div>
-                </label>
-              </div>
+            
             </div>
           </div>
 
@@ -1008,6 +949,10 @@ function AdminSettingsPage() {
 }
 
 export default AdminSettingsPage;
+
+
+
+
 
 
 

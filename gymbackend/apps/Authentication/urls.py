@@ -7,6 +7,7 @@ from .views import AdminDashboardViewSet
 from rest_framework.routers import DefaultRouter
 from .views import AuthTestViewSet
 from .views import CustomTokenRefreshView
+from .admin_stats import revenue_trend
 
 router = DefaultRouter()
 
@@ -15,18 +16,13 @@ router.register(r'auth-test', AuthTestViewSet, basename='auth-test')
 
 
 urlpatterns = [
-    
-    
     path('', include(router.urls)),
     path('token/', views.MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('users/', views.UserListView.as_view(), name='user-list'),
-    
-   
     path('test/', views.test_view, name='test-view'),
     path('debug-urls/', views.debug_urls, name='debug-urls'),
-
-
+    path('admin-dashboard/revenue-trend/', revenue_trend, name='revenue-trend'),
     # CSRF token endpoint
     path('csrf/', views.get_csrf_token, name='get_csrf'),
 ]

@@ -5,6 +5,11 @@ from django.db.models import Sum
 import traceback
 from datetime import datetime, timedelta
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from rest_framework import status
+
 def get_admin_stats():
     """
     Function to get admin dashboard statistics including monthly and annual revenue
@@ -75,3 +80,64 @@ def get_admin_stats():
             'upcomingTrainings': 0,
             'error': str(e)
         }
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def revenue_trend(request):
+    """Get revenue trend for last 6 months"""
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Sum
+        from apps.Member.models import MembershipPayment
+        from apps.Purchase.models import Purchase
+        
+        # Get last 6 months
+        end_date = datetime.now()
+        revenue_data = []
+        
+        for i in range(6):
+            # Calculate month start and end
+            month_date = end_date - timedelta(days=30 * i)
+            month_start = month_date.replace(day=1)
+            if month_date.month == 12:
+                month_end = month_date.replace(year=month_date.year + 1, month=1, day=1) - timedelta(days=1)
+            else:
+                month_end = month_date.replace(month=month_date.month + 1, day=1) - timedelta(days=1)
+            
+            # Get membership revenue
+            try:
+                membership_revenue = MembershipPayment.objects.filter(
+                    payment_date__range=[month_start, month_end]
+                ).aggregate(total=Sum('amount'))['total'] or 0
+            except:
+                membership_revenue = 0
+            
+            # Get shop revenue
+            try:
+                shop_revenue = Purchase.objects.filter(
+                    date__range=[month_start, month_end]
+                ).aggregate(total=Sum('total_price'))['total'] or 0
+            except:
+                shop_revenue = 0
+            
+            revenue_data.append({
+                'month': month_date.strftime('%b'),
+                'revenue': float(membership_revenue + shop_revenue),
+                'membership_revenue': float(membership_revenue),
+                'shop_revenue': float(shop_revenue),
+                'target': 45000
+            })
+        
+        # Reverse to show oldest to newest
+        revenue_data.reverse()
+        
+        return Response({
+            'revenue_trend': revenue_data,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        return Response({
+            'error': str(e),
+            'status': 'error'
+        }, status=500)

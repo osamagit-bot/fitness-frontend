@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import api from "../../services/api";
 import AppToastContainer from "../../components/ui/ToastContainer";
-import { showToast } from "../../utils/toast";
+import api from "../../utils/api";
 import { formatDate, formatDateTime, getDateFromObject } from "../../utils/dateUtils";
+import { showToast } from "../../utils/toast";
 
 function AdminCommunityManagement() {
   const [posts, setPosts] = useState([]);

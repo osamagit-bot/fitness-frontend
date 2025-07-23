@@ -1,5 +1,5 @@
 // utils/auth.js
-import api from '../services/api';
+import api from '../utils/api';
 
 export const checkAuthStatus = async () => {
   console.log('🔍 Starting auth status check...');
@@ -164,4 +164,5 @@ export const isTokenValid = async () => {
     return false;
   }
 };
+
 

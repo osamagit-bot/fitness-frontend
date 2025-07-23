@@ -39,6 +39,8 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import logging
 from django.utils import timezone
+import ssl
+import smtplib
 
 logger = logging.getLogger(__name__)
 
@@ -58,69 +60,41 @@ class EmailNotificationService:
     """
     
     @staticmethod
-    def send_admin_notification_email(subject, message, admin_emails=None):
+    def send_admin_notification_email(subject, message, admin_emails=None, check_preferences=True):
         """
-        Send email notification to admin users.
-        
-        This method sends HTML-formatted email notifications to admin users.
-        It automatically fetches admin emails if not provided and handles
-        SSL certificate issues common in development environments.
+        Send email notification to admin users with preference checking.
         
         Args:
-            subject (str): Email subject line (will be prefixed with "[Gym Management]")
-            message (str): Main message content to be displayed in the email
-            admin_emails (list, optional): List of admin email addresses. 
-                                         If None, automatically fetches from database.
-        
-        Returns:
-            bool: True if email was sent successfully, False otherwise
-            
-        Raises:
-            Exception: Logs any exceptions that occur during email sending
-            
-        Example:
-            >>> service = EmailNotificationService()
-            >>> success = service.send_admin_notification_email(
-            ...     "New Member Registration",
-            ...     "John Doe has registered as a new member."
-            ... )
-            >>> print(f"Email sent: {success}")
-            
-        Note:
-            - Uses custom SSL context to bypass certificate verification in development
-            - For production, consider removing SSL bypass and using proper certificates
-            - Automatically creates HTML email with gym branding
-            - Falls back to sender email if no admin emails found
+            subject (str): Email subject line
+            message (str): Main message content
+            admin_emails (list, optional): List of admin email addresses
+            check_preferences (bool): Whether to check user email preferences
         """
         print("EMAIL SERVICE: Starting email send process...")
-        
-        # Environment-aware email configuration
-        import ssl
-        import smtplib
-        from django.core.mail import EmailMultiAlternatives
-        
-        print("EMAIL BACKEND: USING ENVIRONMENT-AWARE SMTP")
-        print(f"EMAIL_HOST_USER: {settings.EMAIL_HOST_USER}")
-        print(f"EMAIL_PORT: {settings.EMAIL_PORT}")
-        print(f"EMAIL_USE_TLS: {settings.EMAIL_USE_TLS}")
-        print(f"DEBUG MODE: {getattr(settings, 'DEBUG', False)}")
-        print(f"SSL_BYPASS: {getattr(settings, 'EMAIL_DEV_SSL_BYPASS', False)}")
         
         # Auto-fetch admin emails if not provided
         if not admin_emails:
             from apps.Authentication.models import CustomUser
-            admin_emails = list(
-                CustomUser.objects.filter(is_staff=True, is_active=True)
-                .values_list('email', flat=True)
-            )
+            if check_preferences:
+                # Only get admins who have email notifications enabled
+                admin_users = CustomUser.objects.filter(
+                    is_staff=True, 
+                    is_active=True,
+                    email_notifications=True  # Check preference
+                )
+                admin_emails = list(admin_users.values_list('email', flat=True))
+            else:
+                admin_emails = list(
+                    CustomUser.objects.filter(is_staff=True, is_active=True)
+                    .values_list('email', flat=True)
+                )
             
             # Fallback to sender email for testing if no admin emails found
             if not admin_emails:
-                admin_emails = [settings.EMAIL_HOST_USER]  # Send to yourself for testing
-
-        print(f"ADMIN EMAILS: {admin_emails}")
-        print(f"SENDING FROM: {settings.EMAIL_HOST_USER}")
-        print(f"SENDING TO: {admin_emails}")
+                print("⚠️ No admin users with email notifications enabled found")
+                return False
+        
+        print(f"📧 Sending email to {len(admin_emails)} admin(s) with email notifications enabled")
         
         # Validate that we have recipient emails
         if not admin_emails:
@@ -258,4 +232,6 @@ class EmailNotificationService:
         except Exception as e:
             logger.error(f"Failed to fetch admin emails: {str(e)}")
             return []
+
+
 
