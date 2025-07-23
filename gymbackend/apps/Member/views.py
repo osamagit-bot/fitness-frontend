@@ -328,6 +328,7 @@ class MemberViewSet(viewsets.ModelViewSet):
             f"Request user: email={user.email}, role={user.role}, id={user.id}, is_staff={user.is_staff}, is_superuser={user.is_superuser}"
         )
 
+        # First check if user has a member profile
         member = getattr(user, "member", None)
         print(f"Member attached: {member}")
 
@@ -336,13 +337,14 @@ class MemberViewSet(viewsets.ModelViewSet):
             member.save()
 
             # Member account deletion request notification
-            from Notifications.services import notification_service
+            from apps.Notifications.services import notification_service
             notification_service.create_notification(
                 f"Member '{user.username}' has requested account deletion.",
                 user_id=user.id
             )
             return Response({"detail": "Member account deletion request sent."}, status=status.HTTP_200_OK)
 
+        # Only check admin status if no member profile exists
         if user.is_staff or user.is_superuser:
             return Response({"detail": "Admins cannot request account deletion here."}, status=status.HTTP_403_FORBIDDEN)
 
