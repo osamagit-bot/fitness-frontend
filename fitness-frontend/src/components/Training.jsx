@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import { staticTrainings } from "../utils/staticData";
 
 const Training = () => {
   const [trainings, setTrainings] = useState([]);
@@ -14,7 +15,12 @@ const Training = () => {
   };
 
   const getImageUrl = (training) => {
-    if (!training.image) return '/images/default-training.png';
+    if (!training.image) return '/images/chest.jpeg';
+    
+    // If it's already a local path, return as is
+    if (training.image.startsWith('/images/')) {
+      return training.image;
+    }
     
     if (training.image.startsWith('http')) {
       return training.image;
@@ -73,52 +79,7 @@ const Training = () => {
       console.error('Error fetching trainings:', error);
       setError('Failed to load trainings');
       // Fallback to static data if API fails
-      setTrainings([
-        {
-          id: 1,
-          image: "/images/chest.jpeg",
-          type: "Chest Workout",
-          description: "Embrace the essence of strength as we delve into its physical, mental, and emotional dimensions.",
-          trainer_name: "John Doe",
-          trainer_email: "john@gym.com",
-          datetime: new Date().toISOString(),
-          duration: 60,
-          capacity: 15
-        },
-        {
-          id: 2,
-          image: "/images/shoulder.jpg",
-          type: "Shoulder Workout", 
-          description: "Improve health, strength, flexibility, and overall well-being through dynamic activities.",
-          trainer_name: "Jane Smith",
-          trainer_email: "jane@gym.com",
-          datetime: new Date().toISOString(),
-          duration: 45,
-          capacity: 12
-        },
-        {
-          id: 3,
-          image: "/images/fat.jpg",
-          type: "Fat Loss",
-          description: "With routines and guidance, we'll help you burn fat and reach your goals effectively.",
-          trainer_name: "Mike Johnson",
-          trainer_email: "mike@gym.com",
-          datetime: new Date().toISOString(),
-          duration: 90,
-          capacity: 20
-        },
-        {
-          id: 4,
-          image: "/images/weight.jpg",
-          type: "Weight Gain",
-          description: "Our program provides a structured approach to gaining weight in a sustainable manner.",
-          trainer_name: "Sarah Wilson",
-          trainer_email: "sarah@gym.com",
-          datetime: new Date().toISOString(),
-          duration: 75,
-          capacity: 10
-        },
-      ]);
+      setTrainings(staticTrainings);
     } finally {
       setIsLoading(false);
     }

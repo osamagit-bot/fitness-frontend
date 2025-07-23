@@ -25,7 +25,7 @@ function About() {
       <div className="w-full lg:w-[60%] xl:w-[50%] mb-10 lg:mb-0 flex justify-center lg:justify-end px-4 sm:px-0">
         <div className="relative group overflow-hidden rounded-lg shadow-2xl border-4 border-white transform transition-all duration-500 hover:shadow-xl">
           <img 
-            src="/images/gmy.jpeg" 
+            src="/images/gym1.jpg" 
             className="w-full max-w-[500px] lg:max-w-none mr-36 lg:w-[80%] xl:ml-20 object-cover transition-transform duration-500 group-hover:scale-105"
             alt="About us"
           />

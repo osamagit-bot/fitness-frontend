@@ -2,7 +2,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api/',  // Changed back to 8000
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/',
+  timeout: 10000, // 10 second timeout
 });
 
 api.interceptors.request.use((config) => {
@@ -21,6 +22,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle network errors gracefully (when backend is down)
+    if (!error.response) {
+      console.warn('🔌 Backend appears to be offline. Some features may use cached data.');
+      return Promise.reject(error);
+    }
+
     // Check if it's a 401 error and not a retry attempt
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -28,7 +35,8 @@ api.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const response = await axios.post('http://127.0.0.1:8000/api/token/refresh/', {
+          const refreshUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/'}/token/refresh/`.replace('/api//', '/api/');
+          const response = await axios.post(refreshUrl, {
             refresh: refreshToken,
           });
 

@@ -11,8 +11,20 @@ from .serializers import ProductSerializer,PurchaseSerializer
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAdminUser]
     authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['list', 'retrieve']:
+            # Allow anyone to view products (for shopping)
+            permission_classes = [permissions.AllowAny]
+        else:
+            # Only admins can create, update, delete products
+            permission_classes = [permissions.IsAdminUser]
+        
+        return [permission() for permission in permission_classes]
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)

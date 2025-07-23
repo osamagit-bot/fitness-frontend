@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import HisabPayCheckout from './payment/HisabPayCheckout';
 import PaymentSuccess from './payment/PaymentSuccess';
+import { staticProducts } from '../utils/staticData';
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -27,13 +28,22 @@ export default function Products() {
   // Add this helper function at the top of your component
   const getImageUrl = (product) => {
     if (product.image_url) {
+      // If it's already a local path, return as is
+      if (product.image_url.startsWith('/images/')) {
+        return product.image_url;
+      }
       return product.image_url;
     }
     if (product.image) {
+      // If it's already a local path, return as is
+      if (product.image.startsWith('/images/')) {
+        return product.image;
+      }
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-      return `${baseUrl}${product.image}`;
+      const imagePath = product.image.startsWith('/') ? product.image : `/${product.image}`;
+      return `${baseUrl}${imagePath}`;
     }
-    return '/images/default-product.jpg'; // Use local fallback
+    return '/images/whey.jpg'; // Use local fallback
   };
 
   // Fetch member PK after login (or on mount if token exists)
@@ -109,6 +119,10 @@ export default function Products() {
     } catch (error) {
       console.error('Error fetching products:', error);
       setError('Failed to load products');
+      // Fallback to static data if API fails
+      setProducts(staticProducts);
+      const uniqueCategories = ['All', ...new Set(staticProducts.map(p => p.category).filter(Boolean))];
+      setCategories(uniqueCategories);
     } finally {
       setIsLoading(false);
     }
@@ -272,7 +286,7 @@ export default function Products() {
                 />
               ) : (
                 <div className="h-80 w-full bg-gray-200 flex items-center justify-center text-gray-500">
-                  <img src="/images/default-product.jpg" alt="No image" className="max-h-80 object-contain" />
+                  <img src="/images/whey.jpg" alt="No image" className="max-h-80 object-contain" />
                 </div>
               )}
             </div>
@@ -456,7 +470,23 @@ export default function Products() {
     );
   }
 
-  if (error) {
+  // Show error notice but continue with products if available
+  const ErrorNotice = () => error && products.length > 0 && (
+    <div className="mb-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-md">
+      <div className="flex items-center">
+        <svg className="h-6 w-6 text-yellow-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <div>
+          <p className="text-yellow-800 font-semibold">Notice</p>
+          <p className="text-yellow-700">Showing sample products due to: {error}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Only show error page if no products available at all
+  if (error && products.length === 0) {
     return (
       <section id="products" className="py-12 bg-white">
         <div className="container mx-auto py-8 px-4">
@@ -492,6 +522,8 @@ export default function Products() {
   return (
     <section id="products" className="py-8 sm:py-12 bg-white">
       <div className="container mx-auto py-4 sm:py-8 px-2 sm:px-4">
+        <ErrorNotice />
+        
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <h2 className="text-4xl font-bold">
             OUR <span className="text-yellow-500">SHOP</span>
@@ -614,7 +646,7 @@ export default function Products() {
                       loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = '/images/default-product.jpg'; // Use local fallback
+                        e.target.src = '/images/whey.jpg'; // Use local fallback
                       }}
                     />
                   ) : product.image ? (
@@ -625,7 +657,7 @@ export default function Products() {
                       loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = '/images/default-product.jpg'; // Use local fallback
+                        e.target.src = '/images/whey.jpg'; // Use local fallback
                       }}
                     />
                   ) : (

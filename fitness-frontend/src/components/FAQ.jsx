@@ -34,21 +34,8 @@ const FAQ = () => {
       answer: "Our club is open Monday through Friday from 5:00 AM to 11:00 PM, and weekends from 7:00 AM to 8:00 PM. Premium and Elite members have 24/7 access with their key fob.",
       category: "Facilities"
     },
-    {
-      question: "Is there free parking available?",
-      answer: "Yes, we offer complimentary parking for all members in our dedicated lot. During peak hours, we also have overflow parking available.",
-      category: "Facilities"
-    },
-    {
-      question: "Can I put my membership on hold?",
-      answer: "Yes, you can freeze your membership for up to 3 months per year for qualifying reasons like medical issues, travel, or temporary relocation. A small maintenance fee may apply during the freeze period.",
-      category: "Membership"
-    },
-    {
-      question: "Do you offer any discounts for students or seniors?",
-      answer: "We offer special rates for students with valid ID, seniors (age 65+), military personnel, and first responders. Please inquire at the front desk for current discount programs.",
-      category: "Payments"
-    }
+
+
   ];
 
   const categories = [
@@ -106,15 +93,15 @@ const FAQ = () => {
               <button
                 onClick={() => toggleFAQ(index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className="w-full px-6 py-4 text-left bg-gray-800 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="w-full px-6 py-4 text-left bg-gray-200 hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 "
                 aria-expanded={activeIndex === index}
                 aria-controls={`faq-content-${index}`}
               >
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold text-yellow-400">
+                  <h3 className="text-lg font-semibold text-gray-700">
                     {faq.question}
                   </h3>
-                  <i className={`bx ${activeIndex === index ? 'bx-minus' : 'bx-plus'} text-yellow-400 text-xl transition-transform`} />
+                  <i className={`bx ${activeIndex === index ? 'bx-minus' : 'bx-plus'} text-gray-700 text-xl transition-transform`} />
                 </div>
               </button>
               <div
@@ -125,7 +112,7 @@ const FAQ = () => {
                 role="region"
                 aria-labelledby={`faq-button-${index}`}
               >
-                <div className="px-6 py-4 bg-gray-900 text-gray-300">
+                <div className="px-6 py-4 bg-yellow-600 text-gray-100">
                   {faq.answer}
                 </div>
               </div>

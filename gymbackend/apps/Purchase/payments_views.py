@@ -30,7 +30,14 @@ def hisab_pay(request):
     Handle Hisab Pay payment processing
     """
     try:
-        data = json.loads(request.body)
+        # Debug: Print raw request data
+        print(f"DEBUG: Request method: {request.method}")
+        print(f"DEBUG: Request content type: {request.content_type}")
+        print(f"DEBUG: Request body: {request.body}")
+        print(f"DEBUG: Request data: {request.data}")
+        
+        # Use request.data for DRF API views instead of json.loads
+        data = request.data
         phone_number = data.get('phoneNumber')
         amount = data.get('amount')
         items = data.get('items', [])
@@ -149,13 +156,13 @@ def hisab_pay(request):
                 'warning': 'This is a test transaction. Configure HisabPay credentials for production.'
             })
         
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
         logger.error(f"Payment processing error: {str(e)}")
+        print(f"DEBUG: Payment error - {str(e)}")  # For debugging
         return JsonResponse({
             'success': False,
-            'message': 'Internal server error. Please try again later.'
+            'message': f'Payment processing error: {str(e)}',
+            'debug': str(e) if settings.DEBUG else 'Internal server error'
         }, status=500)
 
 @api_view(['POST'])
@@ -166,7 +173,8 @@ def hisab_pay_callback(request):
     Handle HisabPay payment status callbacks
     """
     try:
-        data = json.loads(request.body)
+        # Use request.data for DRF API views
+        data = request.data
         transaction_id = data.get('transactionId')
         status = data.get('status')
         reference = data.get('reference')

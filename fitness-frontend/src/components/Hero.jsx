@@ -146,7 +146,7 @@ function Hero() {
       </div>
 
       {/* Custom animations */}
-      <style jsx>{`
+      <style jsx="true">{`
         @keyframes slideInUp {
           from {
             transform: translateY(40px);
