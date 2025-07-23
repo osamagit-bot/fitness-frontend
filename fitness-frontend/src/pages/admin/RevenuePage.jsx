@@ -61,10 +61,23 @@ function RevenuePage() {
         api.get(`members/`, { headers }),
         api.get(`purchases/`, { headers }),
       ]);
-      setMembers(membersRes.data);
-      setPurchases(purchasesRes.data);
+      
+      // Ensure we always have arrays
+      const membersData = Array.isArray(membersRes.data) 
+        ? membersRes.data 
+        : membersRes.data?.results || [];
+      const purchasesData = Array.isArray(purchasesRes.data) 
+        ? purchasesRes.data 
+        : purchasesRes.data?.results || [];
+        
+      setMembers(membersData);
+      setPurchases(purchasesData);
     } catch (err) {
+      console.error("Error fetching data:", err);
       setError("Failed to fetch data.");
+      // Set empty arrays as fallback
+      setMembers([]);
+      setPurchases([]);
     }
     setLoading(false);
   };

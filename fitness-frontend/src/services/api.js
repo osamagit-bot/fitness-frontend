@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api/',
+  baseURL: 'http://127.0.0.1:8000/api/',  // Changed back to 8000
 });
 
 api.interceptors.request.use((config) => {
@@ -15,12 +15,13 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor to handle 401 errors and refresh token
+// Response interceptor - prevent redirects during critical operations
 api.interceptors.response.use(
-  response => response,
-  async error => {
+  (response) => response,
+  async (error) => {
     const originalRequest = error.config;
 
+    // Check if it's a 401 error and not a retry attempt
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       const refreshToken = localStorage.getItem('refreshToken');
@@ -33,32 +34,58 @@ api.interceptors.response.use(
 
           const newAccessToken = response.data.access;
           localStorage.setItem('access_token', newAccessToken);
-
-          // Update Authorization header and retry original request
           originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
           return api(originalRequest);
         } catch (refreshError) {
-          // Refresh token invalid or expired, clear storage and redirect to login
-          console.log('Token refresh failed, redirecting to login');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('userType');
-          localStorage.removeItem('userId');
-          localStorage.removeItem('memberId');
-          localStorage.removeItem('memberID');
-          localStorage.removeItem('name');
-          localStorage.removeItem('username');
-          localStorage.removeItem('isAuthenticated');
+          console.log('🚨 Token refresh failed:', refreshError.response?.data);
           
-          // Only redirect if not already on login page
+          // Check if user was deleted
+          if (refreshError.response?.data?.code === 'user_deleted') {
+            console.log('🚨 User account deleted - forcing logout');
+            
+            const currentUserType = localStorage.getItem('userType');
+            
+            // Only show alert and logout if current user is a member
+            if (currentUserType === 'member') {
+              alert('Your account has been deleted. You will be redirected to login.');
+              
+              // Clear all auth data for deleted member
+              const keysToRemove = [
+                'access_token', 'refreshToken', 'userType', 'userId', 
+                'memberId', 'memberID', 'name', 'username', 'isAuthenticated'
+              ];
+              keysToRemove.forEach(key => localStorage.removeItem(key));
+              
+              // Redirect member to login
+              if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+              }
+            } else {
+              console.log('🔧 Admin session - member account was deleted, no action needed');
+              // Don't clear admin session or redirect
+            }
+            
+            return Promise.reject(refreshError);
+          }
+          
+          // For other refresh errors, clear session and redirect
+          const keysToRemove = [
+            'access_token', 'refreshToken', 'userType', 'userId', 
+            'memberId', 'memberID', 'name', 'username', 'isAuthenticated'
+          ];
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+          
+          // Force redirect to login
           if (!window.location.pathname.includes('/login')) {
             window.location.href = '/login';
           }
           return Promise.reject(refreshError);
         }
       } else {
-        // No refresh token, redirect to login
-        window.location.href = '/login';
+        // No refresh token - redirect to login
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
       }
     }
 
@@ -67,3 +94,9 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+
+
+
+
+

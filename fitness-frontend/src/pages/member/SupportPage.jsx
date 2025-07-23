@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import api from '../../services/api';
 import AppToastContainer from '../../components/ui/ToastContainer';
-import { showToast } from '../../utils/toast';
+import api from '../../services/api';
 import { formatDate, formatDateTime } from '../../utils/dateUtils';
+import { showToast } from '../../utils/toast';
 
 function MemberSupportPage() {
   const [tickets, setTickets] = useState([]);
@@ -118,7 +118,7 @@ function MemberSupportPage() {
   if (error) {
     return (
       <motion.div
-        className="text-center p-10"
+        className="text-center pl-10"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >

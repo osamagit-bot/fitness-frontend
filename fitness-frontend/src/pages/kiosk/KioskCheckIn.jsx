@@ -74,34 +74,64 @@ const KioskCheckIn = () => {
   const fetchRecentCheckIns = async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      // --- CHANGE: Use publicApi ---
       const response = await publicApi.get(
         `attendance_history/?date=${today}&limit=5`
       );
-      setRecentCheckIns(response.data.slice(0, 5));
+      
+      console.log("🔍 Recent check-ins raw data:", response.data);
+      
+      // Validate and clean the data
+      const validCheckIns = response.data.slice(0, 5).map(checkIn => {
+        // Combine date and time if they're separate
+        let fullDateTime = checkIn.check_in_datetime || checkIn.check_in_time;
+        
+        if (!fullDateTime && checkIn.date && checkIn.check_in_time) {
+          // If we have separate date and time, combine them
+          if (checkIn.check_in_time.match(/^\d{2}:\d{2}:\d{2}$/)) {
+            fullDateTime = `${checkIn.date}T${checkIn.check_in_time}`;
+          }
+        }
+        
+        return {
+          ...checkIn,
+          check_in_datetime: fullDateTime || new Date().toISOString(),
+          member_name: checkIn.member_name || "Unknown Member",
+          member_id: checkIn.member_id || "N/A",
+          verification_method: checkIn.verification_method || "Manual"
+        };
+      });
+      
+      console.log("🔍 Processed check-ins:", validCheckIns);
+      setRecentCheckIns(validCheckIns);
+      
     } catch (error) {
       console.error("Error fetching recent check-ins:", error);
+      setRecentCheckIns([]);
     }
   };
 
   const fetchTodayStats = async () => {
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const [attendanceResponse, membersResponse] = await Promise.all([
-        // --- CHANGE: Use publicApi for attendance history ---
-        publicApi.get(`attendance_history/?date=${today}`),
-        // --- CHANGE: Use publicApi for members (assuming this endpoint is public or you have a public alternative for count) ---
-        // NOTE: If 'members/' endpoint requires authentication, you might need a separate public endpoint for total member count.
-        // For now, assuming it's okay to use publicApi here.
-        publicApi.get("members/"),
-      ]);
-
+      console.log("🔍 Fetching today's stats...");
+      
+      // Use public endpoint - no authentication needed
+      const response = await publicApi.get('/today_stats/');
+      
+      console.log("📊 Stats response:", response.data);
+      
       setStats({
-        todayCount: attendanceResponse.data.length,
-        totalMembers: membersResponse.data.length,
+        todayCount: response.data.todayCount || 0,
+        totalMembers: response.data.totalMembers || 0,
       });
+      
+      console.log(`📊 Stats updated: ${response.data.todayCount} check-ins, ${response.data.totalMembers} total members`);
+      
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      console.error("❌ Error fetching stats:", error);
+      setStats({
+        todayCount: 0,
+        totalMembers: 0,
+      });
     }
   };
 
@@ -116,8 +146,7 @@ const KioskCheckIn = () => {
   };
 
   const startAutomaticAuthentication = async (autoModeOverride = null) => {
-    const effectiveAutoMode =
-      autoModeOverride !== null ? autoModeOverride : isAutoMode;
+    const effectiveAutoMode = autoModeOverride !== null ? autoModeOverride : isAutoMode;
     console.log("startAutomaticAuthentication called", {
       effectiveAutoMode,
       autoModeOverride,
@@ -136,19 +165,13 @@ const KioskCheckIn = () => {
       welcomeMessage ||
       !effectiveAutoMode
     ) {
-      console.log("Skipping authentication - conditions not met", {
-        isAuthenticating: isAuthenticatingRef.current,
-        isProcessing,
-        welcomeMessage: !!welcomeMessage,
-        effectiveAutoMode,
-      });
+      console.log("Skipping authentication - conditions not met");
       return;
     }
 
-    // Check if user recently cancelled - if so, disable auto mode
+    // Check if user recently cancelled
     const now = Date.now();
     if (lastCancelTimeRef.current && now - lastCancelTimeRef.current < 30000) {
-      // 30 seconds cooldown
       console.log("Recent cancellation detected, staying in manual mode");
       return;
     }
@@ -161,51 +184,33 @@ const KioskCheckIn = () => {
       // Create new AbortController for this request
       abortControllerRef.current = new AbortController();
 
-      // Use simplified kiosk authentication (prompts for any registered fingerprint)
-      const assertion = await kioskAuthenticate(
-        abortControllerRef.current.signal
-      );
+      // Use simplified kiosk authentication
+      const assertion = await kioskAuthenticate(abortControllerRef.current.signal);
 
-      // Send assertion to backend for member identification
-      // --- CHANGE: Use publicApi ---
+      // Send assertion to backend for member identification - USE PUBLIC API
       const response = await publicApi.post("webauthn/kiosk/checkin/", {
         assertion: assertion,
       });
 
       handleSuccessfulCheckIn(response.data);
-      // Reset cancel count on successful authentication
       cancelCountRef.current = 0;
+      
     } catch (error) {
-      // Handle different types of errors gracefully
+      // Handle errors without token refresh attempts
       if (error.name === "NotAllowedError") {
-        console.log("User cancelled or denied fingerprint authentication");
-        // Track cancellation but keep auto mode active
+        console.log("User cancelled fingerprint authentication");
         lastCancelTimeRef.current = Date.now();
         cancelCountRef.current++;
         showTemporaryError("Authentication cancelled - Auto mode still active");
       } else if (error.name === "AbortError") {
         console.log("Authentication was aborted");
-        // Don't restart if manually aborted
-      } else if (
-        error.name === "InvalidStateError" ||
-        error.message?.includes("already pending")
-      ) {
-        console.log("Authentication request already pending");
-        // Don't retry immediately for pending requests
       } else {
         console.error("Fingerprint detection error:", error);
-
         if (error.response?.status === 404) {
-          showTemporaryError(
-            "Fingerprint not recognized. Please register first."
-          );
-        } else if (error.response?.data?.error) {
-          showTemporaryError(error.response.data.error);
+          showTemporaryError("Fingerprint not recognized. Please register first.");
         } else {
           showTemporaryError("Check-in failed. Please try again.");
         }
-
-        // Don't disable auto mode for other errors - let it continue trying
       }
     } finally {
       setIsProcessing(false);
@@ -415,23 +420,67 @@ const KioskCheckIn = () => {
     }, 3000);
   };
 
-  const formatTime = (date) => {
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-      timeZone: "Asia/Kabul", // Ensure correct timezone display
-    });
+  const formatTime = (dateTimeString) => {
+    if (!dateTimeString) return "No time";
+    
+    try {
+      // Handle different date formats
+      let dateObj;
+      
+      if (typeof dateTimeString === 'string') {
+        // If it's just a time string like "04:43:22"
+        if (dateTimeString.match(/^\d{2}:\d{2}:\d{2}$/)) {
+          const today = new Date().toISOString().split('T')[0];
+          dateObj = new Date(`${today}T${dateTimeString}`);
+        } 
+        // If it's a full ISO string
+        else if (dateTimeString.includes('T')) {
+          dateObj = new Date(dateTimeString);
+        }
+        // If it's a date string, combine with current time
+        else {
+          dateObj = new Date(dateTimeString);
+        }
+      } else {
+        dateObj = new Date(dateTimeString);
+      }
+      
+      if (isNaN(dateObj.getTime())) {
+        console.error("Invalid date:", dateTimeString);
+        return "Invalid time";
+      }
+      
+      return dateObj.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch (error) {
+      console.error("Time formatting error:", error, "Input:", dateTimeString);
+      return "Invalid time";
+    }
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "Asia/Kabul",
-    });
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return "No date";
+    
+    try {
+      const dateObj = new Date(dateString);
+      if (isNaN(dateObj.getTime())) {
+        console.error("Invalid date:", dateString);
+        return "Invalid date";
+      }
+      
+      return dateObj.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (error) {
+      console.error("Date formatting error:", error, "Input:", dateString);
+      return "Invalid date";
+    }
   };
 
   return (
@@ -445,7 +494,7 @@ const KioskCheckIn = () => {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold">{formatTime(currentTime)}</div>
-            <div className="text-blue-200">{formatDate(currentTime)}</div>
+            <div className="text-blue-200">{formatDateDisplay(currentTime)}</div>
           </div>
         </div>
       </div>
@@ -661,15 +710,7 @@ const KioskCheckIn = () => {
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-medium">
-                          {new Date(checkIn.check_in_time).toLocaleTimeString(
-                            "en-US",
-                            {
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                              timeZone: "Asia/Kabul",
-                            }
-                          )}
+                          {formatTime(checkIn.check_in_datetime)}
                         </div>
                         <div className="text-xs text-gray-400">
                           {checkIn.verification_method}
@@ -696,3 +737,15 @@ const KioskCheckIn = () => {
 };
 
 export default KioskCheckIn;
+
+
+
+
+
+
+
+
+
+
+
+

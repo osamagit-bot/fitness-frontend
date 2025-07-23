@@ -23,9 +23,19 @@ const HisabPayCheckout = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate phone number
+    // Enhanced validation
     if (!isValidAfghanPhoneNumber(phoneNumber)) {
-      setErrorMessage('Please enter a valid Afghan phone number (starts with 07 or +937)');
+      setErrorMessage('Please enter a valid Afghan phone number (07XXXXXXXX or +937XXXXXXXX)');
+      return;
+    }
+    
+    if (!cartItems || cartItems.length === 0) {
+      setErrorMessage('Your cart is empty');
+      return;
+    }
+    
+    if (!total || total <= 0) {
+      setErrorMessage('Invalid total amount');
       return;
     }
     
@@ -34,15 +44,17 @@ const HisabPayCheckout = ({
     setIsSimulation(false);
     
     try {
-      // Create order items array for API
       const orderItems = cartItems.map(item => ({
         product_id: item.product_id,
+        name: item.name,
         quantity: item.quantity,
         price: item.price
       }));
       
-      // Send payment request to your backend
-      const response = await axios.post('http://127.0.0.1:8000/api/payments/hisab-pay/', {
+      // Use environment variable for API URL
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+      
+      const response = await axios.post(`${apiUrl}/payments/hisab-pay/`, {
         phoneNumber: phoneNumber,
         amount: total,
         items: orderItems
@@ -50,17 +62,23 @@ const HisabPayCheckout = ({
         headers: {
           'Content-Type': 'application/json',
         },
+        timeout: 30000, // 30 second timeout
         withCredentials: false
       });
       
-      // Check if this is a simulation
-      if (response.data.simulation) {
-        setIsSimulation(true);
-      }
-      
-      // Check response from your backend
       if (response.data.success) {
-        // Give a small delay to simulate processing
+        // Check if simulation mode
+        if (response.data.simulation) {
+          setIsSimulation(true);
+        }
+        
+        // If HisabPay provides a payment URL, redirect user
+        if (response.data.paymentUrl) {
+          window.location.href = response.data.paymentUrl;
+          return;
+        }
+        
+        // Otherwise, show success after delay
         setTimeout(() => {
           setIsProcessing(false);
           onPaymentSuccess(response.data.transactionId, response.data.simulation);
@@ -72,10 +90,18 @@ const HisabPayCheckout = ({
       }
     } catch (error) {
       setIsProcessing(false);
-      const errorMsg = error.response?.data?.message || 'Payment failed. Please try again.';
-      setErrorMessage(errorMsg);
-      onPaymentFailure(errorMsg);
-      console.error('Hisab Pay error:', error);
+      
+      if (error.code === 'ECONNABORTED') {
+        setErrorMessage('Payment request timed out. Please try again.');
+      } else if (error.response?.status === 503) {
+        setErrorMessage('Payment service is temporarily unavailable. Please try again later.');
+      } else {
+        const errorMsg = error.response?.data?.message || 'Payment failed. Please try again.';
+        setErrorMessage(errorMsg);
+      }
+      
+      onPaymentFailure(error.response?.data?.message || error.message);
+      console.error('HisabPay error:', error);
     }
   };
   

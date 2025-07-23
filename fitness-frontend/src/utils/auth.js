@@ -106,16 +106,12 @@ export const checkAuthStatus = async () => {
 };
 
 export const clearAuthData = () => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('userType');
-  localStorage.removeItem('userId');
-  localStorage.removeItem('memberId');
-  localStorage.removeItem('memberID');
-  localStorage.removeItem('name');
-  localStorage.removeItem('username');
-  localStorage.removeItem('isAuthenticated');
-  console.log('Authentication data cleared');
+  const keysToRemove = [
+    'access_token', 'refreshToken', 'userType', 'userId', 
+    'memberId', 'memberID', 'name', 'username', 'isAuthenticated'
+  ];
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  console.log('🧹 Auth data cleared');
 };
 
 export const logout = () => {
@@ -156,38 +152,16 @@ export const restoreAdminSession = () => {
   return false;
 };
 
-export const isTokenValid = () => {
-  const token = localStorage.getItem('access_token');
-  if (!token) {
-    console.log('🔍 No token found');
-    return false;
-  }
-
+export const isTokenValid = async () => {
   try {
-    // Check if token has valid JWT format
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      console.log('🔍 Token does not have valid JWT format');
+    const response = await api.get('auth-test/check/');
+    return true;
+  } catch (error) {
+    if (error.response?.status === 401) {
+      clearAuthData();
       return false;
     }
-
-    // Decode JWT token to check expiration
-    const payload = JSON.parse(atob(parts[1]));
-    const currentTime = Math.floor(Date.now() / 1000);
-    
-    console.log('🔍 Token validation:', {
-      exp: payload.exp,
-      currentTime,
-      isExpired: payload.exp <= currentTime,
-      timeUntilExpiry: payload.exp - currentTime
-    });
-    
-    // Check if token is expired (with 1 minute buffer)
-    const isValid = payload.exp > currentTime + 60;
-    console.log('🔍 Token is valid:', isValid);
-    return isValid;
-  } catch (error) {
-    console.error('🔍 Error parsing token:', error);
     return false;
   }
 };
+

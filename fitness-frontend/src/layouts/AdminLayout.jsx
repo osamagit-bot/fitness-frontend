@@ -1,40 +1,43 @@
-import 'boxicons/css/boxicons.min.css';
-import { useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import "boxicons/css/boxicons.min.css";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import PageTransitionWrapper from "../components/ui/PageTransitionWrapper";
 import api from "../services/api";
 
-
+// Utility functions for notifications
 const getNotifStyle = (message) => {
-  const lower = message.toLowerCase();
-  if (lower.includes('posted:')) return 'bg-cyan-50 border-l-4 border-cyan-400 text-cyan-800';
-  if (lower.includes('new member registered')) return 'bg-green-50 border-l-4 border-green-400 text-green-800';
-  if (lower.includes('membership expired')) return 'bg-red-50 border-l-4 border-red-400 text-red-800';
-  if (lower.includes('membership renewed')) return 'bg-indigo-50 border-l-4 border-indigo-400 text-indigo-800';
-  if (lower.includes('product added')) return 'bg-blue-50 border-l-4 border-blue-400 text-blue-800';
-  if (lower.includes('support')) return 'bg-purple-50 border-l-4 border-purple-400 text-purple-800';
-  if (lower.includes('payment')) return 'bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800';
-  return 'bg-gray-50 border-l-4 border-gray-300 text-gray-700';
+  if (message.toLowerCase().includes('payment') || message.toLowerCase().includes('due')) {
+    return 'bg-red-50 border-l-4 border-red-400';
+  }
+  if (message.toLowerCase().includes('support') || message.toLowerCase().includes('help')) {
+    return 'bg-blue-50 border-l-4 border-blue-400';
+  }
+  if (message.toLowerCase().includes('new member') || message.toLowerCase().includes('joined')) {
+    return 'bg-green-50 border-l-4 border-green-400';
+  }
+  return 'bg-gray-50 border-l-4 border-gray-400';
 };
 
 const getNotifIcon = (message) => {
-  const lower = message.toLowerCase();
-  if (lower.includes('posted:')) return 'bx-message-square-dots';
-  if (lower.includes('new member registered')) return 'bx-user-plus';
-  if (lower.includes('membership expired')) return 'bx-error-circle';
-  if (lower.includes('membership renewed')) return 'bx-refresh';
-  if (lower.includes('product added')) return 'bx-package';
-  if (lower.includes('support')) return 'bx-help-circle';
-  if (lower.includes('payment')) return 'bx-dollar-circle';
-  return 'bx-info-circle';
+  if (message.toLowerCase().includes('payment') || message.toLowerCase().includes('due')) {
+    return 'bx-error-circle text-red-500';
+  }
+  if (message.toLowerCase().includes('support') || message.toLowerCase().includes('help')) {
+    return 'bx-help-circle text-blue-500';
+  }
+  if (message.toLowerCase().includes('new member') || message.toLowerCase().includes('joined')) {
+    return 'bx-user-plus text-green-500';
+  }
+  return 'bx-info-circle text-gray-500';
 };
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const dropdownRef = useRef(null);
 
   const [authChecked, setAuthChecked] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed to false by default for mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,62 +49,32 @@ function AdminDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [notificationError, setNotificationError] = useState(null);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      setIsLoading(true);
-      const token = localStorage.getItem('access_token');
-      const isAuthenticated = localStorage.getItem('isAuthenticated');
-      const user = localStorage.getItem('user');
+  // Dropdown state - all collapsed by default
+  const [expandedGroups, setExpandedGroups] = useState({
+    'Members': false,
+    'Products & Sales': false,
+    'Training': false
+  });
 
-      if (!token || isAuthenticated !== 'true') {
-        navigate('/login');
-      } else {
-        try {
-          setUserData(user ? JSON.parse(user) : null);
-          setAuthChecked(true);
-          fetchNotifications();
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-          navigate('/login');
-        }
-      }
-      setIsLoading(false);
-    };
-
-    checkAuth();
-
-    const handleResize = () => {
-      setSidebarOpen(window.innerWidth > 1024);
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, [navigate]);
-
-  useEffect(() => {
-    if (showNotifications) {
-      fetchNotifications();
-    }
-  }, [showNotifications]);
-
-  const getActiveTab = () => {
-    const path = location.pathname.split('/')[2] || 'dashboard';
-    return path;
+  const toggleGroup = (title) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
   };
 
-  const activeTab = getActiveTab();
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const handleBellClick = () => {
+    setShowNotifications((prev) => !prev);
+  };
 
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
   };
-  const token = localStorage.getItem('access_token');
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-  const { userType } = JSON.parse(localStorage.getItem('authInfo') || '{}');
 
   const fetchNotifications = async () => {
     setNotifLoading(true);
@@ -116,7 +89,7 @@ function AdminDashboard() {
       if (response.data && Array.isArray(response.data.notifications)) {
         setNotifications(response.data.notifications);
       } else {
-        throw new Error('Invalid notifications data format');
+        setNotifications([]);
       }
     } catch (err) {
       console.error('Error fetching notifications:', err);
@@ -127,33 +100,18 @@ function AdminDashboard() {
     }
   };
 
-  useEffect(() => {
-    if (userType === 'admin' && token) {
-      fetchNotifications();
-    }
-  }, [userType, token]);
-
-  const handleBellClick = () => {
-    setShowNotifications((prev) => !prev);
-  };
-
   const handleMarkAllAsRead = async () => {
     setIsMarkingRead(true);
-    setNotificationError(null);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await api.post(
+      await api.post(
         'notifications/mark_all_read/',
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      if (response.status === 200) {
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      }
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch (err) {
       console.error('Failed to mark all as read', err);
-      setNotificationError('Failed to mark notifications as read');
     } finally {
       setIsMarkingRead(false);
     }
@@ -161,26 +119,140 @@ function AdminDashboard() {
 
   const handleDeleteAll = async () => {
     setIsDeleting(true);
-    setNotificationError(null);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await api.delete(
+      await api.delete(
         'notifications/delete_all/',
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      if (response.status === 204) {
-        setNotifications([]);
-      }
+      setNotifications([]);
     } catch (err) {
       console.error('Failed to delete all notifications', err);
-      setNotificationError('Failed to delete notifications');
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const getActiveTab = () => {
+    const path = location.pathname.split('/')[2] || 'dashboard';
+    return path;
+  };
+
+  const activeTab = getActiveTab();
   const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        console.log('🔍 AdminLayout: Checking authentication...');
+        const token = localStorage.getItem('access_token');
+        const userType = localStorage.getItem('userType');
+        
+        console.log('🔑 Token exists:', !!token);
+        console.log('👤 User type:', userType);
+        
+        if (!token || userType !== 'admin') {
+          console.log('❌ AdminLayout: No valid admin token, redirecting to login');
+          navigate('/login');
+          return;
+        }
+
+        // Test the token with a simple endpoint
+        const response = await api.get('auth-test/check/', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log('✅ AdminLayout: Auth check successful');
+        setUserData({ name: localStorage.getItem('name'), email: localStorage.getItem('username') });
+        setAuthChecked(true);
+      } catch (error) {
+        console.error('❌ AdminLayout: Auth check failed:', error);
+        console.log('🧹 Clearing localStorage and redirecting...');
+        localStorage.clear();
+        navigate('/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (authChecked) {
+      fetchNotifications();
+    }
+  }, [authChecked]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Enhanced sidebar menu items with submenus and icons
+  const menuItems = [
+    {
+      title: 'Dashboard',
+      icon: 'bx-home',
+      path: 'dashboard',
+      type: 'link'
+    },
+    {
+      title: 'Members',
+      icon: 'bx-user',
+      type: 'group',
+      items: [
+        { title: 'Register Member', icon: 'bx-user-plus', path: 'register' },
+        { title: 'All Members', icon: 'bx-group', path: 'members' },
+        { title: 'Attendance', icon: 'bx-calendar-check', path: 'attendance' },
+      ]
+    },
+    {
+      title: 'Products & Sales',
+      icon: 'bx-store',
+      type: 'group',
+      items: [
+        { title: 'Products', icon: 'bx-package', path: 'products' },
+        { title: 'Revenue', icon: 'bx-dollar', path: 'revenue' },
+      ]
+    },
+    {
+      title: 'Training',
+      icon: 'bx-dumbbell',
+      type: 'group',
+      items: [
+        { title: 'Trainings', icon: 'bx-dumbbell', path: 'trainings' },
+        { title: 'Trainers', icon: 'bx-user-voice', path: 'trainers' },
+      ]
+    },
+    {
+      title: 'Community',
+      icon: 'bx-message-square-detail',
+      path: 'community',
+      type: 'link'
+    },
+    {
+      title: 'Support',
+      icon: 'bx-help-circle',
+      path: 'support',
+      type: 'link',
+      badge: 'New'
+    },
+    {
+      title: 'Settings',
+      icon: 'bx-cog',
+      path: 'adminsettings',
+      type: 'link'
+    }
+  ];
 
   if (isLoading) {
     return (
@@ -202,77 +274,161 @@ function AdminDashboard() {
           onClick={toggleSidebar}
           className="text-white focus:outline-none transition-transform hover:scale-110"
         >
-          <i className={`bx ${sidebarOpen ? 'bx-x' : 'bx-menu'} text-3xl`}></i>
+          <i className={`bx ${sidebarOpen ? "bx-x" : "bx-menu"} text-3xl`}></i>
         </button>
       </div>
 
-      {/* Sidebar */}
-      <div className={`
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        lg:translate-x-0 lg:w-72 bg-gradient-to-b from-indigo-700 to-blue-800 text-white flex flex-col
+      {/* Enhanced Sidebar */}
+      <div
+        className={`
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
+        lg:translate-x-0 lg:w-72 bg-gradient-to-b  from-indigo-800 to-blue-900 text-white flex flex-col
         transform transition-all duration-300 ease-in-out
         fixed lg:relative z-30 h-full lg:h-auto
-        w-80 shadow-xl
-      `}>
-        <div className="p-6 pb-4 border-b border-blue-600">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-md">
-              <i className="bx bx-user text-2xl"></i>
+        w-80 shadow-2xl
+      `}
+      >
+        {/* Sidebar Header */}
+        <div className="p-6 pb-4 border-b border-blue-700 relative">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-blue-900/30 to-indigo-900/30"></div>
+          <div className="relative z-10 flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg">
+              <i className="bx bx-shield-alt-2 text-2xl"></i>
             </div>
             <div>
               <h1 className="text-md font-bold">Admin Dashboard</h1>
-              <p className="text-sm text-blue-200">{userData?.email || 'Administrator'}</p>
+              <p className="text-xs text-blue-200">
+                {userData?.email || "Administrator"}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar py-4">
-          <ul className="space-y-1 px-4">
-            {[
-              { path: 'dashboard', icon: 'bx-home', label: 'Dashboard' },
-              { path: 'register', icon: 'bxs-add-to-queue', label: 'Register Member' },
-              { path: 'products', icon: 'bx-package', label: 'Products' },
-              { path: 'trainings', icon: 'bx-dumbbell', label: 'Trainings' },
-              { path: 'attendance', icon: 'bx-qr-scan', label: 'Attendance' },
-              { path: 'revenue', icon: 'bx-dollar', label: 'Revenue' },
-              { path: 'members', icon: 'bx-user', label: 'Members' },
-              { path: 'trainers', icon: 'bx-user-voice', label: 'Trainers' },
-              { path: 'community', icon: 'bx-message-square-detail', label: 'Community' },
-              { path: 'support', icon: 'bx-help-circle', label: 'Support' },
-              { path: 'adminsettings', icon: 'bx-cog', label: 'Settings' },
-            ].map((item) => (
-              <li key={item.path}>
-                <button
-                  onClick={() => {
-                    navigate(`/admin/${item.path}`);
-                    if (window.innerWidth < 1024) setSidebarOpen(false);
-                  }}
-                  className={`
-                    w-full text-left px-4 py-3 rounded-lg transition-all
-                    hover:bg-blue-600 hover:shadow-md hover:translate-x-1
-                    ${activeTab === item.path ?
-                    'bg-blue-600 shadow-md translate-x-1' :
-                    'bg-transparent'}
-                    flex items-center
-                  `}
-                >
-                  <i className={`bx ${item.icon} mr-3 text-xl`}></i>
-                  <span>{item.label}</span>
-                  {activeTab === item.path && (
-                    <span className="ml-auto w-2 h-2 bg-blue-300 rounded-full animate-pulse"></span>
-                  )}
-                </button>
+        {/* Sidebar Search (optional) */}
+        <div className="px-4 py-3 border-b border-blue-700">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search menu..."
+              className="w-full bg-blue-900/50 border border-blue-700 rounded-lg px-4 py-2 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <i className="bx bx-search absolute left-3 top-2.5 text-blue-300"></i>
+          </div>
+        </div>
+
+        {/* Sidebar Menu */}
+        <div className="flex-1 pt-5 overflow-y-auto custom-scrollbar py-4">
+          <ul className="space-y-1 px-3">
+            {menuItems.map((item) => (
+              <li key={item.title}>
+                {item.type === 'group' ? (
+                  // Group with dropdown
+                  <div>
+                    <button
+                      onClick={() => toggleGroup(item.title)}
+                      className={`
+                        w-full text-left px-4 py-3 rounded-lg transition-all
+                        hover:bg-blue-700/50 hover:shadow-md
+                        bg-transparent
+                        flex items-center justify-between
+                      `}
+                    >
+                      <div className="flex items-center">
+                        <i className={`bx ${item.icon} mr-3 text-xl`}></i>
+                        <span>{item.title}</span>
+                      </div>
+                      <i className={`bx ${expandedGroups[item.title] ? 'bx-chevron-up' : 'bx-chevron-down'} text-lg transition-transform duration-200`}></i>
+                    </button>
+                    
+                    {/* Submenu items with animation */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      expandedGroups[item.title] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      <ul className="mt-2 ml-4 space-y-1">
+                        {item.items.map((subItem, index) => (
+                          <li 
+                            key={subItem.path}
+                            className={`transform transition-all duration-200 ease-in-out ${
+                              expandedGroups[item.title] 
+                                ? 'translate-y-0 opacity-100' 
+                                : '-translate-y-2 opacity-0'
+                            }`}
+                            style={{ 
+                              transitionDelay: expandedGroups[item.title] ? `${index * 50}ms` : '0ms' 
+                            }}
+                          >
+                            <button
+                              onClick={() => {
+                                navigate(`/admin/${subItem.path}`);
+                                if (window.innerWidth < 1024) setSidebarOpen(false);
+                              }}
+                              className={`
+                                w-full text-left px-4 py-2 rounded-lg transition-all text-sm
+                                hover:bg-blue-700/50 hover:shadow-md hover:translate-x-1
+                                ${
+                                  activeTab === subItem.path
+                                    ? "bg-blue-700/70 shadow-md"
+                                    : "bg-transparent"
+                                }
+                                flex items-center
+                              `}
+                            >
+                              <i className={`bx ${subItem.icon} mr-3 text-lg`}></i>
+                              <span>{subItem.title}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  // Regular link
+                  <button
+                    onClick={() => {
+                      navigate(`/admin/${item.path}`);
+                      if (window.innerWidth < 1024) setSidebarOpen(false);
+                    }}
+                    className={`
+                      w-full text-left px-4 py-3 rounded-lg transition-all
+                      hover:bg-blue-700/50 hover:shadow-md
+                      ${
+                        activeTab === item.path
+                          ? "bg-blue-700/70 shadow-md"
+                          : "bg-transparent"
+                      }
+                      flex items-center justify-between
+                    `}
+                  >
+                    <div className="flex items-center">
+                      <i className={`bx ${item.icon} mr-3 text-xl`}></i>
+                      <span>{item.title}</span>
+                    </div>
+                    {item.badge && (
+                      <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="p-4 border-t border-blue-600">
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-blue-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-xs text-blue-300">
+              <div>Last login: {new Date().toLocaleString()}</div>
+              <div>v2.4.1</div>
+            </div>
+            
+          </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg transition-all hover:shadow-md"
+            className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-600 hover:to-indigo-600 rounded-lg transition-all hover:shadow-md"
           >
-            <i className="bx bx-log-out mr-2 text-xl"></i>
+            <i className="bx bx-log-out-circle mr-2 text-xl"></i>
             <span>Logout</span>
           </button>
         </div>
@@ -318,7 +474,7 @@ function AdminDashboard() {
 
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 top-14 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200 overflow-hidden">
+                <div ref={dropdownRef} className="absolute right-0 top-14 bg-white shadow-xl rounded-lg w-96 z-50 border border-gray-200 overflow-hidden">
                   <div className="sticky top-0 bg-white z-10 p-4 border-b font-semibold text-gray-700 flex justify-between items-center">
                     Notifications
                     <button
@@ -364,35 +520,35 @@ function AdminDashboard() {
                       <div className="p-4 text-gray-500">No notifications</div>
                     ) : (
                       notifications.map((notif) => (
-                      <div
-                      key={notif.id}
-                      className={`flex items-start gap-3 p-4 border-b ${getNotifStyle(notif.message)} ${!notif.is_read ? 'font-semibold' : ''}`}
-                      >
-                      <i className={`bx ${getNotifIcon(notif.message)} text-xl mt-1`}></i>
+                        <div
+                          key={notif.id}
+                          className={`flex items-start gap-3 p-4 border-b ${getNotifStyle(notif.message)} ${!notif.is_read ? 'font-semibold' : ''}`}
+                        >
+                          <i className={`bx ${getNotifIcon(notif.message)} text-xl mt-1`}></i>
                           <div className="flex-1">
-                          <div>
-                          {notif.message}
-                          {notif.message.toLowerCase().includes('support') && (
-                          <button
-                          onClick={() => navigate('/admin/support')}
-                          className="ml-2 text-blue-600 underline hover:text-blue-800 text-sm"
-                          >
-                          View Ticket
-                          </button>
-                          )}
-                            {notif.message.toLowerCase().includes('posted:') && (
-                              <button
-                              onClick={() => navigate('/admin/community')}
-                                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm transition-colors"
+                            <div>
+                              {notif.message}
+                              {notif.message.toLowerCase().includes('support') && (
+                                <button
+                                  onClick={() => navigate('/admin/support')}
+                                  className="ml-2 text-blue-600 underline hover:text-blue-800 text-sm"
                                 >
-                                   View Community
-                                 </button>
-                               )}
-                             </div>
-                             <div className="text-xs text-gray-500 mt-1">
-                               {new Date(notif.created_at).toLocaleString()}
-                             </div>
-                           </div>
+                                  View Ticket
+                                </button>
+                              )}
+                              {notif.message.toLowerCase().includes('posted:') && (
+                                <button
+                                  onClick={() => navigate('/admin/community')}
+                                  className="ml-2 px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm transition-colors"
+                                >
+                                  View Community
+                                </button>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {new Date(notif.created_at).toLocaleString()}
+                            </div>
+                          </div>
                         </div>
                       ))
                     )}
@@ -428,8 +584,6 @@ function AdminDashboard() {
               <Outlet />
             </PageTransitionWrapper>
           </div>
-
-         
         </div>
       </div>
 
@@ -453,3 +607,34 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

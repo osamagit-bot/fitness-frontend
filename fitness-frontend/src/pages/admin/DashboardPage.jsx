@@ -16,9 +16,9 @@ import {
   FiTrendingUp,
   FiUserCheck,
   FiUsers,
-  FiZap
+  FiZap,
 } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Area,
   AreaChart,
@@ -33,24 +33,26 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from "recharts";
-import api from "../../services/api";
+import api from "../../utils/api";
 import { formatDate, formatDateTime } from "../../utils/dateUtils";
 
-function EnhancedDashboardPage() {
+const DashboardPage = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
-    totalRevenue: 0,
     activeMembers: 0,
-    activeTrainers: 0,
-    upcomingTrainings: 0,
-    presentMembers: 0,
-    totalAttendance: 0,
-    revenueGrowth: 5.2,
-    memberGrowth: 8.5,
+    todayCheckIns: 0,
+    monthlyRevenue: 0,
+    outstandingPayments: 0,
+    totalRevenue: 0,
     shopRevenue: 0,
+    activeTrainers: 0,
+    totalAttendance: 0,
+    revenueGrowth: 0,
+    memberGrowth: 0,
     monthlyTarget: 50000,
-    completionRate: 75,
+    completionRate: 0,
     averageSessionTime: 85,
     memberRetention: 92,
   });
@@ -65,7 +67,7 @@ function EnhancedDashboardPage() {
   const [memberFrequency, setMemberFrequency] = useState([]);
   const [topActiveMembers, setTopActiveMembers] = useState([]);
   const [revenueData, setRevenueData] = useState([]);
-
+  const [recentActivity, setRecentActivity] = useState([]);
 
   // Enhanced color schemes
   const CHART_COLORS = {
@@ -78,23 +80,24 @@ function EnhancedDashboardPage() {
   };
 
   const GRADIENT_COLORS = [
-    "from-purple-400 via-pink-500 to-red-500",
-    "from-green-400 to-blue-500",
+    "from-blue-400 via-sky-500 to-blue-700",
+    "from-blue-400 to-blue-500",
     "from-blue-400 to-purple-600",
     "from-yellow-400 to-red-500",
     "from-pink-400 to-purple-600",
     "from-indigo-400 to-purple-600",
+    "from-blue-600 to-gray-400",
   ];
 
   useEffect(() => {
-    fetchStats();
+    fetchDashboardData();
     fetchRecentMembers();
     generateMemberInsights();
     generateRevenueData();
 
     // Set up auto-refresh every 5 minutes
     const interval = setInterval(() => {
-      fetchStats();
+      fetchDashboardData();
       setLastUpdate(new Date());
     }, 5 * 60 * 1000);
 
@@ -112,7 +115,6 @@ function EnhancedDashboardPage() {
     }));
     setRevenueData(data);
   };
-
 
   const generateMemberInsights = async () => {
     try {
@@ -178,7 +180,7 @@ function EnhancedDashboardPage() {
       // Attendance-based insights
       try {
         const attendanceResponse = await api.get(
-          "attendance/history/?today_only=true"
+          "attendance_history/?today_only=true"
         );
         const memberAttendanceCounts = {};
 
@@ -223,70 +225,100 @@ function EnhancedDashboardPage() {
     }
   };
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch all required data
-      const [
-        membersResponse,
-        purchasesResponse,
-        paymentsResponse,
-        trainersResponse,
-      ] = await Promise.all([
-        api.get("members/"),
+      console.log("🔍 Fetching dashboard data...");
+
+      // Fetch stats and purchases for debugging
+      const [statsResponse, purchasesResponse] = await Promise.all([
+        api.get("admin-dashboard/stats/"),
         api.get("purchases/"),
-        api.get("members/payments_summary/"),
-        api.get("trainers/"),
       ]);
 
-      // Process shop revenue
-      let shopRevenueTotal = 0;
-      let purchasesList = Array.isArray(purchasesResponse.data)
+      console.log("🔍 Stats response:", statsResponse.data);
+      console.log("🔍 Purchases response:", purchasesResponse.data);
+
+      // Debug purchases data
+      const purchases = Array.isArray(purchasesResponse.data)
         ? purchasesResponse.data
         : purchasesResponse.data.results || [];
 
-      purchasesList.forEach((purchase) => {
-        if (purchase?.total_price) {
-          const price = parseFloat(purchase.total_price);
-          if (!isNaN(price)) shopRevenueTotal += price;
+      console.log("🔍 Total purchases found:", purchases.length);
+      console.log("🔍 Sample purchase:", purchases[0]);
+
+      // Calculate shop revenue manually for current month
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      let manualShopRevenue = 0;
+      const currentMonthPurchases = purchases.filter((purchase) => {
+        const purchaseDate = new Date(purchase.date);
+        const isCurrentMonth =
+          purchaseDate.getMonth() + 1 === currentMonth &&
+          purchaseDate.getFullYear() === currentYear;
+        if (isCurrentMonth) {
+          console.log("🔍 Current month purchase:", purchase);
+          manualShopRevenue += parseFloat(purchase.total_price || 0);
         }
+        return isCurrentMonth;
       });
 
-      // Process members
-      let membersList = Array.isArray(membersResponse.data)
-        ? membersResponse.data
-        : membersResponse.data.results || [];
-      const activeMembersList = membersList.filter(
-        (m) => m.is_active !== false
+      console.log("🔍 Current month purchases:", currentMonthPurchases.length);
+      console.log("🔍 Manual shop revenue calculation:", manualShopRevenue);
+
+      // Fetch today's attendance count
+      const todayAttendanceResponse = await api.get(
+        "attendance_history/?today_only=true"
       );
-      const membersCount = activeMembersList.length;
 
-      // Process trainers
-      let trainersList = Array.isArray(trainersResponse.data)
-        ? trainersResponse.data
-        : trainersResponse.data.results || [];
-      const trainersCount = trainersList.length;
+      // Parse the revenue values
+      const parseRevenue = (value) => {
+        if (typeof value === "string") {
+          return parseFloat(value.replace(" AFN", "").replace(",", "")) || 0;
+        }
+        return parseFloat(value) || 0;
+      };
 
-      // Process revenue
-      const totalRevenue = paymentsResponse.data.monthly_payments || 0;
+      const backendStats = statsResponse.data;
+      const backendShopRevenue = parseRevenue(
+        backendStats.monthly_revenue_shop
+      );
 
-      // Enhanced stats with calculated metrics
-      setStats((prev) => ({
-        ...prev,
-        totalRevenue,
-        activeMembers: membersCount,
-        activeTrainers: trainersCount,
-        shopRevenue: shopRevenueTotal,
-        memberGrowth: Math.random() * 10 + 5, // Mock growth rate
-        completionRate: Math.floor((totalRevenue / prev.monthlyTarget) * 100),
-        memberRetention: Math.floor(Math.random() * 10) + 90,
-        averageSessionTime: Math.floor(Math.random() * 30) + 70,
+      // Use manual calculation if backend shows 0 but we have purchases
+      const finalShopRevenue =
+        backendShopRevenue > 0 ? backendShopRevenue : manualShopRevenue;
+
+      setStats((prevStats) => ({
+        ...prevStats,
+        activeMembers: backendStats.total_members || 0,
+        activeTrainers: backendStats.total_trainers || 0,
+        todayCheckIns: todayAttendanceResponse.data.length,
+        totalAttendance: todayAttendanceResponse.data.length,
+        monthlyRevenue: parseRevenue(backendStats.monthly_revenue),
+        totalRevenue: parseRevenue(backendStats.total_revenue),
+        shopRevenue: finalShopRevenue,
+        outstandingPayments: parseRevenue(backendStats.monthly_renewal_revenue),
+        memberGrowth: Math.random() * 10 + 5,
+        revenueGrowth: Math.random() * 10 + 3,
+        completionRate: Math.floor(
+          (parseRevenue(backendStats.monthly_revenue) /
+            prevStats.monthlyTarget) *
+            100
+        ),
       }));
 
-      setError(null);
+      console.log("🔍 Final stats update:", {
+        backendShopRevenue,
+        manualShopRevenue,
+        finalShopRevenue,
+        totalPurchases: purchases.length,
+        currentMonthPurchases: currentMonthPurchases.length,
+      });
     } catch (error) {
-      console.error("Error fetching stats:", error);
-      setError("Failed to load dashboard data. Please try again.");
+      console.error("❌ Error fetching dashboard data:", error);
+      setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -298,17 +330,20 @@ function EnhancedDashboardPage() {
       let memberList = Array.isArray(response.data)
         ? response.data.slice(0, 5)
         : response.data.results?.slice(0, 5) || [];
-      
+
       // Debug: Log the member data structure
       console.log("Member data structure:", memberList[0]);
-      
+
       setRecentMembers(memberList);
     } catch (error) {
       console.error("Error fetching recent members:", error);
     }
   };
 
-  const formatCurrency = (amount) => `${parseFloat(amount).toFixed(0)} AFN`;
+  const formatCurrency = (amount) => {
+    const numAmount = parseFloat(amount) || 0;
+    return `${numAmount.toFixed(0)} AFN`;
+  };
 
   const StatCard = ({
     title,
@@ -369,7 +404,7 @@ function EnhancedDashboardPage() {
                     <span
                       className={`text-sm font-medium flex items-center ${
                         trend === "up"
-                          ? "text-green-400"
+                          ? "text-black"
                           : trend === "down"
                           ? "text-red-400"
                           : "text-blue-400"
@@ -460,7 +495,7 @@ function EnhancedDashboardPage() {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 -m-6 min-h-screen">
+    <div className="bg-gradient-to-br from-gray-150 via-blue-50 to-indigo-50 -m-6 min-h-screen">
       {/* Header section with title and refresh */}
       <div className="px-6 pt-6 pb-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -472,7 +507,7 @@ function EnhancedDashboardPage() {
             >
               ⚡ Elite Fitness Dashboard
             </motion.h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            <p className="text-gray-600 mt-1 text-vsm sm:text-base">
               Real-time insights and analytics • Last updated:{" "}
               {formatDateTime(lastUpdate)}
             </p>
@@ -490,7 +525,7 @@ function EnhancedDashboardPage() {
                 setLastUpdate(new Date());
               }}
               disabled={loading}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 text-sm sm:text-base"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 text-sm sm:text-base"
             >
               <FiRefreshCw
                 className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
@@ -520,13 +555,13 @@ function EnhancedDashboardPage() {
         </AnimatePresence>
 
         {/* Main Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 p-5  sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <StatCard
             title="Total Revenue"
             value={formatCurrency(stats.totalRevenue)}
             icon={FiDollarSign}
             trend="up"
-            trendValue={`${stats.revenueGrowth}%`}
+            trendValue={`${(stats.revenueGrowth || 0).toFixed(1)}%`}
             isLoading={loading}
             gradient={GRADIENT_COLORS[0]}
           />
@@ -543,18 +578,20 @@ function EnhancedDashboardPage() {
 
           <StatCard
             title="Active Members"
-            value={stats.activeMembers}
+            value={stats.activeMembers || 0}
             icon={FiUsers}
             trend="up"
-            trendValue={`${stats.memberGrowth.toFixed(1)}%`}
+            trendValue={`${(stats.memberGrowth || 0).toFixed(1)}%`}
             isLoading={loading}
             color="green"
             subtitle="Total registered"
+            gradient={GRADIENT_COLORS[6]}
+            
           />
 
           <StatCard
             title="Active Trainers"
-            value={stats.activeTrainers}
+            value={stats.activeTrainers || 0}
             icon={FiUserCheck}
             trend="stable"
             trendValue="0%"
@@ -564,18 +601,8 @@ function EnhancedDashboardPage() {
           />
 
           <StatCard
-            title="Present Now"
-            value={stats.presentMembers}
-            icon={FiActivity}
-            trend="up"
-            trendValue="5.2%"
-            isLoading={loading}
-            gradient={GRADIENT_COLORS[2]}
-          />
-
-          <StatCard
             title="Today's Check-ins"
-            value={stats.totalAttendance}
+            value={stats.todayCheckIns || 0}
             icon={FiCheckCircle}
             trend="up"
             trendValue="8.1%"
@@ -664,7 +691,7 @@ function EnhancedDashboardPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl shadow-lg p-6 text-white"
+            className="bg-gradient-to-br from-blue-400 to-blue-800 rounded-2xl shadow-lg p-6 text-white"
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Peak Hours</h3>
@@ -1067,7 +1094,9 @@ function EnhancedDashboardPage() {
                                 {member.first_name} {member.last_name}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {member.user_email || member.email || "No email"}
+                                {member.user_email ||
+                                  member.email ||
+                                  "No email"}
                               </div>
                             </div>
                           </div>
@@ -1084,7 +1113,9 @@ function EnhancedDashboardPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(member.start_date) || formatDate(member.registration_date) || "Recent"}
+                          {formatDate(member.start_date) ||
+                            formatDate(member.registration_date) ||
+                            "Recent"}
                         </td>
                       </motion.tr>
                     ))}
@@ -1154,6 +1185,6 @@ function EnhancedDashboardPage() {
       </div>
     </div>
   );
-}
+};
 
-export default EnhancedDashboardPage;
+export default DashboardPage;

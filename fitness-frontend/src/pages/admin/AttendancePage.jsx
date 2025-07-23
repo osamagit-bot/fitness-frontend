@@ -11,11 +11,33 @@ const AttendancePage = () => {
   const [selectedMember, setSelectedMember] = useState('');
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [stats, setStats] = useState({
-    todayAttendance: 0,
-    weeklyAttendance: 0,
-    monthlyAttendance: 0,
+    todayCount: 0,
+    weeklyCount: 0,
+    monthlyCount: 0,
     totalMembers: 0
   });
+
+  const calculateMemberAbsentDays = (memberStartDate, attendanceCount) => {
+    if (!memberStartDate) return 0;
+    
+    const startDate = new Date(memberStartDate);
+    const today = new Date();
+    const totalDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, totalDays - attendanceCount);
+  };
+
+  const calculateMemberAttendanceRate = (memberStartDate, attendanceCount) => {
+    if (!memberStartDate) return 0;
+    
+    const startDate = new Date(memberStartDate);
+    const today = new Date();
+    const totalDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    
+    if (totalDays === 0) return 100;
+    
+    return Math.min(100, Math.round((attendanceCount / totalDays) * 100));
+  };
 
   useEffect(() => {
     fetchMembers();
@@ -26,9 +48,23 @@ const AttendancePage = () => {
   const fetchMembers = async () => {
     try {
       const response = await api.get('members/');
-      setMembers(response.data);
+      console.log('🔍 Members response:', response.data); // Debug log
+      
+      // Handle different response formats
+      let membersData;
+      if (Array.isArray(response.data)) {
+        membersData = response.data;
+      } else if (response.data.results && Array.isArray(response.data.results)) {
+        membersData = response.data.results;
+      } else {
+        console.warn('⚠️ Unexpected members data format:', response.data);
+        membersData = [];
+      }
+      
+      setMembers(membersData);
     } catch (error) {
-      console.error('Error fetching members:', error);
+      console.error('❌ Error fetching members:', error);
+      setMembers([]); // Fallback to empty array
     }
   };
 
@@ -39,10 +75,16 @@ const AttendancePage = () => {
       if (selectedDate) params.append('date', selectedDate);
       if (selectedMember) params.append('member_id', selectedMember);
       
+      console.log('🔍 Fetching attendance with params:', params.toString());
+      
+      // Use the correct endpoint
       const response = await api.get(`attendance_history/?${params}`);
+      console.log('🔍 Attendance response:', response.data);
+      
       setAttendanceData(response.data);
     } catch (error) {
-      console.error('Error fetching attendance data:', error);
+      console.error('❌ Error fetching attendance data:', error);
+      console.error('❌ Error response:', error.response?.data);
     } finally {
       setLoading(false);
     }
@@ -51,6 +93,8 @@ const AttendancePage = () => {
   const fetchStats = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
+      
+      console.log('🔍 Fetching stats for today:', today);
       
       // Today's attendance
       const todayResponse = await api.get(`attendance_history/?date=${today}`);
@@ -64,36 +108,47 @@ const AttendancePage = () => {
       const monthAgo = new Date();
       monthAgo.setMonth(monthAgo.getMonth() - 1);
       const monthlyResponse = await api.get(`attendance_history/?start_date=${monthAgo.toISOString().split('T')[0]}&end_date=${today}`);
-      
+
       setStats({
-        todayAttendance: todayResponse.data.length,
-        weeklyAttendance: weeklyResponse.data.length,
-        monthlyAttendance: monthlyResponse.data.length,
+        todayCount: todayResponse.data.length,
+        weeklyCount: weeklyResponse.data.length,
+        monthlyCount: monthlyResponse.data.length,
         totalMembers: members.length
       });
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('❌ Error fetching stats:', error);
     }
   };
 
-  const addManualAttendance = async (memberAthleteId) => {
-    try {
-      await api.post('webauthn/check_in/', {
-        athlete_id: memberAthleteId,
-        manual_entry: true
-      });
-      
-      toast.success('Manual attendance recorded successfully!');
-      fetchAttendanceData();
-      fetchStats();
-    } catch (error) {
-      if (error.response?.status === 400) {
-        toast.error('Member already checked in today');
-      } else {
-        toast.error('Failed to record attendance');
-      }
-    }
-  };
+ const addManualAttendance = async (memberAthleteId) => {
+   try {
+     const response = await api.post("webauthn/checkin/", {
+       athlete_id: memberAthleteId,
+       manual_entry: true,
+     });
+
+     const msg = response.data?.message || "";
+
+     if (msg.includes("Already checked in")) {
+       toast.info("Member has already checked in today.");
+     } else if (msg.includes("Check-in successful")) {
+       toast.success("Manual attendance recorded successfully!");
+     } else {
+       toast.info(msg); // fallback for any other message
+     }
+
+     fetchAttendanceData();
+     fetchStats();
+   } catch (error) {
+     const errMsg = error.response?.data?.error || error.message;
+     if (errMsg.includes("Fingerprint not registered")) {
+       toast.error("Sorry, member not registered yet.");
+     } else {
+       toast.error("Failed to record attendance");
+     }
+   }
+ };
+
 
   const exportAttendance = () => {
     if (attendanceData.length === 0) {
@@ -182,7 +237,7 @@ const AttendancePage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm">Today</p>
-              <p className="text-3xl font-bold">{stats.todayAttendance}</p>
+              <p className="text-3xl font-bold">{stats.todayCount}</p>
               <p className="text-blue-100 text-sm">Check-ins</p>
             </div>
             <i className="bx bx-calendar-check text-3xl text-blue-200"></i>
@@ -193,7 +248,7 @@ const AttendancePage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm">This Week</p>
-              <p className="text-3xl font-bold">{stats.weeklyAttendance}</p>
+              <p className="text-3xl font-bold">{stats.weeklyCount}</p>
               <p className="text-green-100 text-sm">Check-ins</p>
             </div>
             <i className="bx bx-trending-up text-3xl text-green-200"></i>
@@ -204,7 +259,7 @@ const AttendancePage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm">This Month</p>
-              <p className="text-3xl font-bold">{stats.monthlyAttendance}</p>
+              <p className="text-3xl font-bold">{stats.monthlyCount}</p>
               <p className="text-purple-100 text-sm">Check-ins</p>
             </div>
             <i className="bx bx-bar-chart text-3xl text-purple-200"></i>
@@ -359,6 +414,7 @@ const AttendancePage = () => {
           <div className="p-8 text-center">
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-500">Loading attendance data...</p>
+            <p className="text-sm text-gray-400 mt-1">Please wait while we fetch the records</p>
           </div>
         ) : attendanceData.length === 0 ? (
           <div className="p-8 text-center">
@@ -372,28 +428,22 @@ const AttendancePage = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Member
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Check-in Time
+                    Date & Time
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Method
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Absent Days / Rate
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {attendanceData.map((record, index) => (
                   <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(record.date)}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
@@ -408,7 +458,10 @@ const AttendancePage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatTime(record.check_in_time)}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{formatDate(record.date)}</span>
+                        <span className="text-gray-500">{formatTime(record.check_in_time)}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -416,11 +469,15 @@ const AttendancePage = () => {
                         {record.verification_method}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <i className="bx bx-check mr-1"></i>
-                        Present
-                      </span>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="flex flex-col">
+                        <span className="text-red-600 font-medium">
+                          {calculateMemberAbsentDays(record.member_start_date, record.member_total_attendance)} absent
+                        </span>
+                        <span className="text-green-600 text-xs">
+                          {calculateMemberAttendanceRate(record.member_start_date, record.member_total_attendance)}% rate
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -434,3 +491,15 @@ const AttendancePage = () => {
 };
 
 export default AttendancePage;
+
+
+
+
+
+
+
+
+
+
+
+

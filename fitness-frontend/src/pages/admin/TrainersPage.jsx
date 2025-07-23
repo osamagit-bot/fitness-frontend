@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import api from "../../services/api";
 import AppToastContainer from "../../components/ui/ToastContainer";
+import api from "../../services/api";
 import { showToast } from "../../utils/toast";
 function TrainersPage() {
   const [trainers, setTrainers] = useState([]);
@@ -16,9 +16,26 @@ function TrainersPage() {
     monthly_salary: '',
     specialization: '',
     start_date: '',
-    username: '',
-    password: ''
+    image: null // Add image field
   });
+  const [imageErrors, setImageErrors] = useState(new Set());
+
+  const handleImageError = (trainerId) => {
+    setImageErrors(prev => new Set([...prev, trainerId]));
+  };
+
+  // Add this helper function at the top of your component
+  const getImageUrl = (trainer) => {
+    if (!trainer.image) return '/images/trainer1.png';
+    
+    if (trainer.image.startsWith('http')) {
+      return trainer.image;
+    }
+    
+    // Fix: Remove /api from base URL for media files
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace('/api', '');
+    return `${baseUrl}${trainer.image}`;
+  };
 
   useEffect(() => {
     fetchTrainers();
@@ -33,45 +50,30 @@ function TrainersPage() {
         headers: {
           'Authorization': `Bearer ${token}`
         },
-        timeout: 10000  // 10 seconds timeout
+        timeout: 10000
       });
-  
+
       let trainersData = response.data.results || response.data;
       trainersData = Array.isArray(trainersData) ? trainersData : [];
       
-      // Ensure username and password fields exist
+      // Remove username and password processing since we don't need them
       const processedTrainers = trainersData.map(trainer => ({
         ...trainer,
-        username: trainer.username || 'N/A',
-        password: trainer.password || '••••••••'
+        // Remove username/password fields completely
       }));
-      
-      // Store passwords locally too
-      const trainersPasswords = JSON.parse(localStorage.getItem('trainersPasswords') || '{}');
-      processedTrainers.forEach(trainer => {
-        if (trainer.id && trainer.password && trainer.password !== '••••••••') {
-          trainersPasswords[trainer.id] = trainer.password;
-        }
-      });
-      localStorage.setItem('trainersPasswords', JSON.stringify(trainersPasswords));
       
       setTrainers(processedTrainers);
     } catch (error) {
       console.error('Error fetching trainers:', error);
       
-      // More detailed error message
       let errorMessage = 'Failed to load trainers. ';
       
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         errorMessage += `Server error: ${error.response.status}`;
         console.error('Response data:', error.response.data);
       } else if (error.request) {
-        // The request was made but no response was received
         errorMessage += 'No response from server. Check network connection.';
       } else {
-        // Something happened in setting up the request
         errorMessage += error.message;
       }
       
@@ -85,13 +87,19 @@ function TrainersPage() {
     setNewTrainer(prev => ({ ...prev, [name]: value }));
   };
   
+  // Add image handling
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setNewTrainer(prev => ({ ...prev, image: file }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-  
-    // Validate all required fields
-    const requiredFields = ['trainer_id', 'username', 'password', 'first_name', 'last_name', 'email', 'phone', 'monthly_salary', 'specialization', 'start_date'];
+
+    // Validate all required fields (remove username)
+    const requiredFields = ['trainer_id', 'first_name', 'last_name', 'email', 'phone', 'monthly_salary', 'specialization', 'start_date'];
     const missingFields = requiredFields.filter(field => !newTrainer[field]);
     
     if (missingFields.length > 0) {
@@ -99,36 +107,31 @@ function TrainersPage() {
       setIsLoading(false);
       return;
     }
-  
+
     try {
       const token = localStorage.getItem('access_token');
       
-      console.log('Submitting trainer data:', newTrainer);
-      
-      const response = await api.post(
-        'trainers/', 
-        {
-          ...newTrainer,
-          monthly_salary: parseFloat(newTrainer.monthly_salary)
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000  // 10 seconds timeout
+      // Create FormData for file upload
+      const formData = new FormData();
+      Object.keys(newTrainer).forEach(key => {
+        if (key === 'image' && newTrainer[key]) {
+          formData.append(key, newTrainer[key]);
+        } else if (key !== 'image') {
+          formData.append(key, newTrainer[key]);
         }
-      );
+      });
       
-      console.log('Trainer added:', response.data);
-  
-      // Store the password in local storage for admin reference
-      const trainersPasswords = JSON.parse(localStorage.getItem('trainersPasswords') || '{}');
-      if (response.data.id) {
-        trainersPasswords[response.data.id] = newTrainer.password;
-        localStorage.setItem('trainersPasswords', JSON.stringify(trainersPasswords));
-      }
-  
+      console.log('Submitting trainer data with image');
+      
+      const response = await api.post('trainers/', formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type, let browser set it for FormData
+        },
+        timeout: 10000
+      });
+      
+      // Reset form including image
       setNewTrainer({
         trainer_id: '',
         first_name: '',
@@ -138,8 +141,7 @@ function TrainersPage() {
         monthly_salary: '',
         specialization: '',
         start_date: '',
-        username: '',
-        password: ''
+        image: null
       });
       
       setShowAddForm(false);
@@ -212,335 +214,337 @@ function TrainersPage() {
 
   return (
     <>
-    <div className="p-2 md:p-4">
-      <h1 className="text-xl md:text-2xl font-bold mb-3 md:mb-6">Trainers Management</h1>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-          <p className="font-semibold">Error</p>
-          <p className="text-sm md:text-base whitespace-pre-line">{error}</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-2 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-2">
+            Trainers Management
+          </h1>
+          <div className="w-24 h-1 bg-blue-500 mx-auto rounded-full"></div>
+          <p className="text-blue-700 mt-4">Manage your fitness trainers and their profiles</p>
         </div>
-      )}
-      
-      {/* Add Trainer Form */}
-      {showAddForm && (
-        <div className="bg-white p-3 md:p-6 rounded-lg shadow-md mb-4 md:mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg md:text-xl font-semibold">Add New Trainer</h2>
-            <button 
-              onClick={() => setShowAddForm(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Trainer ID</label>
-                <input
-                  type="text"
-                  name="trainer_id"
-                  value={newTrainer.trainer_id}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={newTrainer.username}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">First Name</label>
-                <input
-                  type="text"
-                  name="first_name"
-                  value={newTrainer.first_name}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Last Name</label>
-                <input
-                  type="text"
-                  name="last_name"
-                  value={newTrainer.last_name}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={newTrainer.email}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Phone</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={newTrainer.phone}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Specialization</label>
-                <select
-                  name="specialization"
-                  value={newTrainer.specialization}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select a specialization</option>
-                  {specializations.map(spec => (
-                    <option key={spec.value} value={spec.value}>{spec.label}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Monthly Salary</label>
-                <input
-                  type="number"
-                  name="monthly_salary"
-                  value={newTrainer.monthly_salary}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                <input
-                  type="date"
-                  name="start_date"
-                  value={newTrainer.start_date}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={newTrainer.password}
-                  onChange={handleInputChange}
-                  className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Adding...' : 'Add Trainer'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-      
-     {/* Trainers Table */}
-<div className="bg-white p-3 md:p-6 rounded-lg shadow-md">
-  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-    <h2 className="text-lg md:text-xl font-semibold mb-2 md:mb-0">Trainers List</h2>
-    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-      <button 
-        onClick={() => setShowAddForm(true)} 
-        className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 w-full sm:w-auto"
-        disabled={showAddForm}
-      >
-        Add New Trainer
-      </button>
-      <button 
-        onClick={fetchTrainers}
-        className="bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300 w-full sm:w-auto"
-        disabled={isLoading}
-      >
-        {isLoading ? 'Refreshing...' : 'Refresh'}
-      </button>
-    </div>
-  </div>
-
-  {isLoading ? (
-    <div className="flex justify-center py-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-    </div>
-  ) : (
-    <>
-      {/* Desktop Table View */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trainer ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specialization</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {trainers.length > 0 ? (
-              trainers.map(trainer => (
-                <tr key={trainer.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{trainer.id}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{trainer.trainer_id}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {trainer.first_name} {trainer.last_name}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {trainer.username || 'N/A'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {trainer.password || '••••••••'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {trainer.specialization}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {trainer.email}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    {trainer.phone}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    ${trainer.monthly_salary}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    <button
-                      onClick={() => deleteTrainer(trainer.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="10" className="px-4 py-6 text-center text-gray-500">
-                  No trainers found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      
-      {/* Mobile Card View */}
-      <div className="md:hidden">
-        {trainers.length > 0 ? (
-          <div className="space-y-4">
-            {trainers.map(trainer => (
-              <div key={trainer.id} className="border rounded-lg p-3">
-                <div className="flex justify-between">
-                  <span className="font-semibold text-gray-900">
-                    {trainer.first_name} {trainer.last_name}
-                  </span>
-                  <button
-                    onClick={() => deleteTrainer(trainer.id)}
-                    className="text-red-600 hover:text-red-900 text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-sm">
-                  <span className="text-gray-500">ID:</span>
-                  <span>{trainer.id}</span>
-                  
-                  <span className="text-gray-500">Trainer ID:</span>
-                  <span>{trainer.trainer_id}</span>
-                  
-                  <span className="text-gray-500">Username:</span>
-                  <span>{trainer.username || 'N/A'}</span>
-                  
-                  <span className="text-gray-500">Password:</span>
-                  <span>{trainer.password || '••••••••'}</span>
-                  
-                  <span className="text-gray-500">Specialization:</span>
-                  <span>{trainer.specialization}</span>
-                  
-                  <span className="text-gray-500">Email:</span>
-                  <span>{trainer.email}</span>
-                  
-                  <span className="text-gray-500">Phone:</span>
-                  <span>{trainer.phone}</span>
-                  
-                  <span className="text-gray-500">Salary:</span>
-                  <span>${trainer.monthly_salary}</span>
-                  
-                  <span className="text-gray-500">Start Date:</span>
-                  <span>{trainer.start_date}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-6 text-gray-500">
-            No trainers found
+        
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200">
+            <p className="font-semibold">Error</p>
+            <p className="text-sm whitespace-pre-line">{error}</p>
           </div>
         )}
+        
+        {/* Enhanced Add Trainer Form */}
+        {showAddForm && (
+          <div className="bg-white rounded-2xl shadow-xl border border-blue-200 mb-8 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white">Add New Trainer</h2>
+                <button 
+                  onClick={() => setShowAddForm(false)}
+                  className="text-white hover:text-blue-200 transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">Trainer ID</label>
+                    <input
+                      type="text"
+                      name="trainer_id"
+                      value={newTrainer.trainer_id}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      placeholder="Enter trainer ID"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">Specialization</label>
+                    <select
+                      name="specialization"
+                      value={newTrainer.specialization}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      required
+                    >
+                      <option value="">Select specialization</option>
+                      {specializations.map(spec => (
+                        <option key={spec.value} value={spec.value}>{spec.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">First Name</label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      value={newTrainer.first_name}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      placeholder="Enter first name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={newTrainer.last_name}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      placeholder="Enter last name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={newTrainer.email}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      placeholder="Enter email address"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={newTrainer.phone}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      placeholder="Enter phone number"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">Monthly Salary</label>
+                    <input
+                      type="number"
+                      name="monthly_salary"
+                      value={newTrainer.monthly_salary}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      placeholder="Enter monthly salary"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-black mb-2">Start Date</label>
+                    <input
+                      type="date"
+                      name="start_date"
+                      value={newTrainer.start_date}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-black mb-2">Profile Image</label>
+                  <input
+                    type="file"
+                    name="image"
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-black hover:file:bg-yellow-100"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-semibold shadow-lg disabled:opacity-50"
+                  >
+                    {isLoading ? 'Adding...' : 'Add Trainer'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        
+        {/* Enhanced Trainers Display */}
+        <div className="bg-white rounded-2xl shadow-xl border border-blue-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+              <h2 className="text-xl font-bold text-white mb-2 md:mb-0">Trainers List</h2>
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                <button 
+                  onClick={() => setShowAddForm(true)} 
+                  className="bg-white text-blue-600 py-2 px-6 rounded-lg hover:bg-blue-50 transition-all font-semibold shadow-lg w-full sm:w-auto"
+                  disabled={showAddForm}
+                >
+                  Add New Trainer
+                </button>
+                <button 
+                  onClick={fetchTrainers}
+                  className="bg-blue-700 text-white py-2 px-6 rounded-lg hover:bg-blue-800 transition-all font-semibold shadow-lg w-full sm:w-auto"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+              </div>
+            ) : (
+              <>
+                {/* Desktop Grid View */}
+                <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {trainers.length > 0 ? (
+                    trainers.map(trainer => (
+                      <div key={trainer.id} className="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-lg border border-blue-200 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="relative h-48">
+                          {imageErrors.has(trainer.id) ? (
+                            <div className="h-full w-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                              <span className="text-blue-600 text-4xl">👤</span>
+                            </div>
+                          ) : (
+                            <img 
+                              src={getImageUrl(trainer)}
+                              alt={`${trainer.first_name} ${trainer.last_name}`}
+                              className="h-full w-full object-cover"
+                              onError={() => handleImageError(trainer.id)}
+                            />
+                          )}
+                          <div className="absolute top-4 right-4">
+                            <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                              ID: {trainer.trainer_id}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <h3 className="text-xl font-bold text-blue-900 mb-2">
+                            {trainer.first_name} {trainer.last_name}
+                          </h3>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                              <span className="text-gray-600">Specialization:</span>
+                              <span className="ml-1 font-semibold capitalize">{trainer.specialization}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                              <span className="text-gray-600">Email:</span>
+                              <span className="ml-1 font-semibold">{trainer.email}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                              <span className="text-gray-600">Phone:</span>
+                              <span className="ml-1 font-semibold">{trainer.phone}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                              <span className="text-gray-600">Salary:</span>
+                              <span className="ml-1 font-semibold">${trainer.monthly_salary}</span>
+                            </div>
+                          </div>
+                          <div className="mt-4 pt-4 border-t border-blue-200">
+                            <button
+                              onClick={() => deleteTrainer(trainer.id)}
+                              className="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-all font-semibold"
+                            >
+                              Delete Trainer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-8">
+                      <div className="text-4xl text-blue-400 mb-2">👥</div>
+                      <p className="text-gray-500">No trainers found</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                  {trainers.length > 0 ? (
+                    trainers.map(trainer => (
+                      <div key={trainer.id} className="bg-gradient-to-r from-blue-50 to-white rounded-xl shadow-lg border border-blue-200 overflow-hidden">
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <h3 className="font-bold text-lg text-blue-900">
+                              {trainer.first_name} {trainer.last_name}
+                            </h3>
+                            <button
+                              onClick={() => deleteTrainer(trainer.id)}
+                              className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-gray-500">ID:</span>
+                              <span className="ml-1 font-semibold">{trainer.trainer_id}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Specialization:</span>
+                              <span className="ml-1 font-semibold capitalize">{trainer.specialization}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-gray-500">Email:</span>
+                              <span className="ml-1 font-semibold">{trainer.email}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Phone:</span>
+                              <span className="ml-1 font-semibold">{trainer.phone}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Salary:</span>
+                              <span className="ml-1 font-semibold">${trainer.monthly_salary}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-4xl text-blue-400 mb-2">👥</div>
+                      <p className="text-gray-500">No trainers found</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
-    </>
-  )}
-</div>
     </div>
     <AppToastContainer />
     </>
@@ -548,3 +552,26 @@ function TrainersPage() {
 }
 
 export default TrainersPage;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

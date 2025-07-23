@@ -121,8 +121,8 @@ export const storeSession = async (sessionData) => {
   console.log('✅ Session stored successfully');
 };
 
-// Enhanced session validation
-export const validateSession = async () => {
+// Enhanced session validation with operation context
+export const validateSession = async (operationContext = null) => {
   console.log(`🔍 ${isProduction ? 'Production' : 'Development'} session validation...`);
   
   const token = localStorage.getItem('access_token');
@@ -131,15 +131,24 @@ export const validateSession = async () => {
   
   if (!token || !sessionStart || !userType) {
     console.log('❌ Missing session data');
-    return { isValid: false, reason: 'missing_data' };
+    
+    // Don't auto-clear during critical operations
+    if (operationContext !== 'delete') {
+      return { isValid: false, reason: 'missing_data' };
+    } else {
+      return { isValid: false, reason: 'missing_data', skipClear: true };
+    }
   }
   
   // Check session timeout
   const sessionAge = Date.now() - parseInt(sessionStart);
   if (sessionAge > config.sessionTimeout) {
     console.log(`❌ Session expired (${Math.round(sessionAge / 60000)} minutes old)`);
-    await clearAllSessions();
-    return { isValid: false, reason: 'expired' };
+    
+    if (operationContext !== 'delete') {
+      await clearAllSessions();
+    }
+    return { isValid: false, reason: 'expired', skipClear: operationContext === 'delete' };
   }
   
   // Development: Try to restore session if needed
@@ -168,11 +177,10 @@ export const validateSession = async () => {
     console.log('❌ Token validation failed:', error.response?.status);
     
     if (error.response?.status === 401) {
-      // Let token refresh interceptor handle this
-      return { isValid: false, reason: 'token_refresh_needed' };
+      return { isValid: false, reason: 'token_refresh_needed', skipClear: operationContext === 'delete' };
     }
     
-    return { isValid: false, reason: 'invalid_token' };
+    return { isValid: false, reason: 'invalid_token', skipClear: operationContext === 'delete' };
   }
 };
 
@@ -320,3 +328,4 @@ export default {
   getAvailableSessions,
   getAuthEnvironment
 };
+

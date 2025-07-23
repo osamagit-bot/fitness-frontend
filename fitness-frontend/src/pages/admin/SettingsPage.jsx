@@ -21,6 +21,7 @@ function AdminSettingsPage() {
   // Notification preferences
   const [notifications, setNotifications] = useState({
     email: true,
+    whatsapp: false,
     app: true,
     memberAlerts: true,
     systemUpdates: false,
@@ -258,6 +259,140 @@ function AdminSettingsPage() {
     return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
   };
 
+  // Add email notification handler
+  const handleEmailNotificationToggle = async () => {
+    try {
+      const response = await api.post(
+        'notifications/update_email_preferences/',
+        { email_enabled: !notifications.email },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setNotifications(prev => ({
+        ...prev,
+        email: !prev.email
+      }));
+      
+      toast.success('Email notification preferences updated!');
+    } catch (error) {
+      toast.error('Failed to update email preferences');
+      console.error('Email preference error:', error);
+    }
+  };
+
+  // Add WhatsApp notification handler
+  const handleWhatsAppNotificationToggle = async () => {
+    try {
+      const response = await api.post(
+        'notifications/update_whatsapp_preferences/',
+        { whatsapp_enabled: !notifications.whatsapp },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setNotifications(prev => ({
+        ...prev,
+        whatsapp: !prev.whatsapp
+      }));
+      
+      toast.success('WhatsApp notification preferences updated!');
+    } catch (error) {
+      toast.error('Failed to update WhatsApp preferences');
+      console.error('WhatsApp preference error:', error);
+    }
+  };
+
+  // Add test email function
+  const handleTestEmail = async () => {
+    setLoading(true);
+    try {
+      await api.post(
+        'notifications/test_email_notification/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Test email sent successfully!');
+    } catch (error) {
+      toast.error('Failed to send test email');
+      console.error('Test email error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailSystemTest = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post(
+        'notifications/test_email_system/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('Email System Test Results:', response.data);
+      
+      if (response.data.email_sent) {
+        toast.success('✅ Email system test passed! Check your email.');
+      } else {
+        toast.warning('⚠️ Email configured but sending failed. Check console.');
+      }
+      
+      // Show detailed results in console
+      console.table(response.data.config);
+      
+    } catch (error) {
+      toast.error('❌ Email system test failed');
+      console.error('Email system test error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add WhatsApp test functions
+  const handleTestWhatsApp = async () => {
+    setLoading(true);
+    try {
+      await api.post(
+        'notifications/test_whatsapp_notification/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Test WhatsApp message sent successfully!');
+    } catch (error) {
+      toast.error('Failed to send test WhatsApp message');
+      console.error('Test WhatsApp error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWhatsAppSystemTest = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post(
+        'notifications/test_whatsapp_system/',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('WhatsApp System Test Results:', response.data);
+      
+      if (response.data.whatsapp_sent) {
+        toast.success('✅ WhatsApp system test passed! Check your phone.');
+      } else {
+        toast.warning('⚠️ WhatsApp configured but sending failed. Check console.');
+      }
+      
+      // Show detailed results in console
+      console.table(response.data.config);
+      
+    } catch (error) {
+      toast.error('❌ WhatsApp system test failed');
+      console.error('WhatsApp system test error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <ToastContainer position="top-right" autoClose={5000} />
@@ -477,28 +612,86 @@ function AdminSettingsPage() {
               </h2>
             </div>
             <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Email Notifications</p>
-                  <p className="text-sm text-gray-500">
-                    Receive important updates via email
-                  </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-800">Email Notifications</p>
+                    <p className="text-sm text-gray-500">Receive important updates via email</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notifications.email}
+                      onChange={handleEmailNotificationToggle}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition-colors"></div>
+                    <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+                  </label>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={notifications.email}
-                    onChange={() =>
-                      setNotifications((prev) => ({
-                        ...prev,
-                        email: !prev.email,
-                      }))
-                    }
-                  />
-                  <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition"></div>
-                  <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-5"></div>
-                </label>
+                
+                {/* WhatsApp Notifications */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-800">WhatsApp Notifications</p>
+                    <p className="text-sm text-gray-500">Receive important updates via WhatsApp</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notifications.whatsapp}
+                      onChange={handleWhatsAppNotificationToggle}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+                    <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+                  </label>
+                </div>
+                
+                {/* Test Buttons Row */}
+                <div className="grid grid-cols-2 gap-3 px-4">
+                  {/* Email Test Buttons */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-600 text-center">Email Tests</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEmailSystemTest}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      >
+                        {loading ? 'Testing...' : 'System Test'}
+                      </button>
+                      <button
+                        onClick={handleTestEmail}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {loading ? 'Sending...' : 'Send Test'}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* WhatsApp Test Buttons */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-600 text-center">WhatsApp Tests</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleWhatsAppSystemTest}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      >
+                        {loading ? 'Testing...' : 'System Test'}
+                      </button>
+                      <button
+                        onClick={handleTestWhatsApp}
+                        disabled={loading}
+                        className="flex-1 px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      >
+                        {loading ? 'Sending...' : 'Send Test'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -815,3 +1008,6 @@ function AdminSettingsPage() {
 }
 
 export default AdminSettingsPage;
+
+
+

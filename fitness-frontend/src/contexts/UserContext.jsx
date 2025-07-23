@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useSmartAuth } from '../features/auth/useSmartAuth';
+import api from '../services/api';
 
 // Create the context
 const UserContext = createContext();
@@ -17,6 +18,37 @@ export const useUser = () => {
 export const UserProvider = ({ children }) => {
   const { isAuthenticated, userType, loading } = useSmartAuth();
   const [user, setUser] = useState(null);
+
+  const fetchUserData = async (token) => {
+    try {
+      const response = await api.get('auth-test/check/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log("🔍 UserContext - Full response:", response.data);
+      
+      const userData = response.data;
+      
+      // Extract athlete_id from different possible sources
+      const athleteId = userData.athlete_id || 
+                       userData.member_id || 
+                       localStorage.getItem('memberId') || 
+                       localStorage.getItem('memberID');
+      
+      const enrichedUserData = {
+        ...userData,
+        athlete_id: athleteId
+      };
+      
+      console.log("🔍 UserContext - Enriched user data:", enrichedUserData);
+      
+      setUser(enrichedUserData);
+      return enrichedUserData;
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -67,3 +99,6 @@ export const UserProvider = ({ children }) => {
 };
 
 export default UserContext;
+
+
+

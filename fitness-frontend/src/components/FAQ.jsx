@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const FAQ = () => {
   const [activeIndex, setActiveIndex] = useState(null);
@@ -63,6 +63,14 @@ const FAQ = () => {
     ? faqs
     : faqs.filter((faq) => faq.category === selectedCategory);
 
+  // Add keyboard navigation and accessibility
+  const handleKeyDown = (e, index) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleFAQ(index);
+    }
+  };
+
   return (
     <section className="py-16 bg-white">
       <div className="container mx-auto px-4">
@@ -97,25 +105,29 @@ const FAQ = () => {
             <div key={index} className="py-5">
               <button
                 onClick={() => toggleFAQ(index)}
-                className="flex justify-between items-center w-full text-left focus:outline-none"
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                className="w-full px-6 py-4 text-left bg-gray-800 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                aria-expanded={activeIndex === index}
+                aria-controls={`faq-content-${index}`}
               >
-                <h3 className="text-lg font-semibold text-black">{faq.question}</h3>
-                <span
-                  className={`ml-6 flex-shrink-0 text-yellow-500 transition-transform duration-300 ${
-                    activeIndex === index ? "transform rotate-180" : ""
-                  }`}
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </span>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-yellow-400">
+                    {faq.question}
+                  </h3>
+                  <i className={`bx ${activeIndex === index ? 'bx-minus' : 'bx-plus'} text-yellow-400 text-xl transition-transform`} />
+                </div>
               </button>
               <div
-                className={`mt-2 transition-all duration-300 overflow-hidden ${
-                  activeIndex === index ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                id={`faq-content-${index}`}
+                className={`overflow-hidden transition-all duration-300 ${
+                  activeIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                 }`}
+                role="region"
+                aria-labelledby={`faq-button-${index}`}
               >
-                <p className="text-gray-600 pb-4">{faq.answer}</p>
+                <div className="px-6 py-4 bg-gray-900 text-gray-300">
+                  {faq.answer}
+                </div>
               </div>
             </div>
           ))}

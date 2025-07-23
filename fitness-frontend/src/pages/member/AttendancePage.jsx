@@ -16,13 +16,24 @@ const AttendancePage = () => {
   const [loading, setLoading] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [memberData, setMemberData] = useState(null); // Add member data state
 
   useEffect(() => {
     if (user?.athlete_id) {
       fetchAttendanceData();
+      fetchMemberData(); // Fetch member data for start date
       checkBiometricRegistration();
     }
   }, [user]);
+
+  const fetchMemberData = async () => {
+    try {
+      const response = await api.get(`members/${user.athlete_id}/`);
+      setMemberData(response.data);
+    } catch (error) {
+      console.error("Error fetching member data:", error);
+    }
+  };
 
   const calculateStreak = (attendanceData) => {
     if (!attendanceData.length) return 0;
@@ -51,10 +62,42 @@ const AttendancePage = () => {
     return streak;
   };
 
+  const calculateAbsentDays = (attendanceData, memberStartDate) => {
+    if (!attendanceData.length || !memberStartDate) return 0;
+
+    const startDate = new Date(memberStartDate);
+    const today = new Date();
+    
+    // Calculate total days since joining (excluding today if not checked in)
+    const totalDaysSinceJoining = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    
+    // Count actual attendance days
+    const attendanceDays = attendanceData.length;
+    
+    // Absent days = Total days - Attendance days
+    const absentDays = Math.max(0, totalDaysSinceJoining - attendanceDays);
+    
+    return absentDays;
+  };
+
+  const calculateAttendanceRate = (attendanceData, memberStartDate) => {
+    if (!attendanceData.length || !memberStartDate) return 0;
+
+    const startDate = new Date(memberStartDate);
+    const today = new Date();
+    const totalDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    
+    if (totalDays === 0) return 100;
+    
+    const attendanceRate = (attendanceData.length / totalDays) * 100;
+    return Math.min(100, Math.round(attendanceRate));
+  };
+
   const fetchAttendanceData = async () => {
     try {
+      // Use the member-specific attendance endpoint
       const response = await api.get(
-        `attendance_history/?member_id=${user?.athlete_id}`
+        `attendance/${user?.athlete_id}/history/`
       );
       setAttendanceHistory(response.data);
 
@@ -68,6 +111,16 @@ const AttendancePage = () => {
       setTodayAttendance(todayRecord);
     } catch (error) {
       console.error("Error fetching attendance data:", error);
+      // Fallback: try the public endpoint with member filter
+      try {
+        const fallbackResponse = await api.get(
+          `attendance_history/?member_id=${user?.athlete_id}`
+        );
+        setAttendanceHistory(fallbackResponse.data);
+      } catch (fallbackError) {
+        console.error("Fallback fetch also failed:", fallbackError);
+        setAttendanceHistory([]);
+      }
     }
   };
 
@@ -85,6 +138,11 @@ const AttendancePage = () => {
     }
   };
 const registerFingerprint = async () => {
+  console.log("🔍 DEBUG - Full user object:", user);
+  console.log("🔍 DEBUG - user.athlete_id:", user?.athlete_id);
+  console.log("🔍 DEBUG - localStorage memberId:", localStorage.getItem('memberId'));
+  console.log("🔍 DEBUG - localStorage memberID:", localStorage.getItem('memberID'));
+  
   if (!isWebAuthnSupported()) {
     toast.error("WebAuthn not supported in this browser");
     return;
@@ -98,21 +156,29 @@ const registerFingerprint = async () => {
 
   setLoading(true);
   try {
-    if (!user?.athlete_id) {
+    // Try multiple sources for athlete_id
+    const athleteId = user?.athlete_id || 
+                     localStorage.getItem('memberId') || 
+                     localStorage.getItem('memberID') || 
+                     user?.id;
+    
+    console.log("🔍 DEBUG - Using athlete_id:", athleteId);
+    
+    if (!athleteId) {
       toast.error("User athlete ID not found. Please log in again.");
       setLoading(false);
       return;
     }
 
     const optionsResponse = await api.post("webauthn/register/options/", {
-      athlete_id: user.athlete_id,
+      athlete_id: athleteId,
     });
 
     const options = optionsResponse.data.options;
     const credential = await registerCredential(options);
 
     const registrationData = {
-      athlete_id: user.athlete_id,
+      athlete_id: athleteId,
       biometric_hash: credential.rawId,
       credential_response: credential,
     };
@@ -301,7 +367,7 @@ const registerFingerprint = async () => {
         </motion.div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats - Member's Personal Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -324,7 +390,7 @@ const registerFingerprint = async () => {
                   }).length
                 }
               </p>
-              <p className="text-blue-100 text-sm">Check-ins</p>
+              <p className="text-blue-100 text-sm">My Check-ins</p>
             </div>
             <i className="bx bx-calendar text-3xl text-blue-200"></i>
           </div>
@@ -346,7 +412,7 @@ const registerFingerprint = async () => {
                   }).length
                 }
               </p>
-              <p className="text-green-100 text-sm">Check-ins</p>
+              <p className="text-green-100 text-sm">My Check-ins</p>
             </div>
             <i className="bx bx-trending-up text-3xl text-green-200"></i>
           </div>
@@ -359,7 +425,33 @@ const registerFingerprint = async () => {
               <p className="text-2xl font-bold">{currentStreak}</p>
               <p className="text-orange-100 text-sm">Days</p>
             </div>
-            <i className="bx bx-fire text-3xl text-orange-200"></i>
+            <i className="bx bx-trophy text-3xl text-orange-200"></i>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-100 text-sm">Absent Days</p>
+              <p className="text-2xl font-bold">
+                {memberData ? calculateAbsentDays(attendanceHistory, memberData.start_date) : 0}
+              </p>
+              <p className="text-red-100 text-sm">Days Missed</p>
+            </div>
+            <i className="bx bx-calendar-x text-3xl text-red-200"></i>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm">Attendance Rate</p>
+              <p className="text-2xl font-bold">
+                {memberData ? calculateAttendanceRate(attendanceHistory, memberData.start_date) : 0}%
+              </p>
+              <p className="text-purple-100 text-sm">Success Rate</p>
+            </div>
+            <i className="bx bx-trending-up text-3xl text-purple-200"></i>
           </div>
         </div>
       </motion.div>
@@ -368,3 +460,9 @@ const registerFingerprint = async () => {
 };
 
 export default AttendancePage;
+
+
+
+
+
+

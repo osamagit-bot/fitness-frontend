@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import api from '../services/api';
 import HisabPayCheckout from './payment/HisabPayCheckout';
 import PaymentSuccess from './payment/PaymentSuccess';
-import api from '../services/api';
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -23,6 +23,18 @@ export default function Products() {
   const [memberId, setMemberId] = useState(null);
 
   const featuredProductsRef = useRef(null);
+
+  // Add this helper function at the top of your component
+  const getImageUrl = (product) => {
+    if (product.image_url) {
+      return product.image_url;
+    }
+    if (product.image) {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      return `${baseUrl}${product.image}`;
+    }
+    return '/images/default-product.jpg'; // Use local fallback
+  };
 
   // Fetch member PK after login (or on mount if token exists)
   useEffect(() => {
@@ -260,7 +272,7 @@ export default function Products() {
                 />
               ) : (
                 <div className="h-80 w-full bg-gray-200 flex items-center justify-center text-gray-500">
-                  No image available
+                  <img src="/images/default-product.jpg" alt="No image" className="max-h-80 object-contain" />
                 </div>
               )}
             </div>
@@ -596,22 +608,24 @@ export default function Products() {
                 <div className="mb-4 h-48 bg-gray-50 flex items-center justify-center overflow-hidden rounded-lg relative group">
                   {product.image_url ? (
                     <img 
-                      src={product.image_url} 
+                      src={getImageUrl(product)}
                       alt={product.name} 
                       className="h-48 object-contain transition-transform duration-500 ease-in-out group-hover:scale-110"
+                      loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                        e.target.src = '/images/default-product.jpg'; // Use local fallback
                       }}
                     />
                   ) : product.image ? (
                     <img 
-                      src={`http://127.0.0.1:8000${product.image}`} 
+                      src={getImageUrl(product)}
                       alt={product.name} 
                       className="h-48 object-contain transition-transform duration-500 ease-in-out group-hover:scale-110"
+                      loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                        e.target.src = '/images/default-product.jpg'; // Use local fallback
                       }}
                     />
                   ) : (
@@ -700,3 +714,8 @@ export default function Products() {
     </section>
   );
 }
+
+
+
+
+
