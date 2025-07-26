@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.Purchase',
     'apps.Attendance',
     'apps.Notifications',
+    'apps.Management',
 ]
 
 MIDDLEWARE = [
@@ -154,9 +155,6 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# CORS Configuration (will be overridden in prod)
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
 
 # Channels Configuration
 CHANNEL_LAYERS = {

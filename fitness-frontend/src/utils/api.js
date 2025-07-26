@@ -15,9 +15,7 @@ const getBaseURL = () => {
 const api = axios.create({
   baseURL: getBaseURL(),
   timeout: 30000, // 30 second timeout
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Do not set Content-Type globally; set per-request as needed
 });
 
 // Request interceptor for authentication
@@ -39,10 +37,10 @@ api.interceptors.request.use((config) => {
 // Response interceptor with enhanced error handling
 api.interceptors.response.use(
   (response) => {
-    // Log response time in development
-    if (import.meta.env.VITE_ENVIRONMENT === 'development') {
+    // Only log in development and if explicitly enabled
+    if (import.meta.env.VITE_ENVIRONMENT === 'development' && import.meta.env.VITE_LOG_API === 'true') {
       const duration = new Date() - response.config.metadata.startTime;
-      console.log(`API Response: ${response.config.url} took ${duration}ms`);
+      console.log(`[API][${response.config.method?.toUpperCase()}] ${response.config.url} took ${duration}ms`);
     }
     return response;
   },
@@ -93,15 +91,21 @@ api.interceptors.response.use(
             return Promise.reject(new Error('Account has been deleted'));
           }
           
-          // Clear session and redirect for other refresh errors
-          const keysToRemove = [
-            'access_token', 'refreshToken', 'userType', 'userId', 
-            'memberId', 'memberID', 'name', 'username', 'isAuthenticated'
-          ];
-          keysToRemove.forEach(key => localStorage.removeItem(key));
-          
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+          // Only redirect for token refresh failures, not permission errors
+          if (refreshError.response?.status === 401) {
+            // Clear session and redirect for auth failures
+            const currentUserType = localStorage.getItem('userType');
+            const keysToRemove = [
+              'access_token', 'refreshToken', 'userType', 'userId', 
+              'memberId', 'memberID', 'name', 'username', 'isAuthenticated'
+            ];
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            // Redirect based on user type
+            const redirectPath = currentUserType === 'admin' ? '/admin-login' : '/login';
+            if (!window.location.pathname.includes('login')) {
+              window.location.href = redirectPath;
+            }
           }
           return Promise.reject(refreshError);
         }
@@ -113,6 +117,13 @@ api.interceptors.response.use(
       }
     }
 
+    // Handle 403 errors - don't redirect, just log and pass through
+    if (error.response.status === 403) {
+      console.warn('⚠️ Access forbidden for:', originalRequest.url);
+      // Don't redirect for 403 - these are permission errors, not auth failures
+      return Promise.reject(error);
+    }
+
     return Promise.reject(error);
   }
 );
@@ -121,9 +132,7 @@ api.interceptors.response.use(
 const publicApi = axios.create({
   baseURL: getBaseURL(),
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Do not set Content-Type globally; set per-request as needed
 });
 
 // Public API response interceptor (no auth handling)
@@ -146,6 +155,7 @@ publicApi.interceptors.response.use(
 // Export both instances
 export { api, publicApi };
 export default api; // Default export (for backward compatibility)
+
 
 
 

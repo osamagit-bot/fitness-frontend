@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../utils/api";
+import { publicApi } from "../utils/api";
 import { staticTrainers } from "../utils/staticData";
 
 const TrainerProfiles = () => {
@@ -43,20 +43,16 @@ const TrainerProfiles = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Check if user is authenticated before making API call
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        console.log('No token found, using static data');
-        setTrainers(staticTrainers);
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await api.get('trainers/');
+      console.log('Fetching trainers from API...');
+      const response = await publicApi.get('trainers/');
+      console.log('Trainers API response:', response.data);
       const trainersData = response.data.results || response.data;
+      console.log('Processed trainers data:', trainersData);
       setTrainers(Array.isArray(trainersData) ? trainersData : []);
     } catch (error) {
       console.error('Error fetching trainers:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       setError('Failed to load trainers');
       // Fallback to static data if API fails
       setTrainers(staticTrainers);
@@ -226,7 +222,7 @@ const TrainerProfiles = () => {
         {/* Enhanced Modal */}
         {isModalOpen && selectedTrainer && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-xxl w-full max-h-[90vh] overflow-y-auto">
               <div className="relative">
                 {/* Modal Header */}
                 <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 p-6 rounded-t-3xl">
@@ -366,5 +362,10 @@ const TrainerProfiles = () => {
 };
 
 export default TrainerProfiles;
+
+
+
+
+
 
 

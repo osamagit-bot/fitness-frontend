@@ -172,6 +172,7 @@ const registerFingerprint = async () => {
 
     const optionsResponse = await api.post("webauthn/register/options/", {
       athlete_id: athleteId,
+      hostname: window.location.hostname,
     });
 
     const options = optionsResponse.data.options;

@@ -80,11 +80,7 @@ function AdminDashboard() {
     setNotifLoading(true);
     setNotificationError(null);
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await api.get(
-        'notifications/admin_notifications/',
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get('notifications/admin_notifications/');
       
       if (response.data && Array.isArray(response.data.notifications)) {
         setNotifications(response.data.notifications);
@@ -103,12 +99,7 @@ function AdminDashboard() {
   const handleMarkAllAsRead = async () => {
     setIsMarkingRead(true);
     try {
-      const token = localStorage.getItem('access_token');
-      await api.post(
-        'notifications/mark_all_read/',
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('notifications/mark_all_read/', {});
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch (err) {
       console.error('Failed to mark all as read', err);
@@ -120,11 +111,7 @@ function AdminDashboard() {
   const handleDeleteAll = async () => {
     setIsDeleting(true);
     try {
-      const token = localStorage.getItem('access_token');
-      await api.delete(
-        'notifications/delete_all/',
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.delete('notifications/delete_all/');
       setNotifications([]);
     } catch (err) {
       console.error('Failed to delete all notifications', err);
@@ -144,32 +131,30 @@ function AdminDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log('🔍 AdminLayout: Checking authentication...');
         const token = localStorage.getItem('access_token');
         const userType = localStorage.getItem('userType');
         
-        console.log('🔑 Token exists:', !!token);
-        console.log('👤 User type:', userType);
-        
         if (!token || userType !== 'admin') {
-          console.log('❌ AdminLayout: No valid admin token, redirecting to login');
           navigate('/login');
           return;
         }
 
-        // Test the token with a simple endpoint
-        const response = await api.get('auth-test/check/', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        console.log('✅ AdminLayout: Auth check successful');
+        // Set user data from localStorage immediately
         setUserData({ name: localStorage.getItem('name'), email: localStorage.getItem('username') });
         setAuthChecked(true);
+        
+        // Optional background validation - don't redirect on failure
+        try {
+          await api.get('auth-test/check/');
+          console.log('✅ Background auth validation successful');
+        } catch (error) {
+          console.warn('⚠️ Background auth check failed, but keeping session active:', error.response?.status);
+          // Don't redirect here - let the API interceptor handle token refresh if needed
+        }
       } catch (error) {
-        console.error('❌ AdminLayout: Auth check failed:', error);
-        console.log('🧹 Clearing localStorage and redirecting...');
-        localStorage.clear();
-        navigate('/login');
+        console.error('Auth setup failed:', error);
+        // Only redirect for initial setup failures
+        navigate('/admin-login');
       } finally {
         setIsLoading(false);
       }

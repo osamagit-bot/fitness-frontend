@@ -45,6 +45,16 @@ function AdminSettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Add state for restore functionality
+  const [backupFiles, setBackupFiles] = useState([]);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [selectedBackup, setSelectedBackup] = useState(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+
+  // Add state for backup inspection
+  const [inspectedBackup, setInspectedBackup] = useState(null);
+  const [inspectionLoading, setInspectionLoading] = useState(false);
+
   // Fetch all members
   const fetchMembers = async () => {
     const loadingState = refreshLoading ? setRefreshLoading : setMembersLoading;
@@ -53,11 +63,24 @@ function AdminSettingsPage() {
       const res = await api.get(`members/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMembers(res.data.results || res.data);
+      
+      console.log("🔍 Settings page - Full API response:", res.data);
+      console.log("🔍 Settings page - Response structure:", {
+        hasResults: !!res.data.results,
+        isArray: Array.isArray(res.data),
+        dataType: typeof res.data,
+        dataKeys: Object.keys(res.data || {}),
+      });
+      
+      const membersData = res.data.results || res.data;
+      console.log("🔍 Settings page - Members data:", membersData);
+      
+      setMembers(membersData);
       if (refreshLoading) {
         toast.success("Member list refreshed!");
       }
     } catch (err) {
+      console.error("❌ Settings page - Error fetching members:", err);
       toast.error("Failed to load members");
       setMembers([]);
     } finally {
@@ -84,6 +107,27 @@ function AdminSettingsPage() {
       .toLowerCase()
       .includes(search.toLowerCase())
   );
+
+
+const fetchGlobalNotificationSettings = async () => {
+  try {
+    const response = await api.get(
+      "/get_global_notification_settings/",
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    setNotifications((prev) => ({
+      ...prev,
+      email: response.data.email_notifications_enabled,
+      whatsapp: response.data.whatsapp_notifications_enabled,
+    }));
+  } catch (error) {
+    console.error("Error loading global notification settings:", error);
+  }
+};
+
+
 
   // Generate random password
   function generateRandomPassword(length = 12) {
@@ -214,7 +258,7 @@ function AdminSettingsPage() {
     };
 
     if (token) {
-      loadNotificationPreferences();
+     fetchGlobalNotificationSettings();
     }
   }, [token]);
 
@@ -268,20 +312,18 @@ function AdminSettingsPage() {
   const handleEmailNotificationToggle = async () => {
     try {
       const response = await api.post(
-        'notifications/update_email_preferences/',
-        { email_enabled: !notifications.email },
+        "/set_global_notification_settings/",
+        { email_notifications_enabled: !notifications.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      setNotifications(prev => ({
+      setNotifications((prev) => ({
         ...prev,
-        email: !prev.email
+        email: response.data.email_notifications_enabled,
       }));
-      
-      toast.success('Email notification preferences updated!');
+      toast.success("Email notification setting updated!");
     } catch (error) {
-      toast.error('Failed to update email preferences');
-      console.error('Email preference error:', error);
+      toast.error("Failed to update email notification setting");
+      console.error("Global email notification error:", error);
     }
   };
 
@@ -289,20 +331,18 @@ function AdminSettingsPage() {
   const handleWhatsAppNotificationToggle = async () => {
     try {
       const response = await api.post(
-        'notifications/update_whatsapp_preferences/',
-        { whatsapp_enabled: !notifications.whatsapp },
+        "/set_global_notification_settings/",
+        { whatsapp_notifications_enabled: !notifications.whatsapp },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      setNotifications(prev => ({
+      setNotifications((prev) => ({
         ...prev,
-        whatsapp: !prev.whatsapp
+        whatsapp: response.data.whatsapp_notifications_enabled,
       }));
-      
-      toast.success('WhatsApp notification preferences updated!');
+      toast.success("WhatsApp notification setting updated!");
     } catch (error) {
-      toast.error('Failed to update WhatsApp preferences');
-      console.error('WhatsApp preference error:', error);
+      toast.error("Failed to update WhatsApp notification setting");
+      console.error("Global WhatsApp notification error:", error);
     }
   };
 
@@ -395,6 +435,105 @@ function AdminSettingsPage() {
       console.error('WhatsApp system test error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Add backup system handler
+  const handleBackupSystem = async () => {
+    setLoading(true);
+    try {
+      const response = await api.post(
+        '/backup-database/',  // Updated URL with /api/ prefix
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('Backup System Results:', response.data);
+      
+      if (response.data.success) {
+        toast.success(`✅ ${response.data.message}\n📁 ${response.data.details.filename}\n📊 ${response.data.details.records} records (${response.data.details.size_kb} KB)`);
+      } else {
+        toast.error(`❌ ${response.data.message}`);
+      }
+      
+    } catch (error) {
+      toast.error('❌ Backup system failed');
+      console.error('Backup system error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch available backup files
+  const fetchBackupFiles = async () => {
+    try {
+      const response = await api.get('/list-backups/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setBackupFiles(response.data.backups);
+      }
+    } catch (error) {
+      console.error('Error fetching backup files:', error);
+      toast.error('Failed to load backup files');
+    }
+  };
+
+  // Handle restore system
+  const handleRestoreSystem = async () => {
+    if (!selectedBackup) return;
+    
+    setRestoreLoading(true);
+    setShowRestoreModal(false);
+    
+    try {
+      const response = await api.post(
+        '/restore-database/',
+        { backup_filename: selectedBackup.filename },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        toast.success(`✅ ${response.data.message}\n📁 Restored from: ${response.data.details.restored_from}\n📊 ${response.data.details.records_restored} records restored\n🛡️ Emergency backup: ${response.data.details.emergency_backup}`);
+        
+        // Refresh the page after successful restore
+        setTimeout(() => {
+          window.location.reload();
+        }, 3000);
+      } else {
+        toast.error(`❌ ${response.data.message}`);
+      }
+      
+    } catch (error) {
+      toast.error('❌ Database restore failed');
+      console.error('Restore error:', error);
+    } finally {
+      setRestoreLoading(false);
+      setSelectedBackup(null);
+    }
+  };
+
+  // Open restore modal
+  const openRestoreModal = async () => {
+    await fetchBackupFiles();
+    setShowRestoreModal(true);
+  };
+
+  // Inspect backup file contents
+  const inspectBackupFile = async (filename) => {
+    setInspectionLoading(true);
+    try {
+      const response = await api.get(`/inspect-backup/?filename=${filename}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setInspectedBackup(response.data);
+      }
+    } catch (error) {
+      console.error('Error inspecting backup:', error);
+      toast.error('Failed to inspect backup file');
+    } finally {
+      setInspectionLoading(false);
     }
   };
 
@@ -714,6 +853,168 @@ function AdminSettingsPage() {
               </h2>
             </div>
             <div className="p-6 space-y-6">
+              {/* Database Backup & Restore Section */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-800 mb-3">
+                  🗄️ Database Management
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Backup Button */}
+                  <button
+                    onClick={handleBackupSystem}
+                    disabled={loading}
+                    className={`px-6 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                      loading
+                        ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
+                        : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg hover:shadow-xl"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span className="font-semibold">Creating Backup...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xl">💾</span>
+                          <span className="font-semibold text-lg">Backup Database</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Restore Button */}
+                  <button
+                    onClick={openRestoreModal}
+                    disabled={loading || restoreLoading}
+                    className={`px-6 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                      loading || restoreLoading
+                        ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
+                        : "bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg hover:shadow-xl"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      {restoreLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span className="font-semibold">Restoring...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xl">🔄</span>
+                          <span className="font-semibold text-lg">Restore Database</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                </div>
+                
+                <p className="text-sm text-gray-500 mt-3 text-center">
+                  Create secure backups and restore from previous states. Emergency backup is created automatically before restore.
+                </p>
+              </div>
+
+              {/* Restore Modal */}
+              {showRestoreModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4">⚠️ Restore Database</h3>
+                    
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                      <p className="text-red-800 text-sm">
+                        <strong>Warning:</strong> This will replace your current database with the selected backup. 
+                        An emergency backup will be created automatically.
+                      </p>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Backup File:
+                      </label>
+                      <select
+                        value={selectedBackup?.filename || ''}
+                        onChange={(e) => {
+                          const backup = backupFiles.find(b => b.filename === e.target.value);
+                          setSelectedBackup(backup);
+                          setInspectedBackup(null);
+                          if (backup) {
+                            inspectBackupFile(backup.filename);
+                          }
+                        }}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Choose a backup...</option>
+                        {backupFiles.map((backup) => (
+                          <option key={backup.filename} value={backup.filename}>
+                            {backup.created} ({backup.size_kb} KB)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* Backup inspection results */}
+                    {inspectionLoading && (
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span className="text-sm text-blue-800">Inspecting backup...</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {inspectedBackup && (
+                      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <h4 className="font-medium text-gray-800 mb-2">📋 Backup Contents:</h4>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <div>📊 Total Records: {inspectedBackup.total_records}</div>
+                          <div>👥 Users: {inspectedBackup.model_counts['Authentication.customuser'] || 0}</div>
+                          <div>🏃 Members: {inspectedBackup.model_counts['Member.member'] || 0}</div>
+                          <div>💪 Trainers: {inspectedBackup.model_counts['Member.trainer'] || 0}</div>
+                          
+                          {inspectedBackup.members.length > 0 && (
+                            <div className="mt-2">
+                              <div className="font-medium">Members in this backup:</div>
+                              <div className="max-h-20 overflow-y-auto text-xs">
+                                {inspectedBackup.members.map((member, idx) => (
+                                  <div key={idx} className="text-gray-500">
+                                    ID: {member.pk}, User: {member.user_id}, Type: {member.membership_type}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowRestoreModal(false);
+                          setSelectedBackup(null);
+                        }}
+                        className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleRestoreSystem}
+                        disabled={!selectedBackup}
+                        className={`flex-1 px-4 py-2 text-white rounded-lg transition ${
+                          selectedBackup
+                            ? "bg-red-600 hover:bg-red-700"
+                            : "bg-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Restore Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <h3 className="text-lg font-medium text-gray-800 mb-3">
                   Maintenance Mode
@@ -949,6 +1250,17 @@ function AdminSettingsPage() {
 }
 
 export default AdminSettingsPage;
+
+
+
+
+
+
+
+
+
+
+
 
 
 

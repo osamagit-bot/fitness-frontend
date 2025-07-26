@@ -13,10 +13,50 @@ function MemberSupportPage() {
   const [activeTab, setActiveTab] = useState('support');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingTickets, setEditingTickets] = useState({}); // key: ticketId, value: { subject, message, type }
+  const [canSubmitToday, setCanSubmitToday] = useState(true);
 
   const memberName = localStorage.getItem('name') || 'Member';
   const memberID = localStorage.getItem('memberId');
   const token = localStorage.getItem('access_token');
+
+  // Helper function to check if user can submit ticket today
+  const checkCanSubmitToday = (ticketsArray) => {
+    const today = new Date().toDateString();
+    const todayTickets = ticketsArray.filter(ticket => {
+      const ticketDate = new Date(ticket.date).toDateString();
+      return ticketDate === today;
+    });
+    return todayTickets.length === 0;
+  };
+
+  // Helper function to check if user owns the ticket
+  const isTicketOwner = (ticket) => {
+    return ticket.memberID === memberID || ticket.member_name === memberName;
+  };
+
+  // Ticket editing functions
+  const handleEditTicketStart = (ticketId, currentSubject, currentMessage, currentType) => {
+    setEditingTickets(prev => ({
+      ...prev,
+      [ticketId]: { subject: currentSubject, message: currentMessage, type: currentType }
+    }));
+  };
+
+  const handleEditTicketCancel = (ticketId) => {
+    setEditingTickets(prev => {
+      const copy = { ...prev };
+      delete copy[ticketId];
+      return copy;
+    });
+  };
+
+  const handleEditTicketChange = (ticketId, field, value) => {
+    setEditingTickets(prev => ({
+      ...prev,
+      [ticketId]: { ...prev[ticketId], [field]: value }
+    }));
+  };
 
   useEffect(() => {
     const fetchSupportData = async () => {
@@ -47,7 +87,11 @@ function MemberSupportPage() {
           headers: { 'Authorization': `Bearer ${token}` },
           params: { memberID }
         });
-        setTickets(Array.isArray(ticketsResponse.data) ? ticketsResponse.data : []);
+        const ticketsData = Array.isArray(ticketsResponse.data) ? ticketsResponse.data : [];
+        setTickets(ticketsData);
+        
+        // Check if user can submit ticket today
+        setCanSubmitToday(checkCanSubmitToday(ticketsData));
   
       } catch (err) {
         console.error("Error fetching support data:", err);
@@ -61,37 +105,106 @@ function MemberSupportPage() {
   }, []);
   const submitFeedback = async (e) => {
     e.preventDefault();
-  
 
-  
-    console.log("DEBUG: memberID =", memberID);
-  
     if (!feedback.subject.trim() || !feedback.message.trim()) {
       showToast.warn('Please fill in both subject and message');
       return;
     }
-  
+
     if (!memberID) {
       showToast.error('Member ID not found. Please login again.');
       return;
     }
-  
+
+    // Check if user can submit ticket today
+    if (!canSubmitToday) {
+      showToast.error('You can only submit one ticket per day. Please try again tomorrow.');
+      return;
+    }
+
     try {
       const response = await api.post('support/tickets/create/', {
         type: feedback.type,
         subject: feedback.subject,
         message: feedback.message,
-        memberID: memberID // ✅ correct format
+        memberID: memberID
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-  
-      setTickets([response.data, ...(Array.isArray(tickets) ? tickets : [])]);
+
+      const updatedTickets = [response.data, ...(Array.isArray(tickets) ? tickets : [])];
+      setTickets(updatedTickets);
       setFeedback({ type: 'general', subject: '', message: '' });
+      
+      // Update daily submission status
+      setCanSubmitToday(checkCanSubmitToday(updatedTickets));
+      
       showToast.success('Your ticket has been submitted. We will respond as soon as possible.');
     } catch (err) {
       console.error('Error submitting ticket:', err);
       showToast.error('Failed to submit ticket. Please try again.');
+    }
+  };
+
+  // Update ticket function
+  const handleEditTicketSave = async (ticketId) => {
+    const editedTicket = editingTickets[ticketId];
+    if (!editedTicket?.subject?.trim() || !editedTicket?.message?.trim()) {
+      showToast.warn('Subject and message cannot be empty.');
+      return;
+    }
+
+    try {
+      const response = await api.put(`support/tickets/${ticketId}/`, {
+        ticketId: ticketId,
+        type: editedTicket.type,
+        subject: editedTicket.subject,
+        message: editedTicket.message
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      setTickets(tickets.map(ticket => 
+        ticket.id === ticketId 
+          ? { ...ticket, subject: editedTicket.subject, message: editedTicket.message, type: editedTicket.type }
+          : ticket
+      ));
+
+      handleEditTicketCancel(ticketId);
+      showToast.success('Ticket updated successfully.');
+    } catch (err) {
+      console.error('Error updating ticket:', err);
+      if (err.response?.status === 403) {
+        showToast.error('You can only edit your own tickets.');
+      } else {
+        showToast.error('Failed to update ticket. Please try again.');
+      }
+    }
+  };
+
+  // Delete ticket function
+  const handleDeleteTicket = async (ticketId) => {
+    if (!window.confirm('Are you sure you want to delete this ticket?')) return;
+
+    try {
+      await api.delete(`support/tickets/delete/?ticketID=${ticketId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const updatedTickets = tickets.filter(ticket => ticket.id !== ticketId);
+      setTickets(updatedTickets);
+      
+      // Update daily submission status after deletion
+      setCanSubmitToday(checkCanSubmitToday(updatedTickets));
+
+      showToast.success('Ticket deleted successfully.');
+    } catch (err) {
+      console.error('Error deleting ticket:', err);
+      if (err.response?.status === 403) {
+        showToast.error('You can only delete your own tickets.');
+      } else {
+        showToast.error('Failed to delete ticket. Please try again.');
+      }
     }
   };
   
@@ -221,21 +334,86 @@ function MemberSupportPage() {
                         'bg-green-50 border-l-4 border-green-500'
                       }`}>
                         <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold text-lg">{ticket.subject}</h3>
-                            <p className="text-sm text-gray-500">
-                              Submitted on {formatDate(ticket.date)}
-                            </p>
+                          <div className="flex-1">
+                            {editingTickets[ticket.id] ? (
+                              <div className="space-y-2">
+                                <select
+                                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                                  value={editingTickets[ticket.id].type}
+                                  onChange={(e) => handleEditTicketChange(ticket.id, 'type', e.target.value)}
+                                >
+                                  <option value="general">General Inquiry</option>
+                                  <option value="technical">Technical Support</option>
+                                  <option value="billing">Billing Question</option>
+                                  <option value="feedback">Feature Suggestion</option>
+                                  <option value="complaint">Complaint</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  className="w-full p-2 border border-gray-300 rounded font-semibold text-lg"
+                                  value={editingTickets[ticket.id].subject}
+                                  onChange={(e) => handleEditTicketChange(ticket.id, 'subject', e.target.value)}
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-semibold text-lg">{ticket.subject}</h3>
+                                <p className="text-sm text-gray-500">
+                                  Type: {ticket.type} • Submitted on {formatDate(ticket.date)}
+                                </p>
+                              </>
+                            )}
                           </div>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            ticket.status === 'open' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                          }`}>
-                            {ticket.status === 'open' ? 'Open' : 'Closed'}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              ticket.status === 'open' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                            }`}>
+                              {ticket.status === 'open' ? 'Open' : 'Closed'}
+                            </span>
+                            {isTicketOwner(ticket) && ticket.status === 'open' && (
+                              <div className="space-x-2">
+                                {editingTickets[ticket.id] ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleEditTicketSave(ticket.id)}
+                                      className="text-sm text-blue-600 hover:underline"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditTicketCancel(ticket.id)}
+                                      className="text-sm text-gray-600 hover:underline"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                  
+                                    <button
+                                      onClick={() => handleDeleteTicket(ticket.id)}
+                                      className="text-sm text-red-600 hover:underline"
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="p-4 border-b border-gray-200">
-                        <p className="text-gray-700">{ticket.message}</p>
+                        {editingTickets[ticket.id] ? (
+                          <textarea
+                            className="w-full p-2 border border-gray-300 rounded"
+                            rows={4}
+                            value={editingTickets[ticket.id].message}
+                            onChange={(e) => handleEditTicketChange(ticket.id, 'message', e.target.value)}
+                          />
+                        ) : (
+                          <p className="text-gray-700 whitespace-pre-wrap">{ticket.message}</p>
+                        )}
                       </div>
                       {ticket.responses && ticket.responses.length > 0 && (
                         <div className="p-4 bg-gray-50">
@@ -358,6 +536,28 @@ function MemberSupportPage() {
             transition={{ duration: 0.3 }}
           >
             <h2 className="text-xl font-semibold mb-4">Submit Feedback or Support Request</h2>
+            
+            {/* Daily submission warning */}
+            {!canSubmitToday && (
+              <motion.div
+                className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <i className="bx bx-info-circle text-yellow-400 text-xl"></i>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      <strong>Daily Limit Reached:</strong> You can only submit one support ticket per day. 
+                      You have already submitted a ticket today. Please try again tomorrow.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            
             <motion.div
               className="bg-white rounded-lg shadow-md p-6"
               initial={{ opacity: 0, y: 20 }}

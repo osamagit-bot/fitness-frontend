@@ -94,12 +94,16 @@ class TrainerSerializer(serializers.ModelSerializer):
 # Training serializer
 class TrainingSerializer(serializers.ModelSerializer):
     trainer_name = serializers.SerializerMethodField()
-    image = serializers.ImageField(required=False)  # Add read-only image field for URL
+    image = serializers.ImageField(required=False)
+    trainer_email = serializers.SerializerMethodField()
+ 
     
     class Meta:
         model = Training
-        fields = ['id', 'trainer', 'trainer_name', 'type', 'datetime', 'duration', 'capacity', 'description','image']
+        fields = ['id', 'trainer', 'trainer_name', 'type', 'datetime', 'duration','trainer_email', 'capacity', 'description','image']
     
     def get_trainer_name(self, obj):
         return f"{obj.trainer.first_name} {obj.trainer.last_name}"
+    def get_trainer_email(self, obj):
+        return obj.trainer.email
 

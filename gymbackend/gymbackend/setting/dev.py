@@ -10,7 +10,25 @@ import os
 
 # Development settings
 DEBUG = True
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+     'http://member.localhost:3000',
+      'http://admin.localhost:3000',# Or your frontend's port if React, etc.
+]
+
+# Security
+SESSION_COOKIE_NAME = 'gym_sessionid'
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_AGE = 86400  # 1 hour or longer if needed
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 
 # Database
 DATABASES = {
@@ -57,14 +75,14 @@ MESSAGEBIRD_API_KEY = env('MESSAGEBIRD_API_KEY', default='')
 WHATSAPP_ACCESS_TOKEN = env('WHATSAPP_ACCESS_TOKEN', default='')
 WHATSAPP_PHONE_NUMBER_ID = env('WHATSAPP_PHONE_NUMBER_ID', default='')
 
-print("EMAIL CONFIG DEBUG:")
-print(f"   EMAIL_HOST_USER: {EMAIL_HOST_USER}")
-print(f"   EMAIL_PORT: {EMAIL_PORT}")
-print(f"   EMAIL_USE_TLS: {EMAIL_USE_TLS}")
-print(f"   EMAIL_DEV_SSL_BYPASS: {EMAIL_DEV_SSL_BYPASS}")
+# print("EMAIL CONFIG DEBUG:")
+# print(f"   EMAIL_HOST_USER: {EMAIL_HOST_USER}")
+# print(f"   EMAIL_PORT: {EMAIL_PORT}")
+# print(f"   EMAIL_USE_TLS: {EMAIL_USE_TLS}")
+# print(f"   EMAIL_DEV_SSL_BYPASS: {EMAIL_DEV_SSL_BYPASS}")
 
 # Print debug info
-print(f"DEV MODE - BASE_DIR: {BASE_DIR}")
-print(f"Templates path: {BASE_DIR / 'templates'}")
-print(f"Email backend: {EMAIL_BACKEND}")
-print("Real email sending ENABLED")
+# print(f"DEV MODE - BASE_DIR: {BASE_DIR}")
+# print(f"Templates path: {BASE_DIR / 'templates'}")
+# print(f"Email backend: {EMAIL_BACKEND}")
+# print("Real email sending ENABLED")

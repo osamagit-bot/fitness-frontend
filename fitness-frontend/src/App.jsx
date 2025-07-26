@@ -29,21 +29,20 @@ import KioskCheckIn from './pages/kiosk/KioskCheckIn';
 // Layouts
 import { AdminLayout, MemberLayout } from './layouts';
 
-// Admin Pages
-import {
-  AttendancePage as AdminAttendancePage,
-  CommunityPage as AdminCommunityManagement,
-  SettingsPage as AdminSettingsPage,
-  SupportPage as AdminSupportManagement,
+// Admin Pages (Lazy Loaded)
+import { Suspense, lazy } from 'react';
 
-  DashboardPage,
-  MembersPage,
-  ProductsPage,
-  MemberRegistrationPage as RegisterPage,
-  RevenuePage,
-  TrainersPage,
-  TrainingsPage
-} from './pages/admin';
+const AdminAttendancePage = lazy(() => import('./pages/admin/AttendancePage.jsx'));
+const AdminCommunityManagement = lazy(() => import('./pages/admin/CommunityPage.jsx'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/SettingsPage.jsx'));
+const AdminSupportManagement = lazy(() => import('./pages/admin/SupportPage.jsx'));
+const DashboardPage = lazy(() => import('./pages/admin/DashboardPage.jsx'));
+const MembersPage = lazy(() => import('./pages/admin/MembersPage.jsx'));
+const ProductsPage = lazy(() => import('./pages/admin/ProductsPage.jsx'));
+const RegisterPage = lazy(() => import('./pages/admin/MemberRegistrationPage.jsx'));
+const RevenuePage = lazy(() => import('./pages/admin/RevenuePage.jsx'));
+const TrainersPage = lazy(() => import('./pages/admin/TrainersPage.jsx'));
+const TrainingsPage = lazy(() => import('./pages/admin/TrainingsPage.jsx'));
 
 // Member Pages
 import {
@@ -181,18 +180,18 @@ function App() {
             <AdminLayout />
           </AdminRoute>
         }>
-          <Route index element={<DashboardPage />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="register" element={<RegisterPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="trainings" element={<TrainingsPage />} />
-          <Route path="attendance" element={<AdminAttendancePage />} />
-          <Route path="revenue" element={<RevenuePage />} />
-          <Route path="members" element={<MembersPage />} />
-          <Route path="trainers" element={<TrainersPage />} />
-          <Route path="community" element={<AdminCommunityManagement />} />
-          <Route path="support" element={<AdminSupportManagement />} />
-          <Route path="adminsettings" element={<AdminSettingsPage />} />
+          <Route index element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><DashboardPage /></Suspense>} />
+          <Route path="dashboard" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><DashboardPage /></Suspense>} />
+          <Route path="register" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><RegisterPage /></Suspense>} />
+          <Route path="products" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><ProductsPage /></Suspense>} />
+          <Route path="trainings" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><TrainingsPage /></Suspense>} />
+          <Route path="attendance" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><AdminAttendancePage /></Suspense>} />
+          <Route path="revenue" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><RevenuePage /></Suspense>} />
+          <Route path="members" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><MembersPage /></Suspense>} />
+          <Route path="trainers" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><TrainersPage /></Suspense>} />
+          <Route path="community" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><AdminCommunityManagement /></Suspense>} />
+          <Route path="support" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><AdminSupportManagement /></Suspense>} />
+          <Route path="adminsettings" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>}><AdminSettingsPage /></Suspense>} />
         </Route>
 
         {/* Member Routes */}

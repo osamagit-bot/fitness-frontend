@@ -125,7 +125,14 @@ class Member(models.Model):
         ordering = ['-start_date']
 
     def __str__(self):
-     return f"{self.first_name} {self.last_name}" + (" (Inactive)" if not self.is_active else "")
+        return f"{self.first_name} {self.last_name} (ID: {self.athlete_id})"
+    
+    @property
+    def user_status(self):
+        """Check if member has valid user relationship"""
+        if hasattr(self, 'user') and self.user:
+            return f"User: {self.user.username} (Active: {self.user.is_active})"
+        return "No user relationship"
 
 
 

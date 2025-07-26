@@ -18,33 +18,34 @@ def webauthn_register_options(request):
     try:
         data = json.loads(request.body)
         athlete_id = data.get('athlete_id')
-        
-        # Debug logging
-        print(f"Received athlete_id: {athlete_id} (type: {type(athlete_id)})")
-        
-        # Try to find member with this athlete_id
-        try:
-            member = Member.objects.get(athlete_id=athlete_id)
-        except Member.DoesNotExist:
-            # List available members for debugging
-            available_members = list(Member.objects.values_list('athlete_id', 'first_name', 'last_name'))
-            print(f"Available members: {available_members}")
-            return JsonResponse({
-                'error': f'Member with athlete_id "{athlete_id}" not found',
-                'available_members': [f"{aid}: {fname} {lname}" for aid, fname, lname in available_members]
-            }, status=404)
+
+        # Get hostname without port (e.g., 'member.localhost' from 'member.localhost:3000')
+        ALLOWED_RP_IDS = ['member.localhost', 'member.yourdomain.com']
+
+        hostname = data.get('hostname') or request.get_host().split(':')[0]
+
+        if hostname not in ALLOWED_RP_IDS:
+         return JsonResponse({'error': 'Invalid hostname'}, status=400)
+
+        # Fetch member by athlete_id
+        member = Member.objects.get(athlete_id=athlete_id)
+
         challenge = base64.urlsafe_b64encode(b'some-random-challenge').decode('utf-8')
+
         options = {
             'challenge': challenge,
-            'rp': {'name': 'Elite Fitness Club', 'id': 'localhost'},  # add 'id' if needed
+            'rp': {
+                'name': 'Elite Fitness Club',
+                'id': hostname,   # dynamically set here
+            },
             'user': {
                 'id': base64.b64encode(str(member.athlete_id).encode()).decode(),
                 'name': member.first_name,
                 'displayName': f"{member.first_name} {member.last_name}",
             },
             'pubKeyCredParams': [
-                {'type': 'public-key', 'alg': -7},   # ES256
-                {'type': 'public-key', 'alg': -257}, # RS256
+                {'type': 'public-key', 'alg': -7},
+                {'type': 'public-key', 'alg': -257},
             ],
             'timeout': 60000,
             'attestation': 'direct',
@@ -52,10 +53,13 @@ def webauthn_register_options(request):
         request.session[f'webauthn_challenge_{athlete_id}'] = challenge
         request.session.modified = True
         return JsonResponse({'options': options})
+    except Member.DoesNotExist:
+        return JsonResponse({'error': 'Member not found'}, status=404)
     except Exception as e:
         import traceback
         print(traceback.format_exc())
-        return JsonResponse({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
     
      
 @csrf_exempt

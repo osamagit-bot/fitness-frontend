@@ -168,13 +168,25 @@ export const validateSession = async (operationContext = null) => {
     }
   }
   
-  // Validate token with backend
+  // Validate token with backend (only if not already in a navigation state)
   try {
+    // Check if we're already being redirected to avoid multiple auth calls
+    if (window.location.pathname.includes('/login')) {
+      console.log('⚠️ Already on login page, skipping validation');
+      return { isValid: false, reason: 'already_redirecting' };
+    }
+    
     await api.get('auth-test/check/');
     console.log('✅ Token validation successful');
     return { isValid: true };
   } catch (error) {
     console.log('❌ Token validation failed:', error.response?.status);
+    
+    // For network errors or 5xx errors, don't invalidate the session
+    if (!error.response || error.response.status >= 500) {
+      console.log('⚠️ Network/server error, keeping session valid');
+      return { isValid: true, reason: 'network_error', warning: true };
+    }
     
     if (error.response?.status === 401) {
       return { isValid: false, reason: 'token_refresh_needed', skipClear: operationContext === 'delete' };

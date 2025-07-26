@@ -109,7 +109,8 @@ function TrainingsPage() {
       const formData = new FormData();
       formData.append('trainer', parseInt(newTraining.trainer));
       formData.append('type', newTraining.type);
-      formData.append('datetime', `${newTraining.date}T${newTraining.time}:00`);
+      const localDate = new Date(`${newTraining.date}T${newTraining.time}:00`);
+      formData.append('datetime', localDate.toISOString());
       formData.append('duration', parseInt(newTraining.duration));
       formData.append('capacity', parseInt(newTraining.capacity));
       formData.append('description', newTraining.description || '');
@@ -124,7 +125,7 @@ function TrainingsPage() {
       const response = await api.post('trainings/', formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type, let browser set it for FormData
+          
         },
         timeout: 10000
       });
@@ -478,7 +479,7 @@ function TrainingsPage() {
                                 {session.trainer_name || 'TBA'}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                                {formatDateTime(session.scheduled_datetime)}
+                                {formatDateTime(session.datetime)}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                                 {formatDuration(session.duration)}
@@ -542,7 +543,7 @@ function TrainingsPage() {
                             </div>
                             <div className="mt-2 space-y-1 text-sm">
                               <div><span className="text-gray-600">Trainer:</span> <span className="font-medium">{session.trainer_name || 'TBA'}</span></div>
-                              <div><span className="text-gray-600">Date:</span> <span className="font-medium">{formatDateTime(session.scheduled_datetime)}</span></div>
+                              <div><span className="text-gray-600">Date:</span> <span className="font-medium">{formatDateTime(session.datetime)}</span></div>
                               <div><span className="text-gray-600">Duration:</span> <span className="font-medium">{formatDuration(session.duration)}</span></div>
                               <div><span className="text-gray-600">Capacity:</span> <span className="font-medium">{session.capacity || '—'}</span></div>
                             </div>
@@ -567,6 +568,7 @@ function TrainingsPage() {
 }
 
 export default TrainingsPage;
+
 
 
 

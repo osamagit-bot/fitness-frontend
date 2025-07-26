@@ -41,6 +41,7 @@ function RevenuePage() {
   // Revenue states
   const [rangeMembershipRevenue, setRangeMembershipRevenue] = useState(0);
   const [rangeProductRevenue, setRangeProductRevenue] = useState(0);
+  const [stats, setStats] = useState({ monthlyRevenue: 0, shopRevenue: 0 });
 
   // For charts
   const [dailyRevenueChart, setDailyRevenueChart] = useState([]);
@@ -57,11 +58,22 @@ function RevenuePage() {
     try {
       const token = localStorage.getItem("access_token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const [membersRes, purchasesRes] = await Promise.all([
-        api.get(`members/`, { headers }),
+      const [statsRes, membersRes, purchasesRes] = await Promise.all([
+        api.get(`admin-dashboard/stats/`, { headers }),
+        api.get(`members/?show_all=true`, { headers }),
         api.get(`purchases/`, { headers }),
       ]);
-      
+      // Parse revenue values from backend stats
+      const parseRevenue = (value) => {
+        if (typeof value === "string") {
+          return parseFloat(value.replace(" AFN", "").replace(",", "")) || 0;
+        }
+        return parseFloat(value) || 0;
+      };
+      setStats({
+        monthlyRevenue: parseRevenue(statsRes.data.monthly_revenue),
+        shopRevenue: parseRevenue(statsRes.data.monthly_revenue_shop),
+      });
       // Ensure we always have arrays
       const membersData = Array.isArray(membersRes.data) 
         ? membersRes.data 
@@ -69,13 +81,11 @@ function RevenuePage() {
       const purchasesData = Array.isArray(purchasesRes.data) 
         ? purchasesRes.data 
         : purchasesRes.data?.results || [];
-        
       setMembers(membersData);
       setPurchases(purchasesData);
     } catch (err) {
       console.error("Error fetching data:", err);
       setError("Failed to fetch data.");
-      // Set empty arrays as fallback
       setMembers([]);
       setPurchases([]);
     }
@@ -547,24 +557,12 @@ function RevenuePage() {
 
   // --- Revenue Calculations ---
   useEffect(() => {
-    calculateRevenues();
+    // Only calculate product revenue and charts from purchases
+    calculateProductRevenueAndCharts();
     // eslint-disable-next-line
-  }, [members, purchases, dateRange]);
+  }, [purchases, dateRange]);
 
-  function calculateRevenues() {
-    // Range revenue (memberships)
-    const rangeMembers = members.filter((m) => {
-      const s = new Date(m.start_date);
-      return (
-        s >= new Date(dateRange.startDate) && s <= new Date(dateRange.endDate)
-      );
-    });
-    const _rangeMembershipRevenue = rangeMembers.reduce(
-      (sum, m) => sum + parseFloat(m.monthly_fee || 0),
-      0
-    );
-    setRangeMembershipRevenue(_rangeMembershipRevenue);
-
+  function calculateProductRevenueAndCharts() {
     // Range product revenue
     const _rangeProductRevenue = purchases
       .filter((p) => {
@@ -576,7 +574,7 @@ function RevenuePage() {
       .reduce((sum, p) => sum + parseFloat(p.total_price || 0), 0);
     setRangeProductRevenue(_rangeProductRevenue);
 
-    // Chart: Daily revenue in range
+    // Chart: Daily revenue in range (only for shop revenue)
     const days = [];
     let current = new Date(dateRange.startDate);
     const end = new Date(dateRange.endDate);
@@ -585,21 +583,14 @@ function RevenuePage() {
       current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
     }
     const chartData = days.map((day) => {
-      const dayMembers = members.filter(
-        (m) => formatDate(m.start_date) === day
-      );
-      const dayMembership = dayMembers.reduce(
-        (sum, m) => sum + parseFloat(m.monthly_fee || 0),
-        0
-      );
       const dayProducts = purchases
         .filter((p) => formatDate(p.date) === day)
         .reduce((sum, p) => sum + parseFloat(p.total_price || 0), 0);
       return {
         date: day,
-        Membership: dayMembership,
+        Membership: stats.monthlyRevenue, // Use backend value for membership revenue
         Shop: dayProducts,
-        Total: dayMembership + dayProducts,
+        Total: stats.monthlyRevenue + dayProducts,
       };
     });
     setDailyRevenueChart(chartData);
@@ -817,7 +808,7 @@ function RevenuePage() {
             Membership Revenue
           </h4>
           <p className="text-2xl font-bold text-blue-600">
-            {formatAfn(rangeMembershipRevenue)}
+            {formatAfn(stats.monthlyRevenue)}
           </p>
           <p className="text-xs text-gray-500 mt-1">
             {formatDate(dateRange.startDate)} - {formatDate(dateRange.endDate)}
@@ -828,7 +819,7 @@ function RevenuePage() {
             Shop Revenue
           </h4>
           <p className="text-2xl font-bold text-green-600">
-            {formatAfn(rangeProductRevenue)}
+            {formatAfn(stats.shopRevenue)}
           </p>
           <p className="text-xs text-gray-500 mt-1">
             {formatDate(dateRange.startDate)} - {formatDate(dateRange.endDate)}
@@ -839,7 +830,7 @@ function RevenuePage() {
             Total Revenue
           </h4>
           <p className="text-2xl font-bold text-indigo-600">
-            {formatAfn(rangeMembershipRevenue + rangeProductRevenue)}
+            {formatAfn(stats.monthlyRevenue + stats.shopRevenue)}
           </p>
         </div>
       </div>

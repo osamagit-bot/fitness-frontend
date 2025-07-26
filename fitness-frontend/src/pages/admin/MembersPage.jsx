@@ -33,11 +33,22 @@ function MembersPage() {
         },
       });
 
+      console.log("🔍 Full API response:", response.data);
+      console.log("🔍 Response structure:", {
+        hasResults: !!response.data.results,
+        isArray: Array.isArray(response.data),
+        dataType: typeof response.data,
+        dataKeys: Object.keys(response.data || {}),
+      });
+
       const athletesData = response.data.results || response.data;
+      console.log("🔍 Athletes data:", athletesData);
+      console.log("🔍 Athletes count:", Array.isArray(athletesData) ? athletesData.length : 'Not an array');
+
       setAthletes(Array.isArray(athletesData) ? athletesData : []);
       setFilteredAthletes(Array.isArray(athletesData) ? athletesData : []);
     } catch (error) {
-      console.error("Error fetching athletes:", error);
+      console.error("❌ Error fetching athletes:", error);
       setError(error.response?.data?.message || "Failed to fetch athletes");
     } finally {
       setIsLoading(false);
@@ -617,3 +628,4 @@ function MembersPage() {
 }
 
 export default MembersPage;
+

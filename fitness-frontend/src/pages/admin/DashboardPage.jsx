@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import {
-  FiActivity,
   FiAward,
   FiCalendar,
   FiCheckCircle,
@@ -13,10 +12,9 @@ import {
   FiSettings,
   FiShoppingCart,
   FiTarget,
-  FiTrendingUp,
   FiUserCheck,
   FiUsers,
-  FiZap,
+  FiZap
 } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -77,6 +75,9 @@ const DashboardPage = () => {
   // Add ref to track initialization
   const initializingRef = useRef(false);
 
+  // Add a single initialization flag at component level
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Enhanced color schemes
   const CHART_COLORS = {
     primary: ["#667eea", "#764ba2", "#f093fb", "#f5576c", "#4facfe", "#00f2fe"],
@@ -97,37 +98,84 @@ const DashboardPage = () => {
     "from-blue-600 to-gray-400",
   ];
 
+  // Add a global initialization state
+  const [isInitializing, setIsInitializing] = useState(true);
+
   useEffect(() => {
     const initializeDashboard = async () => {
-      // Prevent multiple simultaneous initializations
       if (initializingRef.current) return;
       initializingRef.current = true;
+      setIsInitializing(true);
 
       try {
-        // Call functions in sequence to avoid race conditions
-        await fetchDashboardData();
-        await fetchRecentMembers();
-        await generateMemberInsights();
-        await generateRevenueData();
-        await generateAttendanceTrend();
+        // Batch all API calls together
+        const [
+          statsResponse,
+          membersResponse,
+          todayAttendanceResponse,
+          revenueResponse
+        ] = await Promise.allSettled([
+          api.get("admin-dashboard/stats/"),
+          api.get("members/"),
+          api.get("attendance_history/?today_only=true"),
+          api.get("admin-dashboard/revenue-trend/")
+        ]);
+
+        // Process all data in a single state update to prevent multiple re-renders
+        let newStats = { ...stats };
+        let membersList = [];
+
+        if (statsResponse.status === 'fulfilled') {
+          const backendStats = statsResponse.value.data;
+          newStats = {
+            ...newStats,
+            activeMembers: backendStats.total_members || 0,
+            activeTrainers: backendStats.total_trainers || 0,
+            monthlyRevenue: parseFloat(backendStats.monthly_revenue) || 0,
+            totalRevenue: parseFloat(backendStats.total_revenue) || 0,
+            shopRevenue: parseFloat(backendStats.monthly_revenue_shop) || 0,
+            outstandingPayments: parseFloat(backendStats.monthly_renewal_revenue) || 0,
+          };
+        }
+
+        if (todayAttendanceResponse.status === 'fulfilled') {
+          newStats.todayCheckIns = todayAttendanceResponse.value.data.length;
+        }
+
+        if (membersResponse.status === 'fulfilled') {
+          membersList = Array.isArray(membersResponse.value.data) 
+            ? membersResponse.value.data 
+            : membersResponse.value.data.results || [];
+          
+         
+          if (membersList.length > 0) {
+        
+          }
+        }
+
+        // Single state update to prevent multiple re-renders
+        setStats(newStats);
+        setRecentMembers(membersList.slice(0, 5));
+        console.log('🔍 Recent members set:', membersList.slice(0, 5));
+        processMemberInsights(membersList);
+
+        if (revenueResponse.status === 'fulfilled') {
+          setRevenueData(revenueResponse.value.data.revenue_trend || []);
+        }
+
+        await generateAttendanceTrendOptimized();
+        
+      } catch (error) {
+        console.error("❌ Error initializing dashboard:", error);
+        setError("Failed to load dashboard data");
       } finally {
+        setIsInitializing(false);
         initializingRef.current = false;
       }
     };
 
     initializeDashboard();
-
-    // Set up auto-refresh every 5 minutes
-    const interval = setInterval(() => {
-      if (!initializingRef.current) {
-        fetchDashboardData();
-        generateRevenueData();
-        setLastUpdate(new Date());
-      }
-    }, 5 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, []); // Empty dependency array to run only once
+  }, []); // Run only once
 
   const generateRevenueData = async () => {
     if (revenueLoading) return; // Prevent duplicate calls
@@ -157,7 +205,7 @@ const DashboardPage = () => {
   };
 
   const generateMemberInsights = async () => {
-    if (memberInsightsLoading) return; // Prevent duplicate calls
+    if (memberInsightsLoading || initializingRef.current) return;
     
     setMemberInsightsLoading(true);
     try {
@@ -252,6 +300,8 @@ const DashboardPage = () => {
   };
 
   const fetchDashboardData = async () => {
+    if (loading || initializingRef.current) return;
+    
     setLoading(true);
     try {
       console.log("🔍 Fetching dashboard data...");
@@ -351,6 +401,8 @@ const DashboardPage = () => {
   };
 
   const fetchRecentMembers = async () => {
+    if (initializingRef.current) return;
+    
     try {
       const response = await api.get("members/");
       let memberList = Array.isArray(response.data)
@@ -378,18 +430,14 @@ const DashboardPage = () => {
     trend,
     trendValue,
     color = "blue",
-    isLoading,
     subtitle,
     gradient,
+    isLoading = false,
   }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+    <div
       className={`relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${
         gradient ? `bg-gradient-to-br ${gradient}` : "bg-white"
-      }`}
-    >
+      }`}>
       <div className="p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div className={`${gradient ? "text-white" : "text-gray-900"}`}>
@@ -400,81 +448,63 @@ const DashboardPage = () => {
             >
               {title}
             </p>
-            {isLoading ? (
+            {isInitializing ? (
               <div className="animate-pulse">
-                <div
-                  className={`h-8 ${
-                    gradient ? "bg-white/20" : "bg-gray-200"
-                  } rounded w-24 mb-2`}
-                ></div>
-                <div
-                  className={`h-4 ${
-                    gradient ? "bg-white/20" : "bg-gray-200"
-                  } rounded w-16`}
-                ></div>
+                <div className="h-8 bg-gray-300 rounded w-20 mb-2"></div>
+                <div className="h-4 bg-gray-300 rounded w-16"></div>
               </div>
             ) : (
               <>
-                <p className="text-2xl sm:text-3xl font-bold mb-1">{value}</p>
+                <p className="text-2xl sm:text-3xl font-bold mb-1">
+                  {value}
+                </p>
                 {subtitle && (
                   <p
-                    className={`text-sm ${
-                      gradient ? "text-white/70" : "text-gray-500"
+                    className={`text-xs ${
+                      gradient ? "text-white/70" : "text-gray-400"
                     }`}
                   >
                     {subtitle}
                   </p>
                 )}
-                {trend && (
-                  <div className="flex items-center mt-2">
-                    <span
-                      className={`text-sm font-medium flex items-center ${
-                        trend === "up"
-                          ? "text-black"
-                          : trend === "down"
-                          ? "text-red-400"
-                          : "text-blue-400"
-                      }`}
-                    >
-                      {trend === "up" ? (
-                        <FiTrendingUp className="w-4 h-4 mr-1" />
-                      ) : trend === "down" ? (
-                        <FiTrendingUp className="w-4 h-4 mr-1 rotate-180" />
-                      ) : (
-                        <FiActivity className="w-4 h-4 mr-1" />
-                      )}
-                      {trendValue}
-                    </span>
-                    <span
-                      className={`text-sm ml-1 ${
-                        gradient ? "text-white/70" : "text-gray-400"
-                      }`}
-                    >
-                      vs last month
-                    </span>
-                  </div>
-                )}
               </>
             )}
           </div>
           <div
-            className={`p-2 sm:p-3 rounded-xl ${
-              gradient ? "bg-white/20" : `bg-${color}-50`
+            className={`p-3 rounded-full ${
+              gradient ? "bg-white/20" : `bg-${color}-100`
             }`}
           >
             <Icon
-              className={`h-6 w-6 sm:h-8 sm:w-8 ${
-                gradient ? "text-white" : `text-${color}-500`
+              className={`h-6 w-6 ${
+                gradient ? "text-white" : `text-${color}-600`
               }`}
             />
           </div>
         </div>
-      </div>
 
-      {/* Decorative elements */}
-      <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/10 rounded-full"></div>
-      <div className="absolute -right-2 -bottom-2 w-8 h-8 bg-white/10 rounded-full"></div>
-    </motion.div>
+        {!isInitializing && trend && (
+          <div className="flex items-center mt-4">
+            <div
+              className={`flex items-center text-sm ${
+                trend === "up"
+                  ? gradient
+                    ? "text-white/90"
+                    : "text-green-600"
+                  : gradient
+                  ? "text-white/90"
+                  : "text-gray-600"
+              }`}
+            >
+              <span className="mr-1">
+                {trend === "up" ? "↗" : trend === "down" ? "↘" : "→"}
+              </span>
+              {trendValue}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 
   const ProgressRing = ({
@@ -520,43 +550,34 @@ const DashboardPage = () => {
     );
   };
 
-  const generateAttendanceTrend = async () => {
-    if (attendanceLoading) return; // Prevent duplicate calls
-    
-    setAttendanceLoading(true);
+  const generateAttendanceTrendOptimized = async () => {
     try {
-      // Get last 7 days attendance data in a single batch call
-      const promises = [];
-      const dates = [];
+      // Get all 7 days in a single API call using date range
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 6);
+      const startDateStr = startDate.toISOString().split('T')[0];
       
-      for (let i = 6; i >= 0; i--) {
+      const response = await api.get(`attendance_history/?start_date=${startDateStr}&end_date=${endDate}`);
+      const allAttendance = response.data || [];
+      
+      // Group by date
+      const attendanceByDate = {};
+      allAttendance.forEach(record => {
+        const date = record.date;
+        attendanceByDate[date] = (attendanceByDate[date] || 0) + 1;
+      });
+      
+      // Generate 7-day trend
+      const attendanceData = Array(7).fill(0).map((_, i) => {
         const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateString = date.toISOString().split('T')[0];
-        dates.push(dateString);
-        promises.push(
-          api.get(`attendance_history/?date=${dateString}`)
-            .catch(error => {
-              console.error(`Error fetching attendance for ${dateString}:`, error);
-              return { data: [] }; // Return empty array on error
-            })
-        );
-      }
-      
-      // Execute all calls in parallel
-      const responses = await Promise.all(promises);
-      
-      const attendanceData = responses.map((response, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (6 - index));
-        const dayAttendance = Array.isArray(response.data) ? response.data.length : 0;
+        date.setDate(date.getDate() - (6 - i));
+        const dateStr = date.toISOString().split('T')[0];
+        const dayAttendance = attendanceByDate[dateStr] || 0;
         
         return {
           day: date.toLocaleDateString("en-US", { weekday: "short" }),
-          date: date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
+          date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           attendance: dayAttendance,
           capacity: 60,
           percentage: Math.floor((dayAttendance / 60) * 100),
@@ -567,24 +588,51 @@ const DashboardPage = () => {
     } catch (error) {
       console.error("Error generating attendance trend:", error);
       // Fallback to mock data
-      const last7Days = Array(7).fill(0).map((_, i) => {
+      const mockData = Array(7).fill(0).map((_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - (6 - i));
         return {
           day: date.toLocaleDateString("en-US", { weekday: "short" }),
-          date: date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
+          date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           attendance: Math.floor(Math.random() * 40) + 15,
           capacity: 60,
           percentage: Math.floor(Math.random() * 30) + 60,
         };
       });
-      setAttendanceTrend(last7Days);
-    } finally {
-      setAttendanceLoading(false);
+      setAttendanceTrend(mockData);
     }
+  };
+
+  // Helper function to process member insights
+  const processMemberInsights = (membersList) => {
+    // Membership type distribution
+    const membershipTypes = {};
+    membersList.forEach((member) => {
+      const type = member.membership_type || "Standard";
+      membershipTypes[type] = (membershipTypes[type] || 0) + 1;
+    });
+    setMembershipStats(
+      Object.keys(membershipTypes).map((type, index) => ({
+        name: type,
+        value: membershipTypes[type],
+        fill: CHART_COLORS.primary[index % CHART_COLORS.primary.length],
+      }))
+    );
+
+    // Gender distribution
+    const genderCount = { Male: 0, Female: 0, Other: 0 };
+    membersList.forEach((member) => {
+      const gender = member.gender || "Other";
+      if (gender in genderCount) genderCount[gender]++;
+      else genderCount.Other++;
+    });
+    setGenderDistribution(
+      Object.keys(genderCount).map((gender, index) => ({
+        name: gender,
+        value: genderCount[gender],
+        fill: CHART_COLORS.gradient[index % CHART_COLORS.gradient.length],
+      }))
+    );
   };
 
   return (
@@ -612,30 +660,29 @@ const DashboardPage = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={async () => {
-                // Prevent if already loading or initializing
-                if (loading || attendanceLoading || revenueLoading || memberInsightsLoading || initializingRef.current) return;
+                if (isInitializing || initializingRef.current) return;
                 
                 initializingRef.current = true;
-                setLoading(true);
+                setIsInitializing(true);
                 try {
                   await fetchDashboardData();
                   await fetchRecentMembers();
                   await generateMemberInsights();
                   await generateRevenueData();
-                  await generateAttendanceTrend();
+                  await generateAttendanceTrendOptimized();
                   setLastUpdate(new Date());
                 } finally {
-                  setLoading(false);
+                  setIsInitializing(false);
                   initializingRef.current = false;
                 }
               }}
-              disabled={loading || attendanceLoading || revenueLoading || memberInsightsLoading}
+              disabled={isInitializing}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 text-sm sm:text-base"
             >
               <FiRefreshCw
-                className={`h-4 w-4 ${loading || attendanceLoading || revenueLoading || memberInsightsLoading ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${isInitializing ? "animate-spin" : ""}`}
               />
-              {loading || attendanceLoading || revenueLoading || memberInsightsLoading ? "Refreshing..." : "Refresh"}
+              {isInitializing ? "Loading..." : "Refresh"}
             </motion.button>
           </div>
         </div>
@@ -1154,76 +1201,100 @@ const DashboardPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {loading
-                  ? [...Array(3)].map((_, i) => (
-                      <tr key={i}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center animate-pulse">
-                            <div className="h-10 w-10 rounded-full bg-gray-200 mr-4"></div>
-                            <div>
-                              <div className="h-4 w-24 bg-gray-200 rounded mb-1"></div>
-                              <div className="h-3 w-16 bg-gray-200 rounded"></div>
-                            </div>
+                {isInitializing ? (
+                  // Loading skeleton
+                  Array(5).fill(0).map((_, index) => (
+                    <tr key={index} className="animate-pulse">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 bg-gray-300 rounded-full"></div>
+                          <div className="ml-4">
+                            <div className="h-4 bg-gray-300 rounded w-24"></div>
+                            <div className="h-3 bg-gray-300 rounded w-32 mt-1"></div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-                        </td>
-                      </tr>
-                    ))
-                  : recentMembers.map((member, index) => (
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-300 rounded w-16"></div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-300 rounded w-20"></div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-6 bg-gray-300 rounded-full w-16"></div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-300 rounded w-20"></div>
+                      </td>
+                    </tr>
+                  ))
+                ) : recentMembers.length > 0 ? (
+                  recentMembers.map((member, index) => {
+                    const isExpired = member.expiry_date && new Date(member.expiry_date) < new Date();
+                    const memberName = member.name || `${member.first_name || ''} ${member.last_name || ''}`.trim();
+                    
+                    return (
                       <motion.tr
-                        key={member.id || index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        key={member.athlete_id || member.id || index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-gray-50"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                              {member.first_name?.[0]}
-                              {member.last_name?.[0]}
+                            <div className="h-10 w-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                              {memberName.charAt(0).toUpperCase() || 'M'}
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
-                                {member.first_name} {member.last_name}
+                                {memberName || 'Unknown Member'}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {member.user_email ||
-                                  member.email ||
-                                  "No email"}
+                                {member.email || member.user_email || 'No email'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          #{member.athlete_id || member.id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {member.membership_type || "Standard"}
+                          {member.athlete_id || member.id || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Active
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                            {member.membership_type || 'Standard'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            isExpired 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {isExpired ? 'Expired' : 'Active'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(member.start_date) ||
-                            formatDate(member.registration_date) ||
-                            "Recent"}
+                          {member.start_date 
+                            ? formatDate(member.start_date)
+                            : member.created_at 
+                            ? formatDate(member.created_at)
+                            : 'N/A'
+                          }
                         </td>
                       </motion.tr>
-                    ))}
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center">
+                      <div className="text-gray-500">
+                        <FiUsers className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">No recent members</h3>
+                        <p className="text-sm text-gray-500">No members have been registered recently.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -1293,6 +1364,15 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+
+
+
+
+
+
+
+
+
 
 
 

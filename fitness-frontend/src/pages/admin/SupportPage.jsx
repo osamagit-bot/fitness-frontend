@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { FiChevronDown, FiChevronUp, FiEdit2, FiHelpCircle, FiMessageSquare, FiPlus, FiTrash2 } from 'react-icons/fi';
 import AppToastContainer from "../../components/ui/ToastContainer";
 import api from "../../utils/api";
-import { formatDate, formatDateTime } from "../../utils/dateUtils";
+import { formatDate, formatDateTime, getDateFromObject } from "../../utils/dateUtils";
 import { showToast } from "../../utils/toast";
 function AdminSupportManagement() {
   const [tickets, setTickets] = useState([]);
@@ -328,7 +328,7 @@ function AdminSupportManagement() {
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
                               <p>From: {ticket.member_name}</p>
                               <p>Type: {ticket.type}</p>
-                              <p>Date: {formatDate(ticket.date_created)}</p>
+                              <p>Date: {formatDate(getDateFromObject(ticket))}</p>
                             </div>
                           </div>
                         </div>
