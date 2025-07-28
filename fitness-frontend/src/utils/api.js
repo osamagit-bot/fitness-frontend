@@ -25,21 +25,36 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use((config) => {
-  // Determine which token to use based on current route
-  const currentPath = window.location.pathname;
-  let token;
+  // Skip auth headers for public endpoints
+  const publicEndpoints = [
+    '/admin-dashboard/maintenance-mode/',
+    '/public/maintenance-mode/',
+    '/token/refresh/',
+    '/admin-dashboard/login/',
+    '/members/login/'
+  ];
   
-  if (currentPath.startsWith('/admin')) {
-    token = localStorage.getItem('admin_access_token');
-  } else if (currentPath.startsWith('/member-dashboard')) {
-    token = localStorage.getItem('member_access_token');
-  } else {
-    // Fallback to either token if available
-    token = localStorage.getItem('admin_access_token') || localStorage.getItem('member_access_token');
-  }
+  const isPublicEndpoint = publicEndpoints.some(endpoint => 
+    config.url?.includes(endpoint)
+  );
   
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
+  if (!isPublicEndpoint) {
+    // Determine which token to use based on current route
+    const currentPath = window.location.pathname;
+    let token;
+    
+    if (currentPath.startsWith('/admin')) {
+      token = localStorage.getItem('admin_access_token');
+    } else if (currentPath.startsWith('/member-dashboard')) {
+      token = localStorage.getItem('member_access_token');
+    } else {
+      // Fallback to either token if available
+      token = localStorage.getItem('admin_access_token') || localStorage.getItem('member_access_token');
+    }
+    
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
   }
   
   config.metadata = { startTime: new Date() };
@@ -72,6 +87,24 @@ api.interceptors.response.use(
 
     // Handle 401 errors with enhanced logic
     if (error.response.status === 401 && !originalRequest._retry) {
+      // Skip token refresh for public endpoints
+      const publicEndpoints = [
+        '/admin-dashboard/maintenance-mode/',
+        '/public/maintenance-mode/',
+        '/token/refresh/',
+        '/admin-dashboard/login/',
+        '/members/login/'
+      ];
+      
+      const isPublicEndpoint = publicEndpoints.some(endpoint => 
+        originalRequest.url?.includes(endpoint)
+      );
+      
+      if (isPublicEndpoint) {
+        // console.log('401 on public endpoint, not attempting token refresh');
+        return Promise.reject(error);
+      }
+
       // console.log('401 Unauthorized - attempting token refresh');
 
       originalRequest._retry = true;

@@ -90,32 +90,17 @@ def get_maintenance_mode(request):
         'enabled': settings_obj.maintenance_mode_enabled
     })
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdminUser])
-def set_maintenance_mode(request):
+@csrf_exempt
+def get_maintenance_mode_public(request):
     """
-    Set maintenance mode status - admin only
+    Public maintenance mode endpoint that bypasses DRF authentication
     """
-    settings_obj = SiteSettings.get_settings()
-    enabled = request.data.get('enabled')
-    if enabled is not None:
-        settings_obj.maintenance_mode_enabled = bool(enabled)
-        settings_obj.save()
-    return Response({
-        'success': True,
-        'enabled': settings_obj.maintenance_mode_enabled
-    })
-
-@api_view(['GET'])
-@permission_classes([AllowAny])  # Allow access to all users (members need to check maintenance mode)
-def get_maintenance_mode(request):
-    """
-    Get maintenance mode status - accessible to all users
-    """
-    settings_obj = SiteSettings.get_settings()
-    return Response({
-        'enabled': settings_obj.maintenance_mode_enabled
-    })
+    if request.method == 'GET':
+        settings_obj = SiteSettings.get_settings()
+        return JsonResponse({
+            'enabled': settings_obj.maintenance_mode_enabled
+        })
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])

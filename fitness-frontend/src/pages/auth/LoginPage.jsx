@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
+import api, { publicApi } from '../../utils/api';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -20,8 +20,10 @@ const LoginPage = () => {
   useEffect(() => {
     const checkMaintenanceMode = async () => {
       try {
-        const response = await api.get('/admin-dashboard/maintenance-mode/');
+        const response = await publicApi.get('/public/maintenance-mode/');
         const isMaintenanceActive = response.data.enabled || false;
+        console.log('🔧 Maintenance mode response:', response.data);
+        console.log('🔧 Setting maintenance mode to:', isMaintenanceActive);
         setMaintenanceMode(isMaintenanceActive);
         
         // Set admin as default role if maintenance is active
@@ -61,8 +63,12 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('🔧 Maintenance mode:', maintenanceMode);
+    console.log('👤 Role:', formData.role);
+    
     // Block member login if maintenance mode is active
     if (maintenanceMode && formData.role === 'member') {
+      console.log('🚫 Blocking member login - maintenance mode active');
       setError('System is under maintenance. Member access is temporarily disabled.');
       return;
     }
@@ -207,12 +213,12 @@ const LoginPage = () => {
           <div className="flex bg-gray-800/60 backdrop-blur-md rounded-lg p-1 mb-6 border border-yellow-500/30">
             <button
               type="button"
-              onClick={() => handleRoleChange("member")}
+              onClick={() => !maintenanceMode && handleRoleChange("member")}
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
                 formData.role === "member"
                   ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-md"
                   : "text-gray-400 hover:text-white"
-              } ${maintenanceMode ? "opacity-50" : ""}`}
+              } ${maintenanceMode ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
               disabled={maintenanceMode}
             >
               <i className="bx bx-user mr-2"></i>
@@ -308,7 +314,7 @@ const LoginPage = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (maintenanceMode && formData.role === 'member')}
                 className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-black bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 mt-6"
               >
                 {loading ? (

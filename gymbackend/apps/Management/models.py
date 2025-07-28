@@ -14,11 +14,10 @@ class SiteSettings(models.Model):
     email_notifications_enabled = models.BooleanField(default=True)
     whatsapp_notifications_enabled = models.BooleanField(default=False)
     maintenance_mode_enabled = models.BooleanField(default=False)
-    maintenance_mode_enabled = models.BooleanField(default=False)
     # Add other global settings as needed
 
     def __str__(self):
-        return f"SiteSettings (Email: {self.email_notifications_enabled}, WhatsApp: {self.whatsapp_notifications_enabled}, Maintenance: {self.maintenance_mode_enabled}, Maintenance: {self.maintenance_mode_enabled})"
+        return f"SiteSettings (Email: {self.email_notifications_enabled}, WhatsApp: {self.whatsapp_notifications_enabled}, Maintenance: {self.maintenance_mode_enabled})"
 
     @classmethod
     def get_settings(cls):

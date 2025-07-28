@@ -13,6 +13,7 @@ urlpatterns = [
     
     path('admin-dashboard/maintenance-mode/', views.get_maintenance_mode, name='get_maintenance_mode'),
     path('admin-dashboard/set-maintenance-mode/', views.set_maintenance_mode, name='set_maintenance_mode'),
+    path('public/maintenance-mode/', views.get_maintenance_mode_public, name='get_maintenance_mode_public'),
 ]
 
 

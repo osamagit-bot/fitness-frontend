@@ -196,7 +196,7 @@ const fetchGlobalNotificationSettings = async () => {
     
     try {
       const response = await api.post(
-        "/admin-dashboard/maintenance-mode/",
+        "/admin-dashboard/set-maintenance-mode/",
         {
           enabled: newState,
         },
