@@ -31,12 +31,12 @@ const ConfirmationPrompt = ({
 
   const colors = {
     success: {
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
-      icon: <FiCheckCircle className="h-6 w-6 text-emerald-500" />,
-      title: "text-emerald-800",
-      message: "text-emerald-600",
-      button: "bg-emerald-600 hover:bg-emerald-700",
+      bg: "bg-gray-800",
+      border: "border-yellow-600",
+      icon: <FiCheckCircle className="h-6 w-6 text-yellow-500" />,
+      title: "text-yellow-400",
+      message: "text-gray-200",
+      button: "bg-yellow-700 hover:bg-yellow-800",
     },
     error: {
       bg: "bg-red-50",
@@ -59,9 +59,9 @@ const ConfirmationPrompt = ({
   const currentColor = colors[type];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm">
+    <div className={`fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+        <div className={`fixed inset-0 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
           <div className="absolute inset-0 bg-gray-900 opacity-50"></div>
         </div>
 
@@ -72,7 +72,7 @@ const ConfirmationPrompt = ({
           &#8203;
         </span>
 
-        <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full animate-in slide-in-from-bottom-4 duration-300">
+        <div className={`inline-block align-bottom bg-gray-900 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all duration-300 sm:my-8 sm:align-middle sm:max-w-lg sm:w-full ${isOpen ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'}`}>
           <div
             className={`${currentColor.bg} ${currentColor.border} border-l-4 p-6`}
           >
@@ -97,7 +97,7 @@ const ConfirmationPrompt = ({
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse">
+          <div className="bg-gray-800 px-6 py-4 sm:flex sm:flex-row-reverse">
             <button
               type="button"
               onClick={onClose}
@@ -157,7 +157,7 @@ const FormField = ({
   </div>
 );
 
-const CredentialsCard = ({ credentials, onContinue }) => {
+const CredentialsModal = ({ isOpen, credentials, onClose }) => {
   const [copied, setCopied] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
@@ -171,115 +171,165 @@ const CredentialsCard = ({ credentials, onContinue }) => {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="mb-8 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-600 rounded-2xl p-6 shadow-lg">
-      <div className="flex items-center mb-4">
-        <div className="bg-yellow-600 p-2 rounded-full mr-3">
-          <FiUser className="h-6 w-6 text-white" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-800">
-          Member Login Credentials
-        </h2>
-      </div>
-
-      <div className="space-y-4">
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-600">Username</p>
-              <p className="font-mono text-lg text-gray-800">
-                {credentials.username}
-              </p>
-            </div>
-            <button
-              onClick={() => copyToClipboard(credentials.username, "username")}
-              className="p-2 text-gray-500 hover:text-yellow-700 transition-colors"
-            >
-              {copied.username ? (
-                <FiCheck className="h-5 w-5" />
-              ) : (
-                <FiCopy className="h-5 w-5" />
-              )}
-            </button>
-          </div>
+    <div className={`fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div className={`fixed inset-0 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} aria-hidden="true">
+          <div className="absolute inset-0 bg-gray-900 opacity-75"></div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-600">Email</p>
-              <p className="font-mono text-lg text-gray-800">
-                {credentials.email}
-              </p>
-            </div>
-            <button
-              onClick={() => copyToClipboard(credentials.email, "email")}
-              className="p-2 text-gray-500 hover:text-yellow-700 transition-colors"
-            >
-              {copied.email ? (
-                <FiCheck className="h-5 w-5" />
-              ) : (
-                <FiCopy className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-        </div>
+        <span
+          className="hidden sm:inline-block sm:align-middle sm:h-screen"
+          aria-hidden="true"
+        >
+          &#8203;
+        </span>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <div className="flex justify-between items-center">
-            <div className="flex-1">
-              <p className="text-sm text-gray-600">Password</p>
+        <div className={`inline-block align-bottom bg-black/20 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all duration-300 sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full ${isOpen ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'}`}>
+          <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 border-b-2 border-yellow-400 p-6">
+            <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <p className="font-mono text-lg text-gray-800 mr-2">
-                  {showPassword ? credentials.password : "••••••••"}
-                </p>
-                <button
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="p-1 text-gray-500 hover:text-yellow-700 transition-colors"
-                >
-                  {showPassword ? (
-                    <FiEyeOff className="h-4 w-4" />
-                  ) : (
-                    <FiEye className="h-4 w-4" />
-                  )}
-                </button>
+                <div className="bg-white p-2 rounded-full mr-3">
+                  <FiUser className="h-6 w-6 text-yellow-600" />
+                </div>
+                <h2 className="text-xl font-bold text-white">
+                  Member Login Credentials
+                </h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="rounded-md inline-flex text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600 transition-colors"
+              >
+                <span className="sr-only">Close</span>
+                <FiX className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 bg-gray-800">
+            <div className="space-y-4">
+              <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-300">Username</p>
+                    <p className="font-mono text-lg text-white">
+                      {credentials.username}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(credentials.username, "username")
+                    }
+                    className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
+                  >
+                    {copied.username ? (
+                      <FiCheck className="h-5 w-5" />
+                    ) : (
+                      <FiCopy className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm text-gray-300">Email</p>
+                    <p className="font-mono text-lg text-white">
+                      {credentials.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(credentials.email, "email")}
+                    className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
+                  >
+                    {copied.email ? (
+                      <FiCheck className="h-5 w-5" />
+                    ) : (
+                      <FiCopy className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-300">Password</p>
+                    <div className="flex items-center">
+                      <p className="font-mono text-lg text-white mr-2">
+                        {showPassword ? credentials.password : "••••••••"}
+                      </p>
+                      <button
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-1 text-gray-400 hover:text-yellow-400 transition-colors"
+                      >
+                        {showPassword ? (
+                          <FiEyeOff className="h-4 w-4" />
+                        ) : (
+                          <FiEye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(credentials.password, "password")
+                    }
+                    className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
+                  >
+                    {copied.password ? (
+                      <FiCheck className="h-5 w-5" />
+                    ) : (
+                      <FiCopy className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-300 mt-2">
+                <span className="text-yellow-500">Note:</span> You can change member password later in
+                Settings.
+              </p>
+            </div>
+
+            <div className="mt-4 p-4 bg-amber-900/50 border border-amber-600 rounded-lg">
+              <div className="flex items-start">
+                <FiAlertCircle className="h-5 w-5 text-amber-400 mr-2 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-300">
+                    Important
+                  </p>
+                  <p className="text-sm text-amber-200 mt-1">
+                    Please save these credentials securely and share them with
+                    the member. They will need them to access their account.
+                  </p>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="bg-gray-900 px-6 py-4 sm:flex sm:flex-row-reverse">
             <button
-              onClick={() => copyToClipboard(credentials.password, "password")}
-              className="p-2 text-gray-500 hover:text-yellow-700 transition-colors"
+              onClick={() => {
+                onClose();
+                navigate("/admin/members");
+              }}
+              className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-yellow-700 hover:bg-yellow-800 text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600 sm:ml-3 sm:w-auto sm:text-sm transition-all hover:shadow-lg"
             >
-              {copied.password ? (
-                <FiCheck className="h-5 w-5" />
-              ) : (
-                <FiCopy className="h-5 w-5" />
-              )}
+              Continue to Members Page
+              <FiUsers className="ml-2 h-4 w-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-600 shadow-sm px-6 py-3 bg-gray-700 text-base font-medium text-gray-200 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600 sm:mt-0 sm:w-auto sm:text-sm transition-all"
+            >
+              Close
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <div className="flex items-start">
-          <FiAlertCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-amber-800">Important</p>
-            <p className="text-sm text-amber-700 mt-1">
-              Please save these credentials securely and share them with the
-              member. They will need them to access their account.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 flex justify-end">
-        <button
-          onClick={onContinue}
-          className="px-6 py-3 bg-yellow-700 hover:bg-yellow-800 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center"
-        >
-          Continue to Members Page
-          <FiUsers className="ml-2 h-4 w-4" />
-        </button>
       </div>
     </div>
   );
@@ -708,11 +758,14 @@ const RegisterPage = () => {
 
         showConfirmationPrompt(
           "Registration Successful!",
-          `${memberData.first_name} ${memberData.last_name} has been successfully registered. Their account credentials have been generated and are displayed below.`,
+          `${memberData.first_name} ${memberData.last_name} has been successfully registered. Their account credentials have been generated.`,
           "success"
         );
 
-        setShowCredentials(true);
+        // Show credentials modal after a brief delay
+        setTimeout(() => {
+          setShowCredentials(true);
+        }, 1000);
 
         // Reset form
         setMemberData({
@@ -794,13 +847,12 @@ const RegisterPage = () => {
           </div>
         </div>
 
-        {/* Credentials Display */}
-        {showCredentials && (
-          <CredentialsCard
-            credentials={generatedCredentials}
-            onContinue={() => navigate("/admin/members")}
-          />
-        )}
+        {/* Credentials Modal */}
+        <CredentialsModal
+          isOpen={showCredentials}
+          credentials={generatedCredentials}
+          onClose={() => setShowCredentials(false)}
+        />
 
         {/* Form */}
         <div className="bg-black/20 rounded-2xl shadow-xl overflow-hidden">

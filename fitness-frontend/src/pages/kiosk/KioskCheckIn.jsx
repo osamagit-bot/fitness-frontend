@@ -484,17 +484,17 @@ const KioskCheckIn = () => {
   };
 
   return (
-    <div className="kiosk-container min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 text-white overflow-hidden">
+    <div className="kiosk-container min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 text-white overflow-hidden">
       {/* Header */}
-      <div className="kiosk-header bg-black bg-opacity-30 px-8 py-4">
+      <div className="kiosk-header bg-black/30 px-8 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Elite Fitness Club</h1>
-            <p className="text-blue-200">Attendance Kiosk</p>
+            <h1 className="text-3xl font-bold text-yellow-500">Elite Fitness Club</h1>
+            <p className="text-gray-300">Attendance Kiosk</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">{formatTime(currentTime)}</div>
-            <div className="text-blue-200">{formatDateDisplay(currentTime)}</div>
+            <div className="text-2xl font-bold text-white">{formatTime(currentTime)}</div>
+            <div className="text-gray-300">{formatDateDisplay(currentTime)}</div>
           </div>
         </div>
       </div>
@@ -521,7 +521,7 @@ const KioskCheckIn = () => {
                 <p className="text-xl text-green-200">
                   {welcomeMessage.submessage}
                 </p>
-                <div className="mt-4 text-gray-300">
+                <div className="mt-4 text-gray-200">
                   <p>Member ID: {welcomeMessage.member.athlete_id}</p>
                 </div>
               </motion.div>
@@ -563,10 +563,10 @@ const KioskCheckIn = () => {
                   className={`w-40 h-40 mx-auto mb-8 rounded-full flex items-center justify-center ${
                     isProcessing
                       ? "bg-yellow-500 shadow-lg shadow-yellow-500/50"
-                      : "bg-amber-600 shadow-lg shadow-blue-500/50"
+                      : "bg-yellow-600 shadow-lg shadow-yellow-500/50"
                   } ${
                     !isProcessing && !isAutoMode
-                      ? "cursor-pointer hover:bg-blue-600"
+                      ? "cursor-pointer hover:bg-yellow-600"
                       : ""
                   }`}
                 >
@@ -580,7 +580,7 @@ const KioskCheckIn = () => {
                 <h2 className="text-5xl font-bold mb-4">
                   {isProcessing ? "Processing..." : "Touch to Check In"}
                 </h2>
-                <p className="text-2xl text-gray-300">
+                <p className="text-2xl text-gray-200">
                   {isProcessing
                     ? "Verifying your fingerprint..."
                     : "Place your finger on the sensor to check in"}
@@ -637,12 +637,12 @@ const KioskCheckIn = () => {
                           onClick={enableAutoMode}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl text-xl font-semibold shadow-lg transition-colors mb-4"
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white px-8 py-4 rounded-xl text-xl font-semibold shadow-lg transition-colors mb-4"
                         >
                           <i className="bx bx-fingerprint text-2xl mr-2"></i>
                           Enable Auto Sensor
                         </motion.button>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-gray-300">
                           or manually touch the sensor above
                         </p>
                       </motion.div>
@@ -653,7 +653,7 @@ const KioskCheckIn = () => {
                       transition={{ repeat: Infinity, duration: 3, delay: 1 }}
                       className="mt-6"
                     >
-                      <i className="bx bx-down-arrow-alt text-4xl text-blue-300"></i>
+                      <i className="bx bx-down-arrow-alt text-4xl text-gray-200"></i>
                     </motion.div>
                   </motion.div>
                 ) : null}
@@ -663,27 +663,27 @@ const KioskCheckIn = () => {
         </div>
 
         {/* Right Side - Stats & Recent Check-ins */}
-        <div className="w-96 bg-black bg-opacity-30 p-6">
+        <div className="w-96 bg-black/30 p-6">
           {/* Today's Stats */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold mb-4 text-blue-200">
+            <h3 className="text-xl font-bold mb-4 text-gray-300">
               Today's Stats
             </h3>
             <div className="grid grid-cols-1 gap-4">
-              <div className="bg-blue-600 bg-opacity-50 rounded-lg p-4">
-                <div className="text-2xl font-bold">{stats.todayCount}</div>
-                <div className="text-blue-200">Check-ins Today</div>
+              <div className="bg-black/20 rounded-lg p-4 border border-gray-600">
+                <div className="text-2xl font-bold text-white">{stats.todayCount}</div>
+                <div className="text-gray-200">Check-ins Today</div>
               </div>
-              <div className="bg-purple-600 bg-opacity-50 rounded-lg p-4">
-                <div className="text-2xl font-bold">{stats.totalMembers}</div>
-                <div className="text-purple-200">Total Members</div>
+              <div className="bg-black/20 rounded-lg p-4 border border-gray-600">
+                <div className="text-2xl font-bold text-white">{stats.totalMembers}</div>
+                <div className="text-gray-200">Total Members</div>
               </div>
             </div>
           </div>
 
           {/* Recent Check-ins */}
           <div>
-            <h3 className="text-xl font-bold mb-4 text-blue-200">
+            <h3 className="text-xl font-bold mb-4 text-yellow-500">
               Recent Check-ins
             </h3>
             <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -699,20 +699,20 @@ const KioskCheckIn = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-gray-800 bg-opacity-50 rounded-lg p-3"
+                    className="bg-black/20 rounded-lg p-3 border border-gray-600"
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium">{checkIn.member_name}</div>
-                        <div className="text-sm text-gray-400">
+                        <div className="font-medium text-gray-200">{checkIn.member_name}</div>
+                        <div className="text-sm text-gray-300">
                           ID: {checkIn.member_id}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-medium">
+                        <div className="text-sm font-medium text-gray-200">
                           {formatTime(checkIn.check_in_datetime)}
                         </div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-gray-300">
                           {checkIn.verification_method}
                         </div>
                       </div>
@@ -726,7 +726,7 @@ const KioskCheckIn = () => {
       </div>
 
       {/* Footer */}
-      <div className="kiosk-footer bg-black bg-opacity-30 px-8 py-2 text-center">
+      <div className="kiosk-footer bg-black/30 px-8 py-2 text-center">
         <p className="text-gray-400">
           Kiosk Mode Active • WebAuthn Fingerprint Authentication •
           {isProcessing ? " Processing..." : " Ready for Check-in"}

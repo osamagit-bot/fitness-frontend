@@ -1505,7 +1505,7 @@ const DashboardPage = () => {
                         </motion.tr>
                       );
                     })}
-                ; )
+                
               </tbody>
             </table>
           </div>

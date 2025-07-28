@@ -40,14 +40,14 @@
 
 .kiosk-main {
   background: linear-gradient(135deg, 
-    rgba(59, 130, 246, 0.1) 0%, 
-    rgba(147, 51, 234, 0.1) 50%, 
-    rgba(79, 70, 229, 0.1) 100%);
+    rgba(34, 34, 34, 0.1) 0%, 
+    rgba(55, 55, 55, 0.1) 50%, 
+    rgba(40, 40, 44, 0.1) 100%);
 }
 
 .kiosk-footer {
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(124, 122, 0, 0.1);
 }
 
 /* Fingerprint animation */

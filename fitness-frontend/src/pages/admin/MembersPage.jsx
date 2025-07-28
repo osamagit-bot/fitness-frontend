@@ -352,41 +352,41 @@ function MembersPage() {
           {/* Large Screen Table */}
           <div className="hidden md:block">
             <table className="min-w-full divide-y divide-gray-600">
-              <thead className="bg-gray-700">
+              <thead className="bg-gray-900">
                 <tr>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     ID
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Box
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Time
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Fee
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Registered On
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Expiry Date
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-gray-600 divide-y text-white divide-gray-400">
+              <tbody className="bg-gray-700 divide-y text-white divide-gray-400">
                 {filteredAthletes.length === 0 ? (
                   <tr>
                     <td
@@ -412,10 +412,10 @@ function MembersPage() {
                       <tr
                         key={athlete.athlete_id}
                         className={`
-                ${isExpired ? "bg-red-50 hover:bg-red-100 text-sm" : ""}
+                ${isExpired ? "bg-red-900/30 hover:bg-red-900/40 text-sm" : ""}
                 ${
                   isExpiringSoon && !isExpired
-                    ? "bg-yellow-50 text-sm hover:bg-yellow-100"
+                    ? "bg-yellow-900/30 text-sm hover:bg-yellow-900/40"
                     : ""
                 }
                 ${
@@ -430,7 +430,7 @@ function MembersPage() {
                         </td>
                         <td
                           className={`px-3 md:px-6 py-2 md:py-4 whitespace-nowrap ${
-                            isExpired ? "text-red-700 font-semibold" : ""
+                            isExpired ? "text-red-300 font-semibold" : ""
                           }`}
                         >
                           {athlete.first_name} {athlete.last_name}
@@ -452,22 +452,22 @@ function MembersPage() {
                         </td>
                         <td
                           className={`px-3 md:px-6 py-2 md:py-4 whitespace-nowrap ${
-                            isExpired ? "text-red-600 font-semibold" : ""
+                            isExpired ? "text-red-300 font-semibold" : ""
                           }`}
                         >
                           {formatDate(athlete.expiry_date)}
                         </td>
                         <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap">
                           {isExpired ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-700">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-600 text-white">
                               Expired {Math.abs(daysRemaining)} days ago
                             </span>
                           ) : isExpiringSoon ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-700">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-600 text-white">
                               Expires in {daysRemaining} days
                             </span>
                           ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-700">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-600 text-white">
                               Active
                             </span>
                           )}
