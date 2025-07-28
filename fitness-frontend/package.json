@@ -12,7 +12,7 @@
     "lint:fix": "eslint . --ext js,jsx --fix",
     "type-check": "tsc --noEmit",
     "analyze": "npx vite-bundle-analyzer dist/stats.html",
-    "clean": "if exist dist rmdir /s /q dist",
+    "clean": "rimraf dist",
     "prebuild": "npm run clean"
   },
   "dependencies": {
@@ -70,6 +70,7 @@
     "globals": "^15.9.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.12",
+    "rimraf": "^6.0.1",
     "vite": "^5.4.1"
   }
 }
