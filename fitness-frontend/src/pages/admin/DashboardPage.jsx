@@ -122,7 +122,7 @@ const DashboardPage = () => {
           revenueResponse
         ] = await Promise.allSettled([
           api.get("admin-dashboard/stats/"),
-          api.get("members/"),
+          api.get("admin-dashboard/recent-registrations/"),
           api.get("attendance_history/?today_only=true"),
           api.get("admin-dashboard/revenue-trend/")
         ]);
@@ -156,8 +156,8 @@ const DashboardPage = () => {
         }
 
         if (membersResponse.status === 'fulfilled') {
-          membersList = Array.isArray(membersResponse.value.data) 
-            ? membersResponse.value.data 
+          membersList = Array.isArray(membersResponse.value.data.recent_registrations) 
+            ? membersResponse.value.data.recent_registrations 
             : membersResponse.value.data.results || [];
           
          
@@ -173,15 +173,8 @@ const DashboardPage = () => {
         // Process all data synchronously to avoid multiple renders
         processMemberInsights(membersList);
         
-        // Set default values immediately to prevent blinking
-        setTopActiveMembers(membersList.slice(0, 5).map((member, index) => ({
-          id: member.athlete_id || member.id,
-          name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || `Member #${member.athlete_id || member.id}`,
-          count: Math.floor(Math.random() * 10) + 1,
-          trend: Math.random() > 0.5 ? "up" : "down",
-          membershipType: member.membership_type || "Standard",
-          avatar: (member.first_name?.[0] || 'M') + (member.last_name?.[0] || 'M'),
-        })));
+        // Fetch top active members
+        await fetchTopActiveMembers();
         
         setRevenueData([{
           month: new Date().toLocaleDateString('en-US', { month: 'short' }),
@@ -620,10 +613,10 @@ const DashboardPage = () => {
     if (initializingRef.current) return;
     
     try {
-      const response = await api.get("members/");
-      let memberList = Array.isArray(response.data)
-        ? response.data.slice(0, 5)
-        : response.data.results?.slice(0, 5) || [];
+      const response = await api.get("admin-dashboard/recent-registrations/");
+      let memberList = Array.isArray(response.data.recent_registrations)
+        ? response.data.recent_registrations.slice(0, 5)
+        : [];
 
       // Debug: Log the member data structure
       console.log("Member data structure:", memberList[0]);
@@ -631,6 +624,17 @@ const DashboardPage = () => {
       setRecentMembers(memberList);
     } catch (error) {
       console.error("Error fetching recent members:", error);
+    }
+  };
+
+  const fetchTopActiveMembers = async () => {
+    try {
+      const response = await api.get("admin-dashboard/top-active-members/");
+      const topMembers = response.data.top_active_members || [];
+      setTopActiveMembers(topMembers);
+    } catch (error) {
+      console.error("Error fetching top active members:", error);
+      setTopActiveMembers([]);
     }
   };
 
@@ -885,8 +889,11 @@ const DashboardPage = () => {
                   initializingRef.current = true;
                   setIsInitializing(true);
                   try {
+                    // Call the refresh endpoint first
+                    await api.get("admin-dashboard/refresh/");
                     await fetchDashboardData();
                     await fetchRecentMembers();
+                    await fetchTopActiveMembers();
                     await generateMemberInsights();
                     await generateRevenueData();
                     await generateAttendanceTrendOptimized();
@@ -1319,13 +1326,13 @@ const DashboardPage = () => {
               Top Active Members
             </h3>
             <div className="space-y-4">
-              {loading
+              {topActiveMembers.length === 0
                 ? [...Array(5)].map((_, i) => (
                     <div key={i} className="flex items-center animate-pulse">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full mr-3"></div>
+                      <div className="w-10 h-10 bg-gray-500 rounded-full mr-3"></div>
                       <div className="flex-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-4 bg-gray-500 rounded w-3/4 mb-1"></div>
+                        <div className="h-3 bg-gray-500 rounded w-1/2"></div>
                       </div>
                     </div>
                   ))
@@ -1405,120 +1412,104 @@ const DashboardPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-gray-700 divide-y divide-gray-600">
-                {isInitializing ? (
-                  // Loading skeleton
-                  Array(5)
-                    .fill(0)
-                    .map((_, index) => (
-                      <tr key={index} className="animate-pulse">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 bg-gray-500 rounded-full"></div>
-                            <div className="ml-4">
-                              <div className="h-4 bg-gray-500 rounded w-24"></div>
-                              <div className="h-3 bg-gray-500 rounded w-32 mt-1"></div>
+                {recentMembers.length === 0
+                  ? // Loading skeleton
+                    Array(5)
+                      .fill(0)
+                      .map((_, index) => (
+                        <tr key={index} className="animate-pulse">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 bg-gray-500 rounded-full"></div>
+                              <div className="ml-4">
+                                <div className="h-4 bg-gray-500 rounded w-24"></div>
+                                <div className="h-3 bg-gray-500 rounded w-32 mt-1"></div>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-500 rounded w-16"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-500 rounded w-20"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-6 bg-gray-500 rounded-full w-16"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-500 rounded w-20"></div>
-                        </td>
-                      </tr>
-                    ))
-                ) : recentMembers.length > 0 ? (
-                  recentMembers.map((member, index) => {
-                    const isExpired =
-                      member.expiry_date &&
-                      new Date(member.expiry_date) < new Date();
-                    const memberName =
-                      member.name ||
-                      `${member.first_name || ""} ${
-                        member.last_name || ""
-                      }`.trim();
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-4 bg-gray-500 rounded w-16"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-4 bg-gray-500 rounded w-20"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-6 bg-gray-500 rounded-full w-16"></div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-4 bg-gray-500 rounded w-20"></div>
+                          </td>
+                        </tr>
+                      ))
+                  : recentMembers.map((member, index) => {
+                      const isExpired =
+                        member.expiry_date &&
+                        new Date(member.expiry_date) < new Date();
+                      const memberName =
+                        member.name ||
+                        `${member.first_name || ""} ${
+                          member.last_name || ""
+                        }`.trim();
 
-                    return (
-                      <motion.tr
-                        key={member.athlete_id || member.id || index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="hover:bg-gray-600"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-black font-semibold">
-                              {memberName.charAt(0).toUpperCase() || "M"}
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-white">
-                                {memberName || "Unknown Member"}
+                      return (
+                        <motion.tr
+                          key={member.athlete_id || member.id || index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="hover:bg-gray-600"
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-black font-semibold">
+                                {memberName.charAt(0).toUpperCase() || "M"}
                               </div>
-                              <div className="text-sm text-gray-300">
-                                {member.email ||
-                                  member.user_email ||
-                                  "No email"}
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-white">
+                                  {memberName || "Unknown Member"}
+                                </div>
+                                <div className="text-sm text-gray-300">
+                                  {member.email ||
+                                    member.user_email ||
+                                    "No email"}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                          {member.athlete_id || member.id || "N/A"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                            {member.membership_type || "Standard"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              isExpired
-                                ? "bg-red-100 text-red-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {isExpired ? "Expired" : "Active"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {member.start_date
-                            ? formatDate(member.start_date)
-                            : member.created_at
-                            ? formatDate(member.created_at)
-                            : "N/A"}
-                        </td>
-                      </motion.tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center">
-                      <div className="text-gray-300">
-                        <FiUsers className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                        <h3 className="text-sm font-medium text-white mb-1">
-                          No recent members
-                        </h3>
-                        <p className="text-sm text-gray-300">
-                          No members have been registered recently.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                            {member.athlete_id || member.id || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                              {member.membership_type || "Standard"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                isExpired
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}
+                            >
+                              {isExpired ? "Expired" : "Active"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                            {member.start_date
+                              ? formatDate(member.start_date)
+                              : member.created_at
+                              ? formatDate(member.created_at)
+                              : "N/A"}
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                ; )
               </tbody>
             </table>
           </div>
         </motion.div>
-
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1562,12 +1553,8 @@ const DashboardPage = () => {
                   to={action.to}
                   className="flex items-center justify-center p-4 rounded-xl bg-gray-700 hover:bg-gray-600 transition-colors duration-200 group"
                 >
-                  <action.icon
-                    className="h-6 w-6 mr-3 text-yellow-500"
-                  />
-                  <span
-                    className="font-medium text-white group-hover:text-gray-200"
-                  >
+                  <action.icon className="h-6 w-6 mr-3 text-yellow-500" />
+                  <span className="font-medium text-white group-hover:text-gray-200">
                     {action.label}
                   </span>
                 </Link>

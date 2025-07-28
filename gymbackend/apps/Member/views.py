@@ -154,7 +154,7 @@ class MemberViewSet(viewsets.ModelViewSet):
         if CustomUser.objects.filter(email=email).exists():
             return Response({"error": "Email already exists."}, status=400)
 
-        username = f"{data.get("first_name", "").lower()}{data.get("athlete_id", "")}"
+        username = f"{data.get('first_name', '').lower()}{data.get('athlete_id', '')}"
 
         if CustomUser.objects.filter(username=username).exists():
             return Response({"error": "Username already taken."}, status=400)
@@ -210,7 +210,7 @@ class MemberViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Invalid credentials"}, status=401)
 
         authenticated_user = authenticate(username=user.email, password=password)
-        print(f"Authentication result: {"Success" if authenticated_user else "Failed"}")
+        print(f"Authentication result: {'Success' if authenticated_user else 'Failed'}")
 
         if authenticated_user:
             refresh = RefreshToken.for_user(user)
@@ -373,7 +373,7 @@ class MemberViewSet(viewsets.ModelViewSet):
             member=member,
             member_name=f"{member.first_name} {member.last_name}",
             amount=member.monthly_fee,
-            description=f"Renewal for {new_expiry.strftime("%B %Y")}",
+            description=f"Renewal for {new_expiry.strftime('%B %Y')}",
         )
 
         member.start_date = now
@@ -511,7 +511,7 @@ class TrainerViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Username not found"}, status=status.HTTP_401_UNAUTHORIZED)
 
         user = authenticate(username=username, password=password)
-        print(f"Authentication result: {"Success" if user else "Failed"}")
+        print(f"Authentication result: {'Success' if user else 'Failed'}")
 
         if user is not None:
             trainer = Trainer.objects.get(user=user)

@@ -97,9 +97,12 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             now = timezone.now()
 
             # Calculate shop revenue for current month
-            monthly_revenue_shop = Purchase.objects.filter(
-                date__month=now.month, date__year=now.year
-            ).aggregate(total=Sum("total_price"))["total"] or 0
+            try:
+                monthly_revenue_shop = Purchase.objects.filter(
+                    date__month=now.month, date__year=now.year
+                ).aggregate(total=Sum("total_price"))["total"] or 0
+            except:
+                monthly_revenue_shop = 0
 
             # Calculate membership payments for current month
             monthly_renewal_revenue = MembershipPayment.objects.filter(
@@ -108,14 +111,20 @@ class AdminDashboardViewSet(viewsets.ViewSet):
 
             # Calculate total revenue from all time
             total_membership_revenue = MembershipPayment.objects.aggregate(total=Sum("amount"))["total"] or 0
-            total_shop_revenue = Purchase.objects.aggregate(total=Sum("total_price"))["total"] or 0
+            try:
+                total_shop_revenue = Purchase.objects.aggregate(total=Sum("total_price"))["total"] or 0
+            except:
+                total_shop_revenue = 0
             total_revenue = total_membership_revenue + total_shop_revenue
 
             # Monthly membership revenue from member fees - use persistent tracking
-            from apps.Member.models import MembershipRevenue
-            monthly_membership_revenue = MembershipRevenue.update_current_month_revenue()
+            try:
+                from apps.Member.models import MembershipRevenue
+                monthly_membership_revenue = MembershipRevenue.update_current_month_revenue()
+            except:
+                monthly_membership_revenue = Member.objects.aggregate(total=Sum("monthly_fee"))["total"] or 0
 
-            total_monthly_revenue = monthly_revenue_shop + monthly_renewal_revenue + monthly_membership_revenue
+            total_monthly_revenue = float(monthly_revenue_shop) + float(monthly_renewal_revenue) + float(monthly_membership_revenue)
 
             days_in_month = (
                 timezone.datetime(now.year + (now.month == 12), ((now.month % 12) + 1), 1) -
@@ -127,16 +136,27 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             return Response({
                 "total_members": total_members,
                 "total_trainers": total_trainers,
-                "monthly_revenue": float(monthly_membership_revenue),  # Monthly membership fees
-                "monthly_revenue_shop": monthly_revenue_shop,  # Monthly shop sales
-                "monthly_renewal_revenue": monthly_renewal_revenue,  # Monthly payments
+                "monthly_revenue": float(monthly_membership_revenue),
+                "monthly_revenue_shop": float(monthly_revenue_shop),
+                "monthly_renewal_revenue": float(monthly_renewal_revenue),
                 "daily_revenue": f"{daily_revenue:.2f} AFN",
-                "total_revenue": total_revenue,  # All time total
-                "total_monthly_revenue": total_monthly_revenue,  # Combined monthly
+                "total_revenue": float(total_revenue),
+                "total_monthly_revenue": float(total_monthly_revenue),
             })
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print(f"Dashboard stats error: {str(e)}")
+            return Response({
+                "total_members": 0,
+                "total_trainers": 0,
+                "monthly_revenue": 0,
+                "monthly_revenue_shop": 0,
+                "monthly_renewal_revenue": 0,
+                "daily_revenue": "0.00 AFN",
+                "total_revenue": 0,
+                "total_monthly_revenue": 0,
+                "error": str(e)
+            }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], url_path="login", permission_classes=[permissions.AllowAny])
     def login(self, request):
@@ -192,6 +212,18 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             print(f"❌ User is not admin: {auth_username}")
             return Response({"detail": "User is not an admin"}, status=403)
 
+    @action(detail=False, methods=["get"], url_path="refresh")
+    def refresh_data(self, request):
+        """Refresh dashboard data"""
+        try:
+            # Force refresh of membership revenue
+            from apps.Member.models import MembershipRevenue
+            MembershipRevenue.update_current_month_revenue()
+            
+            return Response({"message": "Data refreshed successfully"})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
     @action(detail=False, methods=["get", "post"], url_path="maintenance-mode")
     def maintenance_mode(self, request):
         """Handle maintenance mode toggle"""
@@ -199,9 +231,6 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             return Response({"detail": "Admin access required"}, status=403)
         
         if request.method == "GET":
-            # Get current maintenance mode status
-        
-            
             # Check if maintenance mode file exists
             maintenance_file = os.path.join(settings.BASE_DIR, '.maintenance_mode')
             is_enabled = os.path.exists(maintenance_file)
@@ -210,7 +239,6 @@ class AdminDashboardViewSet(viewsets.ViewSet):
         
         elif request.method == "POST":
             # Toggle maintenance mode
-         
             enabled = request.data.get("enabled", False)
             maintenance_file = os.path.join(settings.BASE_DIR, '.maintenance_mode')
             
@@ -281,6 +309,103 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             print(f"Export error: {str(e)}")
             traceback.print_exc()
             return Response({"error": str(e)}, status=500)
+
+    @action(detail=False, methods=["get"], url_path="recent-registrations")
+    def recent_registrations(self, request):
+        """Get recent member registrations"""
+        try:
+            # Get last 10 registered members
+            recent_members = Member.objects.select_related('user').order_by('-start_date')[:10]
+            
+            registrations = []
+            for member in recent_members:
+                registrations.append({
+                    'id': member.athlete_id,
+                    'name': f"{member.first_name} {member.last_name}",
+                    'email': member.user.email if member.user else '',
+                    'phone': member.phone or '',
+                    'membership_type': member.get_membership_type_display(),
+                    'start_date': member.start_date.strftime('%Y-%m-%d'),
+                    'monthly_fee': float(member.monthly_fee),
+                    'status': 'Active' if member.is_active else 'Inactive'
+                })
+            
+            return Response({
+                'recent_registrations': registrations,
+                'count': len(registrations)
+            })
+            
+        except Exception as e:
+            print(f"Recent registrations error: {str(e)}")
+            return Response({
+                'recent_registrations': [],
+                'count': 0,
+                'error': str(e)
+            }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="top-active-members")
+    def top_active_members(self, request):
+        """Get top active members with attendance data"""
+        try:
+            from apps.Attendance.models import Attendance
+            from django.db.models import Count
+            from datetime import datetime, timedelta
+            
+            # Get last 30 days
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=30)
+            
+            # Get attendance counts per member
+            attendance_counts = Attendance.objects.filter(
+                date__range=[start_date, end_date]
+            ).values('member__athlete_id', 'member__first_name', 'member__last_name', 'member__membership_type').annotate(
+                count=Count('id')
+            ).order_by('-count')[:5]
+            
+            top_members = []
+            for item in attendance_counts:
+                name = f"{item['member__first_name'] or ''} {item['member__last_name'] or ''}".strip()
+                if not name:
+                    name = f"Member #{item['member__athlete_id']}"
+                    
+                top_members.append({
+                    'id': item['member__athlete_id'],
+                    'name': name,
+                    'count': item['count'],
+                    'trend': 'up',
+                    'membershipType': item['member__membership_type'] or 'Standard',
+                    'avatar': (item['member__first_name'] or 'M')[0] + (item['member__last_name'] or 'M')[0]
+                })
+            
+            # If no attendance data, get recent members
+            if not top_members:
+                recent_members = Member.objects.select_related('user').order_by('-start_date')[:5]
+                for member in recent_members:
+                    name = f"{member.first_name} {member.last_name}".strip()
+                    if not name:
+                        name = f"Member #{member.athlete_id}"
+                        
+                    top_members.append({
+                        'id': member.athlete_id,
+                        'name': name,
+                        'count': 0,
+                        'trend': 'stable',
+                        'membershipType': member.get_membership_type_display(),
+                        'avatar': member.first_name[0] + member.last_name[0] if member.first_name and member.last_name else 'MM'
+                    })
+            
+            return Response({
+                'top_active_members': top_members,
+                'count': len(top_members)
+            })
+            
+        except Exception as e:
+            print(f"Top active members error: {str(e)}")
+            return Response({
+                'top_active_members': [],
+                'count': 0,
+                'error': str(e)
+            }, status=status.HTTP_200_OK)
 
 
 

@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedDefaultRouter
 
-from .views import MemberViewSet,TrainerViewSet,TrainingViewSet
+from apps.Member.views import MemberViewSet,TrainerViewSet,TrainingViewSet
 
 
 router = DefaultRouter()
