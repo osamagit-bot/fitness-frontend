@@ -666,7 +666,7 @@ const KioskCheckIn = () => {
         <div className="w-96 bg-black/30 p-6">
           {/* Today's Stats */}
           <div className="mb-8">
-            <h3 className="text-xl font-bold mb-4 text-gray-300">
+            <h3 className="text-xl font-bold mb-4 text-yellow-500">
               Today's Stats
             </h3>
             <div className="grid grid-cols-1 gap-4">
