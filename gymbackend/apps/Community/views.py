@@ -10,7 +10,7 @@ from rest_framework.authentication import TokenAuthentication, SessionAuthentica
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import PostSerializer, CommentSerializer, AnnouncementSerializer, ChallengeSerializer, SupportTicketSerializer, TicketResponseSerializer,FAQCategorySerializer,FAQSerializer,TicketResponseSerializer,FAQ
-
+from apps.Notifications.services import notification_service
 from rest_framework.permissions import IsAdminUser
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
@@ -255,7 +255,7 @@ class SupportViewSet(viewsets.ViewSet):
             if serializer.is_valid():
                 ticket = serializer.save(member=member)
                 # Support ticket creation notification
-                from .services import notification_service
+                
                 notification_service.create_notification(
                     f"New support ticket created by {member.first_name} {member.last_name}"
                 )
@@ -271,7 +271,30 @@ class SupportViewSet(viewsets.ViewSet):
             print(f"Error creating ticket: {str(e)}")
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    @action(detail=False, methods=["delete"], url_path="tickets/delete")
+    def delete_ticket(self, request):
+        ticket_id = request.query_params.get("ticketID")
+        if not ticket_id:
+            return Response({"error": "ticketID parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            ticket = SupportTicket.objects.get(id=ticket_id)
+
+            # Optional: restrict deletion to ticket owner
+            if not (request.user.is_staff or request.user == ticket.member.user):
+                return Response({"error": "Not authorized to delete this ticket"}, status=status.HTTP_403_FORBIDDEN)
+
+            ticket.delete()
+            return Response({"message": "Ticket deleted successfully"}, status=status.HTTP_200_OK)
+        except SupportTicket.DoesNotExist:
+            return Response({"error": "Ticket not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            import traceback
+            print(f"Error deleting ticket: {str(e)}")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+  
     @action(detail=False, methods=["get"], url_path="faqs")
     def get_faqs(self, request):
         try:
@@ -372,7 +395,7 @@ class AdminSupportViewSet(viewsets.ViewSet):
             response = TicketResponse(ticket=ticket, message=request.data.get("message", ""), responder=request.user)
             response.save()
             # Support ticket response notification handled by service layer
-            from .services import notification_service
+
             notification_service.support_ticket_responded(pk)
             serializer = TicketResponseSerializer(response)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -386,7 +409,7 @@ class AdminSupportViewSet(viewsets.ViewSet):
             ticket.status = "closed"
             ticket.save()
             # Support ticket close notification handled by service layer
-            from .services import notification_service
+          
             notification_service.support_ticket_closed(pk)
             serializer = SupportTicketSerializer(ticket)
             return Response(serializer.data)
@@ -413,7 +436,7 @@ class AdminSupportViewSet(viewsets.ViewSet):
             faq = FAQ.objects.get(id=pk)
             faq.delete()
             # FAQ deletion notification handled by service layer
-            from .services import notification_service
+            
             notification_service.faq_deleted(pk)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except:

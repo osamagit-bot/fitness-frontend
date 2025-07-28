@@ -563,7 +563,7 @@ const KioskCheckIn = () => {
                   className={`w-40 h-40 mx-auto mb-8 rounded-full flex items-center justify-center ${
                     isProcessing
                       ? "bg-yellow-500 shadow-lg shadow-yellow-500/50"
-                      : "bg-blue-500 shadow-lg shadow-blue-500/50"
+                      : "bg-amber-600 shadow-lg shadow-blue-500/50"
                   } ${
                     !isProcessing && !isAutoMode
                       ? "cursor-pointer hover:bg-blue-600"

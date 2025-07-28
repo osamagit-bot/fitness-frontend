@@ -23,6 +23,12 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
 
+# CSRF Settings for Production
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    'http://localhost:3000',  # Development
+    'http://127.0.0.1:3000',  # Development
+])
+
 # Database Connection Security
 DATABASES = {
     'default': {
@@ -158,4 +164,5 @@ HISAB_PAY_API_URL = os.environ.get('HISAB_PAY_API_URL', 'https://api.hisabpay.co
 if not HISAB_PAY_API_KEY or not HISAB_PAY_MERCHANT_ID:
     import warnings
     warnings.warn("HisabPay credentials not configured. Payment system will run in simulation mode.")
+
 

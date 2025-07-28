@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 const FAQ = () => {
+  const { classes } = useTheme();
   const [activeIndex, setActiveIndex] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
 
@@ -59,12 +61,12 @@ const FAQ = () => {
   };
 
   return (
-    <section className="py-16 bg-white">
+    <section className={`py-16 ${classes.bg.primary}`}>
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-black mb-4">Frequently <span className='text-yellow-400'>Asked Questions</span></h2>
+          <h2 className={`text-4xl font-bold ${classes.text.primary} mb-4`}>Frequently <span className='text-yellow-400'>Asked Questions</span></h2>
           <div className="w-24 h-1 bg-yellow-500 mx-auto"></div>
-          <p className="mt-4 text-gray-800 max-w-2xl mx-auto">
+          <p className={`mt-4 ${classes.text.secondary} max-w-2xl mx-auto`}>
             Find answers to common questions about our fitness club
           </p>
         </div>
@@ -78,7 +80,7 @@ const FAQ = () => {
               className={`px-6 py-3 rounded-full font-medium transition-colors duration-300 ${
                 selectedCategory === category.title
                   ? "bg-yellow-500 text-black"
-                  : "bg-gray-100 text-black hover:bg-yellow-500"
+                  : `${classes.bg.tertiary} ${classes.text.primary} hover:bg-yellow-500`
               }`}
             >
               {category.title}
@@ -93,15 +95,15 @@ const FAQ = () => {
               <button
                 onClick={() => toggleFAQ(index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className="w-full px-6 py-4 text-left bg-gray-200 hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 "
+                className={`w-full px-6 py-4 text-left ${classes.bg.tertiary} ${classes.card.hover} transition-colors focus:outline-none focus:ring-2`}
                 aria-expanded={activeIndex === index}
                 aria-controls={`faq-content-${index}`}
               >
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold text-gray-700">
+                  <h3 className={`text-lg font-semibold ${classes.text.primary}`}>
                     {faq.question}
                   </h3>
-                  <i className={`bx ${activeIndex === index ? 'bx-minus' : 'bx-plus'} text-gray-700 text-xl transition-transform`} />
+                  <i className={`bx ${activeIndex === index ? 'bx-minus' : 'bx-plus'} ${classes.text.primary} text-xl transition-transform`} />
                 </div>
               </button>
               <div
@@ -112,7 +114,7 @@ const FAQ = () => {
                 role="region"
                 aria-labelledby={`faq-button-${index}`}
               >
-                <div className="px-6 py-4 bg-yellow-600 text-gray-100">
+                <div className={`px-6 py-4 bg-yellow-600 ${classes.text.primary === 'text-white' ? 'text-gray-100' : 'text-white'}`}>
                   {faq.answer}
                 </div>
               </div>
@@ -121,7 +123,7 @@ const FAQ = () => {
         </div>
 
         <div className="text-center mt-12">
-          <p className="text-gray-700 mb-4">Can't find the answer you're looking for?</p>
+          <p className={`${classes.text.secondary} mb-4`}>Can't find the answer you're looking for?</p>
           <button className="px-8 py-3 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-600 transition-colors duration-300 shadow-lg">
             Contact Us
           </button>

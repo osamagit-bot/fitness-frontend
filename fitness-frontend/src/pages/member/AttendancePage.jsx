@@ -19,16 +19,22 @@ const AttendancePage = () => {
   const [memberData, setMemberData] = useState(null); // Add member data state
 
   useEffect(() => {
-    if (user?.athlete_id) {
+    const memberId = localStorage.getItem('member_id');
+    if (memberId) {
       fetchAttendanceData();
       fetchMemberData(); // Fetch member data for start date
       checkBiometricRegistration();
     }
-  }, [user]);
+  }, []);
 
   const fetchMemberData = async () => {
     try {
-      const response = await api.get(`members/${user.athlete_id}/`);
+      const memberId = localStorage.getItem('member_id');
+      if (!memberId) {
+        console.error('No member ID found');
+        return;
+      }
+      const response = await api.get(`members/${memberId}/`);
       setMemberData(response.data);
     } catch (error) {
       console.error("Error fetching member data:", error);
@@ -38,24 +44,63 @@ const AttendancePage = () => {
   const calculateStreak = (attendanceData) => {
     if (!attendanceData.length) return 0;
 
-    // Sort by date descending (most recent first)
-    const sortedData = [...attendanceData].sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
-    );
+    // Get unique dates and sort descending
+    const uniqueDates = [...new Set(attendanceData.map(record => record.date))]
+      .sort((a, b) => new Date(b) - new Date(a));
+
+    if (uniqueDates.length === 0) return 0;
 
     let streak = 0;
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Start checking from today or most recent attendance
+    let checkDate = new Date(today);
+    const mostRecentDate = new Date(uniqueDates[0]);
+    mostRecentDate.setHours(0, 0, 0, 0);
+    
+    // If most recent attendance is today, count it
+    if (mostRecentDate.getTime() === today.getTime()) {
+      streak = 1;
+      checkDate.setDate(checkDate.getDate() - 1);
+      
+      // Check previous days
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const attendanceDate = new Date(uniqueDates[i]);
+        attendanceDate.setHours(0, 0, 0, 0);
+        checkDate.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i < sortedData.length; i++) {
-      const recordDate = new Date(sortedData[i].date);
-      const expectedDate = new Date(today);
-      expectedDate.setDate(today.getDate() - i);
+        if (attendanceDate.getTime() === checkDate.getTime()) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    } else {
+      // If most recent is yesterday, start from yesterday
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      
+      if (mostRecentDate.getTime() === yesterday.getTime()) {
+        streak = 1;
+        checkDate = new Date(yesterday);
+        checkDate.setDate(checkDate.getDate() - 1);
+        
+        // Check previous days
+        for (let i = 1; i < uniqueDates.length; i++) {
+          const attendanceDate = new Date(uniqueDates[i]);
+          attendanceDate.setHours(0, 0, 0, 0);
+          checkDate.setHours(0, 0, 0, 0);
 
-      // Check if this record is for the expected consecutive day
-      if (recordDate.toDateString() === expectedDate.toDateString()) {
-        streak++;
-      } else {
-        break;
+          if (attendanceDate.getTime() === checkDate.getTime()) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
       }
     }
 
@@ -95,38 +140,43 @@ const AttendancePage = () => {
 
   const fetchAttendanceData = async () => {
     try {
+      const memberId = localStorage.getItem('member_id');
+      if (!memberId) {
+        console.error('No member ID found');
+        setAttendanceHistory([]);
+        return;
+      }
+
       // Use the member-specific attendance endpoint
       const response = await api.get(
-        `attendance/${user?.athlete_id}/history/`
+        `attendance_history/?member_id=${memberId}`
       );
-      setAttendanceHistory(response.data);
+      
+      const attendanceData = Array.isArray(response.data) ? response.data : [];
+      setAttendanceHistory(attendanceData);
 
       // Calculate current streak
-      const streak = calculateStreak(response.data);
+      const streak = calculateStreak(attendanceData);
       setCurrentStreak(streak);
 
       // Check if already checked in today
       const today = new Date().toISOString().split("T")[0];
-      const todayRecord = response.data.find((record) => record.date === today);
+      const todayRecord = attendanceData.find((record) => record.date === today);
       setTodayAttendance(todayRecord);
     } catch (error) {
       console.error("Error fetching attendance data:", error);
-      // Fallback: try the public endpoint with member filter
-      try {
-        const fallbackResponse = await api.get(
-          `attendance_history/?member_id=${user?.athlete_id}`
-        );
-        setAttendanceHistory(fallbackResponse.data);
-      } catch (fallbackError) {
-        console.error("Fallback fetch also failed:", fallbackError);
-        setAttendanceHistory([]);
-      }
+      setAttendanceHistory([]);
     }
   };
 
   const checkBiometricRegistration = async () => {
     try {
-      const response = await api.get(`members/${user?.athlete_id}/`);
+      const memberId = localStorage.getItem('member_id');
+      if (!memberId) {
+        setIsRegistered(false);
+        return;
+      }
+      const response = await api.get(`members/${memberId}/`);
       console.log(
         "Member biometric status:",
         response.data.biometric_registered
@@ -140,8 +190,7 @@ const AttendancePage = () => {
 const registerFingerprint = async () => {
   console.log("🔍 DEBUG - Full user object:", user);
   console.log("🔍 DEBUG - user.athlete_id:", user?.athlete_id);
-  console.log("🔍 DEBUG - localStorage memberId:", localStorage.getItem('memberId'));
-  console.log("🔍 DEBUG - localStorage memberID:", localStorage.getItem('memberID'));
+  console.log("🔍 DEBUG - localStorage member_id:", localStorage.getItem('member_id'));
   
   if (!isWebAuthnSupported()) {
     toast.error("WebAuthn not supported in this browser");
@@ -158,8 +207,7 @@ const registerFingerprint = async () => {
   try {
     // Try multiple sources for athlete_id
     const athleteId = user?.athlete_id || 
-                     localStorage.getItem('memberId') || 
-                     localStorage.getItem('memberID') || 
+                     localStorage.getItem('member_id') || 
                      user?.id;
     
     console.log("🔍 DEBUG - Using athlete_id:", athleteId);
@@ -232,17 +280,17 @@ const registerFingerprint = async () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto ml-0">
+    <div className="p-6 max-w-6xl mx-auto ml-0 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+        <h1 className="text-3xl font-bold text-white mb-2">
           Attendance & Check-in
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-300">
           Track your gym attendance with fingerprint authentication
         </p>
       </motion.div>
@@ -253,30 +301,30 @@ const registerFingerprint = async () => {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
+          className="bg-gray-700 rounded-xl shadow-lg p-6 border border-gray-600"
         >
           <div className="text-center">
             <div className="mb-6">
-              <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <i className="bx bx-fingerprint text-white text-4xl"></i>
+              <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
+                <i className="bx bx-fingerprint text-black text-4xl"></i>
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              <h2 className="text-2xl font-bold text-white mb-2">
                 Fingerprint Registration
               </h2>
 
               {!isRegistered ? (
                 <div>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-300 mb-4">
                     Register your fingerprint to enable quick check-in
                   </p>
                   <button
                     onClick={registerFingerprint}
                     disabled={loading}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-8 py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
                   >
                     {loading ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                         Registering...
                       </>
                     ) : (
@@ -289,7 +337,7 @@ const registerFingerprint = async () => {
                 </div>
               ) : (
                 <div className="text-center">
-                  <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg mb-4">
+                  <div className="bg-green-900/30 text-green-400 px-4 py-2 rounded-lg mb-4">
                     <i className="bx bx-check-circle text-2xl mb-2"></i>
                     <p className="font-semibold">
                       Fingerprint Registered Successfully
@@ -305,13 +353,13 @@ const registerFingerprint = async () => {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
+          className="bg-gray-700 rounded-xl shadow-lg p-6 border border-gray-600"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-800">
+            <h3 className="text-xl font-bold text-white">
               Recent Attendance
             </h3>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-300">
               Total visits: {attendanceHistory.length}
             </div>
           </div>
@@ -319,8 +367,8 @@ const registerFingerprint = async () => {
           <div className="max-h-96 overflow-y-auto">
             {attendanceHistory.length === 0 ? (
               <div className="text-center py-8">
-                <i className="bx bx-calendar-x text-4xl text-gray-300 mb-2"></i>
-                <p className="text-gray-500">No attendance records yet</p>
+                <i className="bx bx-calendar-x text-4xl text-gray-500 mb-2"></i>
+                <p className="text-gray-300">No attendance records yet</p>
                 <p className="text-sm text-gray-400">
                   Start checking in to see your history
                 </p>
@@ -330,23 +378,23 @@ const registerFingerprint = async () => {
                 {attendanceHistory.slice(0, 10).map((record, index) => (
                   <div
                     key={record.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100"
+                    className="flex items-center justify-between p-3 bg-gray-600 rounded-lg border border-gray-500"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <i className="bx bx-check text-blue-600"></i>
+                      <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <i className="bx bx-check text-yellow-400"></i>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-800">
+                        <p className="font-medium text-white">
                           {formatDate(record.date)}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-300">
                           {formatTime(record.check_in_time)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-400">
                         <i className="bx bx-fingerprint mr-1"></i>
                         {record.verification_method}
                       </span>
@@ -359,7 +407,7 @@ const registerFingerprint = async () => {
 
           {attendanceHistory.length > 10 && (
             <div className="mt-4 text-center">
-              <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+              <button className="text-yellow-400 hover:text-yellow-300 text-sm font-medium">
                 View All History
               </button>
             </div>
@@ -374,10 +422,10 @@ const registerFingerprint = async () => {
         transition={{ delay: 0.3 }}
         className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6"
       >
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">This Month</p>
+              <p className="text-yellow-200 text-sm">This Month</p>
               <p className="text-2xl font-bold">
                 {
                   attendanceHistory.filter((record) => {
@@ -390,68 +438,80 @@ const registerFingerprint = async () => {
                   }).length
                 }
               </p>
-              <p className="text-blue-100 text-sm">My Check-ins</p>
+              <p className="text-yellow-200 text-sm">My Check-ins</p>
             </div>
-            <i className="bx bx-calendar text-3xl text-blue-200"></i>
+            <i className="bx bx-calendar text-3xl text-yellow-300"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm">This Week</p>
+              <p className="text-yellow-200 text-sm">This Week</p>
               <p className="text-2xl font-bold">
                 {
-                  attendanceHistory.filter((record) => {
-                    const recordDate = new Date(record.date);
-                    const now = new Date();
-                    const startOfWeek = new Date(
-                      now.setDate(now.getDate() - now.getDay())
-                    );
-                    return recordDate >= startOfWeek;
-                  }).length
+                  (() => {
+                    const today = new Date();
+                    const startOfWeek = new Date(today);
+                    const dayOfWeek = today.getDay();
+                    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    startOfWeek.setDate(today.getDate() - daysToMonday);
+                    startOfWeek.setHours(0, 0, 0, 0);
+                    
+                    const endOfWeek = new Date(startOfWeek);
+                    endOfWeek.setDate(startOfWeek.getDate() + 6);
+                    endOfWeek.setHours(23, 59, 59, 999);
+                    
+                    const thisWeekRecords = attendanceHistory.filter((record) => {
+                      const recordDate = new Date(record.date);
+                      return recordDate >= startOfWeek && recordDate <= endOfWeek;
+                    });
+                    
+                    const uniqueDays = new Set(thisWeekRecords.map(record => record.date));
+                    return uniqueDays.size;
+                  })()
                 }
               </p>
-              <p className="text-green-100 text-sm">My Check-ins</p>
+              <p className="text-yellow-200 text-sm">My Check-ins</p>
             </div>
-            <i className="bx bx-trending-up text-3xl text-green-200"></i>
+            <i className="bx bx-trending-up text-3xl text-yellow-300"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-orange-100 text-sm">Current Streak</p>
+              <p className="text-yellow-200 text-sm">Current Streak</p>
               <p className="text-2xl font-bold">{currentStreak}</p>
-              <p className="text-orange-100 text-sm">Days</p>
+              <p className="text-yellow-200 text-sm">Days</p>
             </div>
-            <i className="bx bx-trophy text-3xl text-orange-200"></i>
+            <i className="bx bx-trophy text-3xl text-yellow-300"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-red-100 text-sm">Absent Days</p>
+              <p className="text-yellow-200 text-sm">Absent Days</p>
               <p className="text-2xl font-bold">
                 {memberData ? calculateAbsentDays(attendanceHistory, memberData.start_date) : 0}
               </p>
-              <p className="text-red-100 text-sm">Days Missed</p>
+              <p className="text-yellow-200 text-sm">Days Missed</p>
             </div>
-            <i className="bx bx-calendar-x text-3xl text-red-200"></i>
+            <i className="bx bx-calendar-x text-3xl text-yellow-300"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-purple-100 text-sm">Attendance Rate</p>
+              <p className="text-yellow-200 text-sm">Attendance Rate</p>
               <p className="text-2xl font-bold">
                 {memberData ? calculateAttendanceRate(attendanceHistory, memberData.start_date) : 0}%
               </p>
-              <p className="text-purple-100 text-sm">Success Rate</p>
+              <p className="text-yellow-200 text-sm">Success Rate</p>
             </div>
-            <i className="bx bx-trending-up text-3xl text-purple-200"></i>
+            <i className="bx bx-trending-up text-3xl text-yellow-300"></i>
           </div>
         </div>
       </motion.div>

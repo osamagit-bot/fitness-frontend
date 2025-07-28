@@ -33,10 +33,17 @@ class Product(models.Model):
     
 class Purchase(models.Model):
     member = models.ForeignKey(Member, on_delete=models.SET_NULL,null=True, blank=True)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='purchases')
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, related_name='purchases', null=True, blank=True)
+    product_name = models.CharField(max_length=100, blank=True, null=True)  # Store product name for history
     quantity = models.PositiveIntegerField(default=1)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        # Store product name when creating purchase
+        if self.product and not self.product_name:
+            self.product_name = self.product.name
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.member} bought {self.quantity} x {self.product.name} on {self.date.strftime('%Y-%m-%d %H:%M')}"

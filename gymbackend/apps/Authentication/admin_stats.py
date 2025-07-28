@@ -29,12 +29,22 @@ def get_admin_stats():
         active_members = total_members
         print(f"DEBUG - Total members count: {active_members}")
         
-        # Calculate monthly revenue - use all members
+        # Calculate monthly revenue - use persistent tracking to prevent resets
+        from apps.Member.models import MembershipRevenue
+        
+        # Update current month revenue (only increases, never decreases)
+        persistent_revenue = MembershipRevenue.update_current_month_revenue()
+        
+        # Also calculate current revenue for comparison
         monthly_revenue_query = Member.objects.aggregate(
             total=Sum('monthly_fee')
         )
-        monthly_revenue = monthly_revenue_query['total'] or 0
-        print(f"DEBUG - Monthly revenue: {monthly_revenue} from query {monthly_revenue_query}")
+        current_revenue = monthly_revenue_query['total'] or 0
+        
+        # Use the higher of persistent or current revenue
+        monthly_revenue = max(float(persistent_revenue), float(current_revenue))
+        
+        print(f"DEBUG - Persistent revenue: {persistent_revenue}, Current revenue: {current_revenue}, Final: {monthly_revenue}")
         
         # Calculate annual revenue (monthly revenue * 12)
         annual_revenue = float(monthly_revenue) * 12

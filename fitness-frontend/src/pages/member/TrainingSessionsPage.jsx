@@ -11,7 +11,7 @@ function MemberTrainingSessionsPage() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  const memberId = localStorage.getItem('memberId');
+  const memberId = localStorage.getItem('member_id');
 
   const weekdays = [
     { name: 'Monday', key: 'monday' },
@@ -134,13 +134,13 @@ function MemberTrainingSessionsPage() {
 
   return (
     <motion.div
-      className="p-6 mt-5 "
+      className="p-6 mt-5 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <motion.h1
-        className="text-2xl font-bold mb-2"
+        className="text-2xl font-bold mb-2 text-white"
         initial={{ opacity: 0, x: -30 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
@@ -148,7 +148,7 @@ function MemberTrainingSessionsPage() {
         Weekly Training Schedule
       </motion.h1>
       <motion.p
-        className="text-gray-600 mb-6"
+        className="text-gray-300 mb-6"
         initial={{ opacity: 0, x: 30 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.15 }}
@@ -183,52 +183,52 @@ function MemberTrainingSessionsPage() {
 
       {/* Simple Workout Table */}
       <motion.div
-        className="bg-white shadow overflow-hidden rounded-md mb-10"
+        className="bg-gray-700 shadow overflow-hidden rounded-md mb-10 border border-gray-600"
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2 }}
       >
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-500">
+          <thead className="bg-gradient-to-r from-yellow-500 to-yellow-600">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium text-white uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-sm font-medium text-black uppercase tracking-wider">
                 Day
               </th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-white uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-sm font-medium text-black uppercase tracking-wider">
                 Workout
               </th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-white uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-sm font-medium text-black uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-gray-700 divide-y divide-gray-600">
             <AnimatePresence>
               {weekdays.map((day, idx) => (
                 <motion.tr
                   key={day.key}
-                  className={day.key === 'sunday' ? 'bg-gray-50' : ''}
+                  className={day.key === 'sunday' ? 'bg-gray-600' : ''}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ delay: 0.05 * idx }}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{day.name}</div>
+                    <div className="text-sm font-medium text-white">{day.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingDay === day.key ? (
                       <select
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full py-2 px-3 border border-gray-600 bg-gray-600 text-white rounded-md shadow-sm focus:outline-none sm:text-sm"
                       >
                         {workoutOptions.map(option => (
                           <option key={option} value={option}>{option}</option>
                         ))}
                       </select>
                     ) : (
-                      <div className="text-sm text-gray-900 font-medium">
+                      <div className="text-sm text-white font-medium">
                         {trainingSchedule[day.key] || 'Rest Day'}
                       </div>
                     )}
@@ -238,13 +238,13 @@ function MemberTrainingSessionsPage() {
                       <div className="flex space-x-2">
                         <button
                           onClick={handleSave}
-                          className="text-green-600 hover:text-green-900"
+                          className="text-green-400 hover:text-green-300"
                         >
                           Save
                         </button>
                         <button
                           onClick={handleCancel}
-                          className="text-gray-600 hover:text-gray-900"
+                          className="text-gray-300 hover:text-white"
                         >
                           Cancel
                         </button>
@@ -252,7 +252,7 @@ function MemberTrainingSessionsPage() {
                     ) : (
                       <button
                         onClick={() => handleEdit(day.key)}
-                        className="text-white p-1 w-18 rounded bg-gray-500 hover:bg-gray-400 transition-all"
+                        className="text-black p-1 w-18 rounded bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 transition-all"
                       >
                         Edit
                       </button>
@@ -267,56 +267,37 @@ function MemberTrainingSessionsPage() {
 
       {/* Simple Tips Section */}
       <motion.div
-        className="bg-white shadow overflow-hidden rounded-md p-6 mb-10"
+        className="bg-gray-700 shadow overflow-hidden rounded-md p-6 mb-10 border border-gray-600"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
       >
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Fitness Tips</h2>
-        <ul className="space-y-2 text-sm text-gray-600">
+        <h2 className="text-lg font-medium text-white mb-4">Fitness Tips</h2>
+        <ul className="space-y-2 text-sm text-gray-300">
           <li className="flex items-start">
-            <span className="text-blue-500 mr-2">•</span>
+            <span className="text-yellow-400 mr-2">•</span>
             Aim to follow your workout schedule for at least 4-6 weeks to see results
           </li>
           <li className="flex items-start">
-            <span className="text-blue-500 mr-2">•</span>
+            <span className="text-yellow-400 mr-2">•</span>
             Hydrate before, during, and after your workouts
           </li>
           <li className="flex items-start">
-            <span className="text-blue-500 mr-2">•</span>
+            <span className="text-yellow-400 mr-2">•</span>
             Get enough protein to support muscle recovery and growth
           </li>
           <li className="flex items-start">
-            <span className="text-blue-500 mr-2">•</span>
+            <span className="text-yellow-400 mr-2">•</span>
             Ensure you're getting 7-9 hours of quality sleep each night
           </li>
           <li className="flex items-start">
-            <span className="text-blue-500 mr-2">•</span>
+            <span className="text-yellow-400 mr-2">•</span>
             Consider taking progress photos monthly to track your transformation
           </li>
         </ul>
       </motion.div>
 
-      {/* Simple Trainer Section */}
-      <motion.div
-        className="bg-blue-50 shadow overflow-hidden rounded-md p-6"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="flex flex-col sm:flex-row items-start">
-          <div className="sm:flex-1">
-            <h2 className="text-lg font-medium text-gray-900 mb-2">Need Personalized Guidance?</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Our certified personal trainers can help you create a custom workout program
-              tailored to your specific goals and needs.
-            </p>
-            <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              Book a Trainer
-            </button>
-          </div>
-        </div>
-      </motion.div>
+
     </motion.div>
   );
 }

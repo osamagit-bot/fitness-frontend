@@ -1,5 +1,7 @@
+import { useTheme } from '../contexts/ThemeContext';
 
 const Testimonials = () => {
+  const { classes } = useTheme();
   const testimonials = [
     {
       id: 1,
@@ -25,12 +27,12 @@ const Testimonials = () => {
   ];
 
   return (
-    <section className="py-16 bg-white">
+    <section className={`py-16 ${classes.bg.primary}`}>
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-black mb-4">Success <span className='text-yellow-400'>Stories</span></h2>
+          <h2 className={`text-4xl font-bold ${classes.text.primary} mb-4`}>Success <span className='text-yellow-400'>Stories</span></h2>
           <div className="w-24 h-1 bg-yellow-500 mx-auto"></div>
-          <p className="mt-4 text-gray-800 max-w-2xl mx-auto">
+          <p className={`mt-4 ${classes.text.secondary} max-w-2xl mx-auto`}>
             Our members achieve amazing results with dedication and our expert guidance.
           </p>
         </div>
@@ -39,7 +41,7 @@ const Testimonials = () => {
           {testimonials.map((testimonial) => (
             <div 
               key={testimonial.id} 
-              className="bg-gray-100 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 hover:transform hover:scale-105"
+              className={`${classes.card.primary} rounded-lg overflow-hidden shadow-lg transition-transform duration-300 hover:transform hover:scale-105`}
             >
               <div className="h-64 bg-yellow-100 relative overflow-hidden">
                 <img 
@@ -58,9 +60,9 @@ const Testimonials = () => {
               <div className="p-6">
                 <div className="flex items-center mb-4">
                   <div className="w-2 h-10 bg-yellow-500 mr-4"></div>
-                  <h3 className="text-xl font-bold text-black">{testimonial.name}</h3>
+                  <h3 className={`text-xl font-bold ${classes.text.primary}`}>{testimonial.name}</h3>
                 </div>
-                <p className="text-gray-700 italic">"{testimonial.quote}"</p>
+                <p className={`${classes.text.secondary} italic`}>"{testimonial.quote}"</p>
               </div>
             </div>
           ))}

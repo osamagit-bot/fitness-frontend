@@ -391,8 +391,30 @@ class MemberViewSet(viewsets.ModelViewSet):
         return Response({"detail": f"Membership renewed until {new_expiry}", "expiry_date": member.expiry_date})
 
     def get_queryset(self):
-        show_all = self.request.query_params.get("show_all", "false").lower() == "true"
-        return Member.objects.all() if show_all else Member.objects.filter(is_active=True)
+        """Get queryset with debugging"""
+        # Get all members without any filtering first
+        all_members = Member.objects.all()
+        print(f"Total members in DB (no filter): {all_members.count()}")
+        
+        # Also check users and other models
+        from apps.Authentication.models import CustomUser
+        all_users = CustomUser.objects.all()
+        print(f"Total users in DB: {all_users.count()}")
+        
+        for user in all_users:
+            print(f"User: {user.username}, Role: {user.role}, Active: {user.is_active}")
+        
+        for member in all_members:
+            print(f"Member found: ID={member.athlete_id}, Name={member.first_name} {member.last_name}, Active={member.is_active}, User={member.user_id if hasattr(member, 'user') else 'No user'}")
+        
+        # Fix: Default to showing all members, only filter if explicitly requested
+        show_all = self.request.query_params.get("show_all", "true").lower() == "true"
+        queryset = Member.objects.all() if show_all else Member.objects.filter(is_active=True)
+        
+        print(f"show_all parameter: {show_all}")
+        print(f"Final queryset count: {queryset.count()}")
+        
+        return queryset
 
     def delete(self, *args, **kwargs):
         self.is_active = False
@@ -415,12 +437,26 @@ class TrainerViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
     parser_classes=[MultiPartParser,FormParser]
 
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action == 'list':
+            permission_classes = [permissions.AllowAny]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
     def list(self, request, *args, **kwargs):
         try:
             trainers = Trainer.objects.all()
+            print(f"Total trainers in DB: {trainers.count()}")
+            
             trainers_data = []
             
             for trainer in trainers:
+                print(f"Trainer found: ID={trainer.trainer_id}, Name={trainer.first_name} {trainer.last_name}, User={trainer.user_id if hasattr(trainer, 'user') else 'No user'}")
+                
                 trainer_data = {
                     "id": trainer.id,
                     "trainer_id": trainer.trainer_id,
@@ -432,10 +468,10 @@ class TrainerViewSet(viewsets.ModelViewSet):
                     "specialization": trainer.specialization,
                     "start_date": trainer.start_date,
                     "image": trainer.image.url if trainer.image else None,
-                    # Remove user references completely
                 }
                 trainers_data.append(trainer_data)
             
+            print(f"Returning {len(trainers_data)} trainers to frontend")
             return Response({"results": trainers_data}, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -540,3 +576,32 @@ class TrainingViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
     authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
     parser_classes=[MultiPartParser,FormParser]
+
+    def list(self, request, *args, **kwargs):
+        """List all members with enhanced debugging"""
+        try:
+            queryset = self.get_queryset()
+            print(f"Total members in queryset: {queryset.count()}")
+            
+            # Debug each member in queryset
+            for training in queryset:
+              print(f"Training in queryset: ID={training.id}, Type={training.type}, Trainer={training.trainer.first_name} {training.trainer.last_name}")
+            
+            serializer = self.get_serializer(queryset, many=True)
+            data = serializer.data
+            
+            print(f"Serialized data count: {len(data)}")
+            if data:
+                print(f"First member data: {data[0]}")
+            
+            return Response({
+                'results': data,
+                'count': len(data)
+            })
+            
+        except Exception as e:
+            print(f"Error in member list: {str(e)}")
+            return Response(
+                {"error": f"Failed to fetch members: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

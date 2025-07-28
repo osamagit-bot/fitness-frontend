@@ -41,6 +41,7 @@ function RevenuePage() {
   // Revenue states
   const [rangeMembershipRevenue, setRangeMembershipRevenue] = useState(0);
   const [rangeProductRevenue, setRangeProductRevenue] = useState(0);
+  const [stats, setStats] = useState({ monthlyRevenue: 0, shopRevenue: 0 });
 
   // For charts
   const [dailyRevenueChart, setDailyRevenueChart] = useState([]);
@@ -49,19 +50,44 @@ function RevenuePage() {
   // --- Fetch Data ---
   useEffect(() => {
     fetchAllData();
+    
+    // Listen for purchase completion events
+    const handlePurchaseCompleted = () => {
+      console.log('🔄 Purchase completed, refreshing revenue data...');
+      setTimeout(() => {
+        fetchAllData();
+      }, 1000);
+    };
+    
+    window.addEventListener('purchaseCompleted', handlePurchaseCompleted);
+    return () => window.removeEventListener('purchaseCompleted', handlePurchaseCompleted);
   }, []);
 
   const fetchAllData = async () => {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("access_token") || localStorage.getItem("admin_access_token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const [membersRes, purchasesRes] = await Promise.all([
-        api.get(`members/`, { headers }),
-        api.get(`purchases/`, { headers }),
+      console.log('🔍 Using token for API calls:', !!token);
+      const [statsRes, membersRes, purchasesRes] = await Promise.all([
+        api.get(`admin-dashboard/stats/`, { headers }),
+        api.get(`members/?show_all=true`, { headers }),
+        api.get(`purchases/?show_all=true`, { headers }),
       ]);
       
+      console.log('🔍 Purchases API response:', purchasesRes.data);
+      // Parse revenue values from backend stats
+      const parseRevenue = (value) => {
+        if (typeof value === "string") {
+          return parseFloat(value.replace(" AFN", "").replace(",", "")) || 0;
+        }
+        return parseFloat(value) || 0;
+      };
+      setStats({
+        monthlyRevenue: parseRevenue(statsRes.data.monthly_revenue),
+        shopRevenue: parseRevenue(statsRes.data.monthly_revenue_shop),
+      });
       // Ensure we always have arrays
       const membersData = Array.isArray(membersRes.data) 
         ? membersRes.data 
@@ -69,13 +95,15 @@ function RevenuePage() {
       const purchasesData = Array.isArray(purchasesRes.data) 
         ? purchasesRes.data 
         : purchasesRes.data?.results || [];
-        
+      
+      console.log('🔍 Processed purchases data:', purchasesData.length, 'purchases');
+      console.log('🔍 Sample purchase:', purchasesData[0]);
+      
       setMembers(membersData);
       setPurchases(purchasesData);
     } catch (err) {
       console.error("Error fetching data:", err);
       setError("Failed to fetch data.");
-      // Set empty arrays as fallback
       setMembers([]);
       setPurchases([]);
     }
@@ -547,36 +575,28 @@ function RevenuePage() {
 
   // --- Revenue Calculations ---
   useEffect(() => {
-    calculateRevenues();
+    // Only calculate product revenue and charts from purchases
+    calculateProductRevenueAndCharts();
     // eslint-disable-next-line
-  }, [members, purchases, dateRange]);
+  }, [purchases, dateRange]);
 
-  function calculateRevenues() {
-    // Range revenue (memberships)
-    const rangeMembers = members.filter((m) => {
-      const s = new Date(m.start_date);
-      return (
-        s >= new Date(dateRange.startDate) && s <= new Date(dateRange.endDate)
-      );
-    });
-    const _rangeMembershipRevenue = rangeMembers.reduce(
-      (sum, m) => sum + parseFloat(m.monthly_fee || 0),
-      0
-    );
-    setRangeMembershipRevenue(_rangeMembershipRevenue);
-
+  function calculateProductRevenueAndCharts() {
     // Range product revenue
     const _rangeProductRevenue = purchases
       .filter((p) => {
         const d = new Date(p.date);
-        return (
-          d >= new Date(dateRange.startDate) && d <= new Date(dateRange.endDate)
-        );
+        return d >= new Date(dateRange.startDate) && d <= new Date(dateRange.endDate);
       })
       .reduce((sum, p) => sum + parseFloat(p.total_price || 0), 0);
+    
+    // Use only calculated revenue from actual purchases
     setRangeProductRevenue(_rangeProductRevenue);
+    
+    // Range membership revenue - use current monthly revenue from backend
+    // This represents ongoing membership fees, not just new registrations
+    setRangeMembershipRevenue(stats.monthlyRevenue || 0);
 
-    // Chart: Daily revenue in range
+    // Chart: Daily revenue in range (only for shop revenue)
     const days = [];
     let current = new Date(dateRange.startDate);
     const end = new Date(dateRange.endDate);
@@ -585,21 +605,20 @@ function RevenuePage() {
       current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
     }
     const chartData = days.map((day) => {
-      const dayMembers = members.filter(
-        (m) => formatDate(m.start_date) === day
-      );
-      const dayMembership = dayMembers.reduce(
-        (sum, m) => sum + parseFloat(m.monthly_fee || 0),
-        0
-      );
       const dayProducts = purchases
         .filter((p) => formatDate(p.date) === day)
         .reduce((sum, p) => sum + parseFloat(p.total_price || 0), 0);
+      
+      // For daily membership revenue, use proportional amount
+      // Since membership revenue is monthly, divide by days in month
+      const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+      const dayMembers = (stats.monthlyRevenue || 0) / daysInMonth;
+      
       return {
         date: day,
-        Membership: dayMembership,
+        Membership: dayMembers,
         Shop: dayProducts,
-        Total: dayMembership + dayProducts,
+        Total: dayMembers + dayProducts,
       };
     });
     setDailyRevenueChart(chartData);
@@ -694,13 +713,13 @@ function RevenuePage() {
 
   // --- Render ---
   return (
-    <div className="p-6 bg-gray-50">
+    <div className="p-6 bg-gradient-to-br from-gray-800 via-gray-800 to-black">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Revenue Dashboard</h1>
+        <h1 className="text-3xl font-bold text-white">Revenue Dashboard</h1>
         <div className="flex gap-2">
           <button
             onClick={handleRefresh}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition-colors duration-300"
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded-lg shadow-md hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300"
             disabled={loading}
           >
             {loading ? "Refreshing..." : "Refresh Data"}
@@ -709,24 +728,24 @@ function RevenuePage() {
       </div>
 
       {/* Print Controls */}
-      <div className="bg-white p-5 rounded-xl shadow-md mb-6 no-print">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
+      <div className="bg-gray-700 p-5 rounded-xl shadow-md mb-6 no-print">
+        <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
           <FiPrinter className="mr-2" />
           Print Reports
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+          <div className="border border-gray-600 rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2 flex items-center">
               <FiCalendar className="mr-2 text-blue-500" />
               Daily Report
             </h3>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-300 mb-3">
               Print today's revenue summary
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => handlePrint("daily")}
-                className="flex-1 bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600 transition-colors flex items-center justify-center"
+                className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-3 py-2 rounded text-sm hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 flex items-center justify-center"
               >
                 <FiPrinter className="mr-1" />
                 Print
@@ -741,12 +760,12 @@ function RevenuePage() {
             </div>
           </div>
 
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+          <div className="border border-gray-600 rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2 flex items-center">
               <FiCalendar className="mr-2 text-green-500" />
               Monthly Report
             </h3>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-300 mb-3">
               Print this month's revenue summary
             </p>
             <div className="flex gap-2">
@@ -767,12 +786,12 @@ function RevenuePage() {
             </div>
           </div>
 
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+          <div className="border border-gray-600 rounded-lg p-4">
+            <h3 className="font-semibold text-white mb-2 flex items-center">
               <FiCalendar className="mr-2 text-purple-500" />
               Annual Report
             </h3>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-300 mb-3">
               Print this year's revenue summary
             </p>
             <div className="flex gap-2">
@@ -794,8 +813,8 @@ function RevenuePage() {
           </div>
         </div>
 
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
+        <div className="mt-4 p-3 bg-gray-600 rounded-lg">
+          <p className="text-sm text-gray-300">
             <strong>Note:</strong> Print functionality will generate
             professional reports with all data tables, summaries, and formatted
             layouts optimized for printing. Download option saves reports as
@@ -805,54 +824,54 @@ function RevenuePage() {
       </div>
 
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 mb-6 rounded-lg">
+        <div className="bg-red-900/50 text-red-300 p-4 mb-6 rounded-lg border border-red-500/50">
           {error}
         </div>
       )}
 
       {/* Revenue Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-500 mb-1">
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-300 mb-1">
             Membership Revenue
           </h4>
-          <p className="text-2xl font-bold text-blue-600">
+          <p className="text-2xl font-bold text-blue-400">
             {formatAfn(rangeMembershipRevenue)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             {formatDate(dateRange.startDate)} - {formatDate(dateRange.endDate)}
           </p>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-500 mb-1">
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-300 mb-1">
             Shop Revenue
           </h4>
-          <p className="text-2xl font-bold text-green-600">
+          <p className="text-2xl font-bold text-green-400">
             {formatAfn(rangeProductRevenue)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             {formatDate(dateRange.startDate)} - {formatDate(dateRange.endDate)}
           </p>
         </div>
-        <div className="bg-indigo-50 p-4 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-500 mb-1">
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-300 mb-1">
             Total Revenue
           </h4>
-          <p className="text-2xl font-bold text-indigo-600">
+          <p className="text-2xl font-bold text-yellow-400">
             {formatAfn(rangeMembershipRevenue + rangeProductRevenue)}
           </p>
         </div>
       </div>
 
       {/* Date Range Controls */}
-      <div className="bg-white p-5 rounded-xl shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-4">Revenue Time Period</h2>
+      <div className="bg-gray-700 p-5 rounded-xl shadow-md mb-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Revenue Time Period</h2>
         <div className="flex flex-wrap gap-2 mb-4">
           <button
             className={`px-4 py-2 rounded ${
               dateRangeType === "daily"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200"
+                ? "bg-yellow-500 text-black"
+                : "bg-gray-600 text-white"
             }`}
             onClick={() => handleDateRangeChange("daily")}
           >
@@ -861,8 +880,8 @@ function RevenuePage() {
           <button
             className={`px-4 py-2 rounded ${
               dateRangeType === "weekly"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200"
+                ? "bg-yellow-500 text-black"
+                : "bg-gray-600 text-white"
             }`}
             onClick={() => handleDateRangeChange("weekly")}
           >
@@ -871,8 +890,8 @@ function RevenuePage() {
           <button
             className={`px-4 py-2 rounded ${
               dateRangeType === "monthly"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200"
+                ? "bg-yellow-500 text-black"
+                : "bg-gray-600 text-white"
             }`}
             onClick={() => handleDateRangeChange("monthly")}
           >
@@ -881,8 +900,8 @@ function RevenuePage() {
           <button
             className={`px-4 py-2 rounded ${
               dateRangeType === "quarterly"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200"
+                ? "bg-yellow-500 text-black"
+                : "bg-gray-600 text-white"
             }`}
             onClick={() => handleDateRangeChange("quarterly")}
           >
@@ -891,8 +910,8 @@ function RevenuePage() {
           <button
             className={`px-4 py-2 rounded ${
               dateRangeType === "custom"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200"
+                ? "bg-yellow-500 text-black"
+                : "bg-gray-600 text-white"
             }`}
             onClick={() => setDateRangeType("custom")}
           >
@@ -902,7 +921,7 @@ function RevenuePage() {
         {dateRangeType === "custom" && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
+              <label className="block text-sm text-gray-300 mb-1">
                 Start Date
               </label>
               <input
@@ -912,11 +931,11 @@ function RevenuePage() {
                   handleStartDateChange(new Date(e.target.value))
                 }
                 max={formatDateForInput(new Date())}
-                className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-gray-800 text-white"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
+              <label className="block text-sm text-gray-300 mb-1">
                 End Date
               </label>
               <input
@@ -924,7 +943,7 @@ function RevenuePage() {
                 value={formatDateForInput(dateRange.endDate)}
                 onChange={(e) => handleEndDateChange(new Date(e.target.value))}
                 max={formatDateForInput(new Date())}
-                className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-gray-800 text-white"
               />
             </div>
           </div>
@@ -932,31 +951,34 @@ function RevenuePage() {
       </div>
 
       {/* Revenue Line Chart */}
-      <div className="bg-white p-5 rounded-xl shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-4">Revenue Trend</h2>
+      <div className="bg-gray-700 p-5 rounded-xl shadow-md mb-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Revenue Trend</h2>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={dailyRevenueChart}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
+            <CartesianGrid strokeDasharray="3 3" stroke="#4B5563" />
+            <XAxis dataKey="date" tick={{ fill: '#E5E7EB', fontSize: 12 }} axisLine={{ stroke: '#6B7280' }} />
+            <YAxis tick={{ fill: '#E5E7EB', fontSize: 12 }} axisLine={{ stroke: '#6B7280' }} />
+            <Tooltip contentStyle={{ backgroundColor: '#374151', border: '1px solid #6B7280', borderRadius: '8px', color: '#E5E7EB' }} />
+            <Legend wrapperStyle={{ color: '#E5E7EB' }} />
             <Line
               type="monotone"
               dataKey="Membership"
-              stroke="#2563eb"
+              stroke="#3B82F6"
+              strokeWidth={2}
               name="Membership Revenue"
             />
             <Line
               type="monotone"
               dataKey="Shop"
-              stroke="#10b981"
+              stroke="#10B981"
+              strokeWidth={2}
               name="Shop Revenue"
             />
             <Line
               type="monotone"
               dataKey="Total"
-              stroke="#a78bfa"
+              stroke="#EAB308"
+              strokeWidth={3}
               name="Total Revenue"
             />
           </LineChart>
@@ -964,8 +986,8 @@ function RevenuePage() {
       </div>
 
       {/* Product Sales Pie Chart */}
-      <div className="bg-white p-5 rounded-xl shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-4">
+      <div className="bg-gray-700 p-5 rounded-xl shadow-md mb-6">
+        <h2 className="text-xl font-semibold text-white mb-4">
           Product Sales Distribution
         </h2>
         {productPieData.length > 0 ? (
@@ -992,52 +1014,52 @@ function RevenuePage() {
             </PieChart>
           </ResponsiveContainer>
         ) : (
-          <div className="text-gray-500 text-center py-12">
+          <div className="text-gray-300 text-center py-12">
             No product sales in this period.
           </div>
         )}
       </div>
 
       {/* Recent Registered Members */}
-      <div className="bg-white p-5 rounded-xl shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-4">
+      <div className="bg-gray-700 p-5 rounded-xl shadow-md mb-6">
+        <h2 className="text-xl font-semibold text-white mb-4">
           Recent Registered Members
         </h2>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
+          <table className="min-w-full divide-y divide-gray-600">
+            <thead className="bg-gray-600">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Membership
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Fee
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Registered
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-gray-700 divide-y divide-gray-600">
               {recentMembers.length > 0 ? (
                 recentMembers.map((m, i) => (
                   <tr key={i}>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 text-white">
                       {m.name || `${m.first_name || ""} ${m.last_name || ""}`}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 text-gray-300">
                       {m.membership_type || "Standard"}
                     </td>
-                    <td className="px-4 py-2">{formatAfn(m.monthly_fee)}</td>
-                    <td className="px-4 py-2">{formatDate(m.start_date)}</td>
+                    <td className="px-4 py-2 text-gray-300">{formatAfn(m.monthly_fee)}</td>
+                    <td className="px-4 py-2 text-gray-300">{formatDate(m.start_date)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="text-center text-gray-500 py-4">
+                  <td colSpan={4} className="text-center text-gray-300 py-4">
                     No recent members.
                   </td>
                 </tr>
@@ -1048,41 +1070,41 @@ function RevenuePage() {
       </div>
 
       {/* Recent Sold Products */}
-      <div className="bg-white p-5 rounded-xl shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-4">Recent Sold Products</h2>
+      <div className="bg-gray-700 p-5 rounded-xl shadow-md mb-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Recent Sold Products</h2>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
+          <table className="min-w-full divide-y divide-gray-600">
+            <thead className="bg-gray-600">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Product
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Quantity
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Total Price
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                   Date
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-gray-700 divide-y divide-gray-600">
               {recentProducts.length > 0 ? (
                 recentProducts.map((p, i) => (
                   <tr key={i}>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 text-white">
                       {p.product_name || `Product ${p.product}`}
                     </td>
-                    <td className="px-4 py-2">{p.quantity}</td>
-                    <td className="px-4 py-2">{formatAfn(p.total_price)}</td>
-                    <td className="px-4 py-2">{formatDate(p.date)}</td>
+                    <td className="px-4 py-2 text-gray-300">{p.quantity}</td>
+                    <td className="px-4 py-2 text-gray-300">{formatAfn(p.total_price)}</td>
+                    <td className="px-4 py-2 text-gray-300">{formatDate(p.date)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="text-center text-gray-500 py-4">
+                  <td colSpan={4} className="text-center text-gray-300 py-4">
                     No recent sales.
                   </td>
                 </tr>

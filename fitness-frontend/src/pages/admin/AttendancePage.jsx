@@ -205,13 +205,13 @@ const AttendancePage = () => {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Attendance Management</h1>
-            <p className="text-gray-600">Monitor and manage member attendance</p>
+            <h1 className="text-3xl font-bold text-gray-200 mb-2">Attendance Management</h1>
+            <p className="text-gray-300">Monitor and manage member attendance</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => setShowManualEntry(!showManualEntry)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
             >
               <i className="bx bx-plus"></i>
               Manual Entry
@@ -233,7 +233,7 @@ const AttendancePage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
       >
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 backdrop-blur-lg border border-blue-500/30 text-white rounded-xl p-6 shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm">Today</p>
@@ -244,7 +244,7 @@ const AttendancePage = () => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-green-500/20 to-green-600/20 backdrop-blur-lg border border-green-500/30 text-white rounded-xl p-6 shadow-2xl hover:shadow-green-500/20 transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm">This Week</p>
@@ -255,7 +255,7 @@ const AttendancePage = () => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-purple-500/20 to-purple-600/20 backdrop-blur-lg border border-purple-500/30 text-white rounded-xl p-6 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm">This Month</p>
@@ -266,7 +266,7 @@ const AttendancePage = () => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl p-6">
+        <div className="bg-gradient-to-r from-orange-500/20 to-orange-600/20 backdrop-blur-lg border border-orange-500/30 text-white rounded-xl p-6 shadow-2xl hover:shadow-orange-500/20 transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-orange-100 text-sm">Total Members</p>
@@ -288,10 +288,10 @@ const AttendancePage = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-xl p-6 max-w-md w-full mx-4"
+            className="bg-gray-800/60 backdrop-blur-lg border border-gray-600/40 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-800">Manual Attendance Entry</h3>
+              <h3 className="text-xl font-bold text-white">Manual Attendance Entry</h3>
               <button
                 onClick={() => setShowManualEntry(false)}
                 className="text-gray-500 hover:text-gray-700"
@@ -302,7 +302,7 @@ const AttendancePage = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-white mb-1">
                   Select Member
                 </label>
                 <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -347,11 +347,11 @@ const AttendancePage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white rounded-xl shadow-lg p-6 mb-8"
+        className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 rounded-xl shadow-2xl p-6 mb-8 hover:shadow-gray-500/10 transition-all duration-300"
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-white mb-2">
               Filter by Date
             </label>
             <input
@@ -363,7 +363,7 @@ const AttendancePage = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-white mb-2">
               Filter by Member
             </label>
             <select
@@ -399,12 +399,12 @@ const AttendancePage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-white rounded-xl shadow-lg overflow-hidden"
+        className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 rounded-xl shadow-2xl overflow-hidden hover:shadow-gray-500/10 transition-all duration-300"
       >
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-600">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-800">Attendance Records</h2>
-            <div className="text-sm text-gray-500">
+            <h2 className="text-xl font-bold text-white">Attendance Records</h2>
+            <div className="text-sm text-gray-300">
               {attendanceData.length} records found
             </div>
           </div>
@@ -413,54 +413,54 @@ const AttendancePage = () => {
         {loading ? (
           <div className="p-8 text-center">
             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading attendance data...</p>
+            <p className="text-gray-300">Loading attendance data...</p>
             <p className="text-sm text-gray-400 mt-1">Please wait while we fetch the records</p>
           </div>
         ) : attendanceData.length === 0 ? (
           <div className="p-8 text-center">
             <i className="bx bx-calendar-x text-4xl text-gray-300 mb-4"></i>
-            <p className="text-gray-500">No attendance records found</p>
+            <p className="text-gray-300">No attendance records found</p>
             <p className="text-sm text-gray-400">Try adjusting your filters</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Member
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Date & Time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Method
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Absent Days / Rate
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-gray-700 divide-y divide-gray-600">
                 {attendanceData.map((record, index) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
+                  <tr key={record.id} className="hover:bg-gray-600">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                           <i className="bx bx-user text-blue-600"></i>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-white">
                             {record.member_name}
                           </div>
-                          <div className="text-sm text-gray-500">ID: {record.member_id}</div>
+                          <div className="text-sm text-gray-300">ID: {record.member_id}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       <div className="flex flex-col">
                         <span className="font-medium">{formatDate(record.date)}</span>
-                        <span className="text-gray-500">{formatTime(record.check_in_time)}</span>
+                        <span className="text-gray-300">{formatTime(record.check_in_time)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -469,12 +469,12 @@ const AttendancePage = () => {
                         {record.verification_method}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                       <div className="flex flex-col">
-                        <span className="text-red-600 font-medium">
+                        <span className="text-red-400 font-medium">
                           {calculateMemberAbsentDays(record.member_start_date, record.member_total_attendance)} absent
                         </span>
-                        <span className="text-green-600 text-xs">
+                        <span className="text-green-400 text-xs">
                           {calculateMemberAttendanceRate(record.member_start_date, record.member_total_attendance)}% rate
                         </span>
                       </div>

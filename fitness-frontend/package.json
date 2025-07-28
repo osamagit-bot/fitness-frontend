@@ -12,7 +12,7 @@
     "lint:fix": "eslint . --ext js,jsx --fix",
     "type-check": "tsc --noEmit",
     "analyze": "npx vite-bundle-analyzer dist/stats.html",
-    "clean": "rm -rf dist",
+    "clean": "if exist dist rmdir /s /q dist",
     "prebuild": "npm run clean"
   },
   "dependencies": {

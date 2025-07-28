@@ -123,7 +123,7 @@ function ProductsPage() {
     setIsLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       const response = await api.get("products/", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -148,7 +148,7 @@ function ProductsPage() {
   const fetchSoldProducts = async () => {
     setSoldLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       const response = await api.get("purchases/", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -181,7 +181,7 @@ function ProductsPage() {
     setIsLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       const formData = new FormData();
       formData.append("name", newProduct.name);
       formData.append("price", newProduct.price);
@@ -219,7 +219,7 @@ function ProductsPage() {
   const deleteProduct = async (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
-        const token = localStorage.getItem("access_token");
+        const token = localStorage.getItem("admin_access_token");
         await api.delete(`products/${productId}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -245,26 +245,26 @@ function ProductsPage() {
     <>
       <div
         id="products"
-        className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-2 md:p-6"
+        className="min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 p-2 md:p-6"
       >
         {/* Header Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-black/30 rounded-xl shadow-lg p-6 mb-8">
           <div className="flex items-center space-x-3 mb-2">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-3 rounded-lg">
+            <div className="bg-gradient-to-r from-yellow-500 to-yellow-700 p-3 rounded-lg">
               <ShoppingBagIcon className="text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-100">
                 Products Management
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-300">
                 Manage your fitness products and track sales
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
+          <div className="flex items-center space-x-4 text-sm text-gray-400">
             <span className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
               <span>{products.length} Products</span>
             </span>
             <span className="flex items-center space-x-1">
@@ -275,7 +275,7 @@ function ProductsPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-lg shadow-sm">
+          <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-red-400 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <svg
@@ -307,12 +307,12 @@ function ProductsPage() {
         )}
 
         {/* Add New Product Form */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-black/20 rounded-xl shadow-lg p-6 mb-8">
           <div className="flex items-center space-x-3 mb-6">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-2 rounded-lg">
+            <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-2 rounded-lg">
               <PlusIcon className="text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-200">
               Add New Product
             </h2>
           </div>
@@ -321,7 +321,7 @@ function ProductsPage() {
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-200 mb-2">
                 Product Name
               </label>
               <input
@@ -330,12 +330,12 @@ function ProductsPage() {
                 value={newProduct.name}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 border text-white bg-gray-800 border-gray-300 rounded-lg focus:outline-none transition-all duration-200"
                 placeholder="Enter product name"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-200 mb-2">
                 Price ($)
               </label>
               <input
@@ -345,12 +345,12 @@ function ProductsPage() {
                 value={newProduct.price}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 border text-white bg-gray-800 border-gray-300 rounded-lg focus:outline-none transition-all duration-200"
                 placeholder="0.00"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Description
               </label>
               <textarea
@@ -358,15 +358,15 @@ function ProductsPage() {
                 value={newProduct.description}
                 onChange={handleInputChange}
                 rows="4"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 border text-white bg-gray-800 border-gray-300 rounded-lg focus:outline-none transition-all duration-200"
                 placeholder="Enter product description"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-200 mb-2">
                 Product Image
               </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition-colors duration-200">
+              <div className="mt-1 flex justify-center bg-gray-800 px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-yellow-500 transition-colors duration-200">
                 <div className="space-y-1 text-center">
                   {imagePreview ? (
                     <div className="relative">
@@ -401,8 +401,8 @@ function ProductsPage() {
                   ) : (
                     <>
                       <PhotoIcon className="mx-auto text-gray-400" />
-                      <div className="flex text-sm text-gray-600">
-                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                      <div className="flex text-sm text-gray-300">
+                        <label className="relative cursor-pointer rounded-md font-medium text-yellow-600 hover:text-yellow-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-yellow-500">
                           <span>Upload a file</span>
                           <input
                             type="file"
@@ -413,7 +413,7 @@ function ProductsPage() {
                         </label>
                         <p className="pl-1">or drag and drop</p>
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-300">
                         PNG, JPG, GIF up to 10MB
                       </p>
                     </>
@@ -424,7 +424,7 @@ function ProductsPage() {
             <div className="md:col-span-2">
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
+                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-700 text-white py-3 px-6 rounded-lg hover:from-yellow-600 hover:to-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -444,24 +444,24 @@ function ProductsPage() {
         </div>
 
         {/* Products List */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-3">
               <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-2 rounded-lg">
                 <ShoppingBagIcon className="text-white w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-white">
                   Products List
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-300">
                   {products.length} products available
                 </p>
               </div>
             </div>
             <button
               onClick={fetchProducts}
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200"
+              className="flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-yellow-700 text-white px-4 py-2 rounded-lg hover:from-yellow-600 hover:to-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 transition-all duration-200"
               disabled={isLoading}
             >
               <RefreshIcon />
@@ -471,22 +471,22 @@ function ProductsPage() {
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-              <p className="mt-4 text-gray-600">Loading products...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
+              <p className="mt-4 text-gray-300">Loading products...</p>
             </div>
           ) : products.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map((product) => (
                 <div
                   key={product.product_id}
-                  className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
+                  className="bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-700"
                 >
-                  <div className="relative">
+                  <div className="relative overflow-hidden rounded-t-xl">
                     {product.image_url ? (
                       <img
                         src={product.image_url}
                         alt={product.name}
-                        className="w-full h-48 object-cover rounded-t-xl"
+                        className="w-full h-48 object-cover rounded-t-xl transition-transform duration-300 hover:scale-110"
                       />
                     ) : (
                       <div className="w-full h-48 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-500 rounded-t-xl">
@@ -505,19 +505,19 @@ function ProductsPage() {
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="font-bold text-lg text-gray-900 mb-2 truncate">
+                    <h3 className="font-bold text-lg text-white mb-2 truncate">
                       {product.name}
                     </h3>
                     {product.description && (
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                      <p className="text-gray-300 text-sm mb-3 line-clamp-2">
                         {product.description}
                       </p>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-green-600">
+                      <span className="text-2xl font-bold text-yellow-400">
                         ${parseFloat(product.price).toFixed(2)}
                       </span>
-                      <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                      <div className="bg-yellow-500 text-black px-3 py-1 rounded-full text-xs font-medium">
                         In Stock
                       </div>
                     </div>
@@ -530,17 +530,17 @@ function ProductsPage() {
               <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                 <ShoppingBagIcon className="w-12 h-12 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-white mb-2">
                 No products found
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-300 mb-6">
                 Start by adding your first product to the store.
               </p>
               <button
                 onClick={() =>
                   document.querySelector('input[name="name"]').focus()
                 }
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200"
+                className="bg-gradient-to-r from-yellow-500 to-yellow-700 text-white px-6 py-2 rounded-lg hover:from-yellow-600 hover:to-yellow-800 transition-all duration-200"
               >
                 Add Your First Product
               </button>
@@ -549,16 +549,16 @@ function ProductsPage() {
         </div>
 
         {/* Sold Products Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="flex items-center space-x-3 mb-6">
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-2 rounded-lg">
               <ChartIcon className="text-white w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-white">
                 Sales History
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-300">
                 {soldProducts.length} transactions recorded
               </p>
             </div>
@@ -567,32 +567,32 @@ function ProductsPage() {
           {soldLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent"></div>
-              <p className="mt-4 text-gray-600">Loading sales data...</p>
+              <p className="mt-4 text-gray-300">Loading sales data...</p>
             </div>
           ) : soldProducts.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 rounded-tl-lg">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider bg-gray-700 rounded-tl-lg">
                       #
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider bg-gray-700">
                       Date & Time
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider bg-gray-700">
                       Product
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 rounded-tr-lg">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider bg-gray-700 rounded-tr-lg">
                       Revenue
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-600">
                   {soldProducts.map((sold, index) => (
                     <tr
                       key={sold.id || index}
-                      className="hover:bg-gray-50 transition-colors duration-150"
+                      className="hover:bg-gray-700 transition-colors duration-150"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center justify-center w-8 h-8 bg-green-100 text-green-600 rounded-full text-sm font-medium">
@@ -600,15 +600,15 @@ function ProductsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-white">
                           {new Date(sold.date).toLocaleDateString()}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-300">
                           {new Date(sold.date).toLocaleTimeString()}
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-white">
                           {sold.product_name ||
                             (sold.product && sold.product.name)}
                         </div>
@@ -672,10 +672,10 @@ function ProductsPage() {
               <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                 <ChartIcon className="w-12 h-12 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-white mb-2">
                 No sales recorded yet
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-300">
                 Sales data will appear here once customers start purchasing
                 products.
               </p>

@@ -55,25 +55,21 @@ class WhatsAppNotificationService:
     def send_admin_whatsapp_notification(self, message: str, admin_phones: Optional[List[str]] = None) -> bool:
         """
         Send WhatsApp notification to admin users.
-        
-        Args:
-            message (str): Message content to send
-            admin_phones (list, optional): List of admin phone numbers.
-                                         If None, automatically fetches from database.
-        
-        Returns:
-            bool: True if message was sent successfully, False otherwise
-            
-        Example:
-            >>> service = WhatsAppNotificationService()
-            >>> success = service.send_admin_whatsapp_notification(
-            ...     "New member John Doe has registered."
-            ... )
-            >>> print(f"WhatsApp sent: {success}")
         """
-        if not self.is_enabled:
-            logger.info("WhatsApp notifications are disabled")
-            return False
+        # Check global WhatsApp notification toggle from database
+        try:
+            from apps.Management.models import SiteSettings
+            site_settings = SiteSettings.get_settings()
+            if not site_settings.whatsapp_notifications_enabled:
+                print("Global WhatsApp notifications are DISABLED in database. No WhatsApp will be sent.")
+                logger.info("WhatsApp notification skipped: Global WhatsApp notifications disabled")
+                return False
+        except Exception as e:
+            print(f"Could not check global WhatsApp settings: {e}")
+            # Fallback to Django settings if database check fails
+            if not self.is_enabled:
+                logger.info("WhatsApp notifications are disabled")
+                return False
             
         print("WHATSAPP SERVICE: Starting message send process...")
         print(f"PROVIDER: {self.provider}")
@@ -326,16 +322,17 @@ This is an automated notification from your gym management system.
     def send_member_whatsapp_notification(self, message: str, member_phone: str) -> bool:
         """
         Send WhatsApp notification to a specific member.
-        
-        Args:
-            message (str): Message content to send
-            member_phone (str): Member's phone number
-        
-        Returns:
-            bool: True if message was sent successfully, False otherwise
         """
-        if not self.is_enabled:
-            return False
+        # Check global WhatsApp notification toggle from database
+        try:
+            from apps.Management.models import SiteSettings
+            site_settings = SiteSettings.get_settings()
+            if not site_settings.whatsapp_notifications_enabled:
+                return False
+        except Exception as e:
+            # Fallback to Django settings if database check fails
+            if not self.is_enabled:
+                return False
             
         try:
             formatted_message = self._format_gym_message(message)
@@ -352,3 +349,5 @@ This is an automated notification from your gym management system.
         except Exception as e:
             logger.error(f"Failed to send WhatsApp to member {member_phone}: {str(e)}")
             return False
+
+

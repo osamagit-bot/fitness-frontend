@@ -1,18 +1,31 @@
-// src/SubPages/MemberPages/MemberDashboard.jsx
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import MaintenanceCheck from '../components/MaintenanceCheck';
 import MemberSidebar from '../components/shared/MemberSidebar';
+import useMultiAuth from '../hooks/useMultiAuth';
 
 const MemberDashboard = () => {
+  const { authState } = useMultiAuth();
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    if (authState.member.isAuthenticated) {
+      setUserData(authState.member.user);
+    }
+  }, [authState.member.isAuthenticated]);
+
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <MemberSidebar />
-      
-      {/* Main Content */}
-      <div className="flex-1 p-4 lg:ml-64 overflow-auto pt-20 lg:pt-4">
-        <Outlet />
+    <MaintenanceCheck>
+      <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+        {/* Sidebar */}
+        <MemberSidebar userData={userData} />
+        
+        {/* Main Content */}
+        <div className="flex-1 p-4 lg:ml-64 overflow-auto pt-20 bg-gray-700 lg:pt-4">
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </MaintenanceCheck>
   );
 };
 

@@ -96,17 +96,26 @@ class AdminDashboardViewSet(viewsets.ViewSet):
 
             now = timezone.now()
 
+            # Calculate shop revenue for current month
             monthly_revenue_shop = Purchase.objects.filter(
                 date__month=now.month, date__year=now.year
             ).aggregate(total=Sum("total_price"))["total"] or 0
 
+            # Calculate membership payments for current month
             monthly_renewal_revenue = MembershipPayment.objects.filter(
                 paid_on__month=now.month, paid_on__year=now.year
             ).aggregate(total=Sum("amount"))["total"] or 0
 
-            total_revenue = MembershipPayment.objects.aggregate(total=Sum("amount"))["total"] or 0
+            # Calculate total revenue from all time
+            total_membership_revenue = MembershipPayment.objects.aggregate(total=Sum("amount"))["total"] or 0
+            total_shop_revenue = Purchase.objects.aggregate(total=Sum("total_price"))["total"] or 0
+            total_revenue = total_membership_revenue + total_shop_revenue
 
-            total_monthly_revenue = monthly_revenue_shop + monthly_renewal_revenue
+            # Monthly membership revenue from member fees - use persistent tracking
+            from apps.Member.models import MembershipRevenue
+            monthly_membership_revenue = MembershipRevenue.update_current_month_revenue()
+
+            total_monthly_revenue = monthly_revenue_shop + monthly_renewal_revenue + monthly_membership_revenue
 
             days_in_month = (
                 timezone.datetime(now.year + (now.month == 12), ((now.month % 12) + 1), 1) -
@@ -118,11 +127,12 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             return Response({
                 "total_members": total_members,
                 "total_trainers": total_trainers,
-                "monthly_revenue": f"{total_monthly_revenue:.2f} AFN",
-                "monthly_revenue_shop": f"{monthly_revenue_shop:.2f} AFN",
-                "monthly_renewal_revenue": f"{monthly_renewal_revenue:.2f} AFN",
+                "monthly_revenue": float(monthly_membership_revenue),  # Monthly membership fees
+                "monthly_revenue_shop": monthly_revenue_shop,  # Monthly shop sales
+                "monthly_renewal_revenue": monthly_renewal_revenue,  # Monthly payments
                 "daily_revenue": f"{daily_revenue:.2f} AFN",
-                "total_revenue": f"{total_revenue:.2f} AFN",
+                "total_revenue": total_revenue,  # All time total
+                "total_monthly_revenue": total_monthly_revenue,  # Combined monthly
             })
 
         except Exception as e:

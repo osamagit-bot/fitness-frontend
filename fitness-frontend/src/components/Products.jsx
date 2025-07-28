@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import api from '../utils/api';
 import { staticProducts } from '../utils/staticData';
 import HisabPayCheckout from './payment/HisabPayCheckout';
@@ -22,6 +23,8 @@ export default function Products() {
   const [transactionId, setTransactionId] = useState(null);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [memberId, setMemberId] = useState(null);
+  
+  const { classes } = useTheme();
 
   const featuredProductsRef = useRef(null);
 
@@ -181,25 +184,33 @@ export default function Products() {
 
   // --- CREATE PURCHASE LOGIC ---
   const createPurchase = async (cartItems) => {
-  const token = localStorage.getItem("access_token");
+  const token = localStorage.getItem("access_token") || localStorage.getItem("member_access_token");
+  console.log('🛒 Creating purchases for', cartItems.length, 'items');
+  
   for (const item of cartItems) {
     const purchaseData = {
       product: item.product_id || item.id,
-      quantity: item.quantity,
-      total_price: (item.price * item.quantity).toFixed(2),
+      quantity: parseInt(item.quantity),
+      total_price: parseFloat((item.price * item.quantity).toFixed(2)),
+      date: new Date().toISOString(),
     };
     // Only add member if logged in
     if (memberId) {
       purchaseData.member = memberId;
     }
+    
+    console.log('🛒 Purchase data:', purchaseData);
+    
     try {
-      await api.post(
+      const response = await api.post(
         "purchases/",
         purchaseData,
         token ? { headers: { Authorization: `Bearer ${token}` } } : {}
       );
+      console.log('✅ Purchase created:', response.data);
     } catch (err) {
-      console.error("Failed to create purchase:", err.response?.data || err.message);
+      console.error("❌ Failed to create purchase:", err.response?.data || err.message);
+      console.error('Purchase data that failed:', purchaseData);
     }
   }
 };
@@ -212,12 +223,17 @@ export default function Products() {
 
   // Handle payment success
   const handlePaymentSuccess = async (txnId) => {
+    console.log('💳 Payment successful, transaction ID:', txnId);
     setTransactionId(txnId);
     setShowHisabPay(false);
     setShowPaymentSuccess(true);
 
+    console.log('🛒 Cart items to save:', cart);
     // Save purchases to backend (notifications are created automatically)
     await createPurchase(cart);
+    
+    // Trigger a custom event to refresh revenue pages
+    window.dispatchEvent(new CustomEvent('purchaseCompleted', { detail: { cart } }));
 
     // Clear cart after successful payment
     setCart([]);
@@ -238,9 +254,9 @@ export default function Products() {
     return (
       <div className={`fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 ${showQuickView ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}>
         <div className="absolute inset-0 bg-black bg-opacity-75" onClick={closeQuickView}></div>
-        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-auto z-10 overflow-y-auto max-h-[90vh] transform transition-transform duration-300 scale-100">
+        <div className={`${classes.bg.card} rounded-lg shadow-xl max-w-4xl w-full mx-auto z-10 overflow-y-auto max-h-[90vh] transform transition-transform duration-300 scale-100`}>
           <div className="flex flex-col md:flex-row">
-            <div className="md:w-1/2 p-6 bg-gray-50 flex items-center justify-center">
+            <div className={`md:w-1/2 p-6 ${classes.bg.secondary} flex items-center justify-center`}>
               {selectedProduct.image_url ? (
                 <img
                   src={selectedProduct.image_url}
@@ -254,49 +270,49 @@ export default function Products() {
                   className="max-h-80 object-contain"
                 />
               ) : (
-                <div className="h-80 w-full bg-gray-200 flex items-center justify-center text-gray-500">
+                <div className={`h-80 w-full ${classes.bg.tertiary} flex items-center justify-center ${classes.text.tertiary}`}>
                   <img src="/images/whey.jpg" alt="No image" className="max-h-80 object-contain" />
                 </div>
               )}
             </div>
             <div className="md:w-1/2 p-6">
               <div className="flex justify-between items-start">
-                <h3 className="text-2xl font-bold text-gray-800">{selectedProduct.name}</h3>
-                <button onClick={closeQuickView} className="text-gray-400 hover:text-gray-600">
+                <h3 className={`text-2xl font-bold ${classes.text.primary}`}>{selectedProduct.name}</h3>
+                <button onClick={closeQuickView} className={`${classes.text.tertiary} hover:${classes.text.secondary}`}>
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
               <div className="mt-4">
-                <span className="text-xl font-bold text-gray-800">AFN {parseFloat(selectedProduct.price).toFixed(2)}</span>
+                <span className={`text-xl font-bold ${classes.text.primary}`}>AFN {parseFloat(selectedProduct.price).toFixed(2)}</span>
                 {selectedProduct.compare_at_price && (
-                  <span className="ml-3 text-gray-500 line-through">AFN {parseFloat(selectedProduct.compare_at_price).toFixed(2)}</span>
+                  <span className={`ml-3 ${classes.text.tertiary} line-through`}>AFN {parseFloat(selectedProduct.compare_at_price).toFixed(2)}</span>
                 )}
               </div>
               {selectedProduct.description && (
-                <p className="mt-4 text-gray-600">{selectedProduct.description}</p>
+                <p className={`mt-4 ${classes.text.secondary}`}>{selectedProduct.description}</p>
               )}
               {selectedProduct.category && (
                 <div className="mt-6">
-                  <span className="text-sm text-gray-500">Category:</span>
-                  <span className="ml-2 text-sm bg-gray-100 text-gray-800 py-1 px-2 rounded">
+                  <span className={`text-sm ${classes.text.tertiary}`}>Category:</span>
+                  <span className={`ml-2 text-sm ${classes.bg.tertiary} ${classes.text.primary} py-1 px-2 rounded`}>
                     {selectedProduct.category}
                   </span>
                 </div>
               )}
               <div className="mt-6">
                 <div className="flex items-center space-x-3">
-                  <span className="text-gray-700">Quantity:</span>
-                  <div className="flex items-center border border-gray-300 rounded">
+                  <span className={classes.text.primary}>Quantity:</span>
+                  <div className={`flex items-center border ${classes.border.primary} rounded`}>
                     <button
                       onClick={() => setQuantity(prev => Math.max(prev - 1, 1))}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600"
+                      className={`px-3 py-1 ${classes.bg.tertiary} hover:${classes.bg.secondary} ${classes.text.secondary}`}
                     >-</button>
-                    <span className="px-3 py-1">{quantity}</span>
+                    <span className={`px-3 py-1 ${classes.text.primary}`}>{quantity}</span>
                     <button
                       onClick={() => setQuantity(prev => prev + 1)}
-                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600"
+                      className={`px-3 py-1 ${classes.bg.tertiary} hover:${classes.bg.secondary} ${classes.text.secondary}`}
                     >+</button>
                   </div>
                 </div>
@@ -323,11 +339,11 @@ export default function Products() {
   // Shopping Cart Sidebar
   const ShoppingCartSidebar = () => {
     return (
-      <div className={`fixed inset-y-0 right-0 w-full max-w-full sm:max-w-md md:w-96 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${showCart ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-y-0 right-0 w-full max-w-full sm:max-w-md md:w-96 ${classes.bg.card} shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${showCart ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex flex-col h-full">
-          <div className="p-3 sm:p-4 border-b flex items-center justify-between">
-            <h3 className="text-base sm:text-lg font-semibold">Your Cart ({cart.length})</h3>
-            <button onClick={() => setShowCart(false)} className="text-gray-400 hover:text-gray-600">
+          <div className={`p-3 sm:p-4 border-b ${classes.border.primary} flex items-center justify-between`}>
+            <h3 className={`text-base sm:text-lg font-semibold ${classes.text.primary}`}>Your Cart ({cart.length})</h3>
+            <button onClick={() => setShowCart(false)} className={`${classes.text.tertiary} hover:${classes.text.secondary}`}>
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -335,7 +351,7 @@ export default function Products() {
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <div className={`flex flex-col items-center justify-center h-full ${classes.text.tertiary}`}>
                 <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
@@ -350,34 +366,34 @@ export default function Products() {
             ) : (
               <div className="space-y-4">
                 {cart.map(item => (
-                  <div key={item.product_id} className="flex border-b pb-4">
-                    <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                  <div key={item.product_id} className={`flex border-b ${classes.border.primary} pb-4`}>
+                    <div className={`w-20 h-20 flex-shrink-0 ${classes.bg.tertiary} rounded overflow-hidden`}>
                       {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-contain" />
                       ) : item.image ? (
                         <img src={`http://127.0.0.1:8000${item.image}`} alt={item.name} className="w-full h-full object-contain" />
                       ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-xs text-gray-500">No image</span>
+                        <div className={`w-full h-full ${classes.bg.secondary} flex items-center justify-center`}>
+                          <span className={`text-xs ${classes.text.tertiary}`}>No image</span>
                         </div>
                       )}
                     </div>
                     <div className="ml-4 flex-1">
-                      <h4 className="text-sm font-medium">{item.name}</h4>
-                      <p className="text-sm text-gray-500">AFN {parseFloat(item.price).toFixed(2)}</p>
+                      <h4 className={`text-sm font-medium ${classes.text.primary}`}>{item.name}</h4>
+                      <p className={`text-sm ${classes.text.tertiary}`}>AFN {parseFloat(item.price).toFixed(2)}</p>
                       <div className="flex items-center mt-2">
                         <button
                           onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}
-                          className="text-gray-500 hover:text-gray-700"
+                          className={`${classes.text.tertiary} hover:${classes.text.primary}`}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
                           </svg>
                         </button>
-                        <span className="mx-2 text-sm">{item.quantity}</span>
+                        <span className={`mx-2 text-sm ${classes.text.primary}`}>{item.quantity}</span>
                         <button
                           onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
-                          className="text-gray-500 hover:text-gray-700"
+                          className={`${classes.text.tertiary} hover:${classes.text.primary}`}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -388,7 +404,7 @@ export default function Products() {
                     <div className="ml-2">
                       <button
                         onClick={() => removeFromCart(item.product_id)}
-                        className="text-gray-400 hover:text-red-500"
+                        className={`${classes.text.tertiary} hover:text-red-500`}
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -401,10 +417,10 @@ export default function Products() {
             )}
           </div>
           {cart.length > 0 && (
-            <div className="border-t p-4">
+            <div className={`border-t ${classes.border.primary} p-4`}>
               <div className="flex justify-between mb-4">
-                <span className="font-medium">Subtotal</span>
-                <span className="font-bold">AFN {cartTotal.toFixed(2)}</span>
+                <span className={`font-medium ${classes.text.primary}`}>Subtotal</span>
+                <span className={`font-bold ${classes.text.primary}`}>AFN {cartTotal.toFixed(2)}</span>
               </div>
               <button
                 onClick={handleCheckout}
@@ -417,7 +433,7 @@ export default function Products() {
               </button>
               <button
                 onClick={() => setShowCart(false)}
-                className="w-full mt-2 border border-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-50 transition duration-300"
+                className={`w-full mt-2 border ${classes.border.primary} ${classes.text.primary} py-2 rounded-md hover:${classes.bg.secondary} transition duration-300`}
               >
                 Continue Shopping
               </button>
@@ -430,10 +446,10 @@ export default function Products() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className={`container mx-auto py-8 px-4 ${classes.bg.primary}`}>
         <div className="flex flex-col items-center justify-center h-64">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-yellow-500 mb-4"></div>
-          <p className="text-gray-600">Loading products...</p>
+          <p className={classes.text.secondary}>Loading products...</p>
         </div>
       </div>
     );
@@ -441,14 +457,14 @@ export default function Products() {
 
   // Show error notice but continue with products if available
   const ErrorNotice = () => error && products.length > 0 && (
-    <div className="mb-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-md">
+    <div className={`mb-8 ${classes.bg.tertiary} border-l-4 border-yellow-400 p-4 rounded shadow-md`}>
       <div className="flex items-center">
         <svg className="h-6 w-6 text-yellow-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
         </svg>
         <div>
-          <p className="text-yellow-800 font-semibold">Notice</p>
-          <p className="text-yellow-700">Showing sample products due to: {error}</p>
+          <p className={`${classes.text.primary} font-semibold`}>Notice</p>
+          <p className={classes.text.secondary}>Showing sample products due to: {error}</p>
         </div>
       </div>
     </div>
@@ -457,17 +473,17 @@ export default function Products() {
   // Only show error page if no products available at all
   if (error && products.length === 0) {
     return (
-      <section id="products" className="py-12 bg-white">
+      <section id="products" className={`py-12 ${classes.bg.primary}`}>
         <div className="container mx-auto py-8 px-4">
-          <h2 className="text-4xl font-bold text-center mb-12">
+          <h2 className={`text-4xl font-bold text-center mb-12 ${classes.text.primary}`}>
             OUR <span className="text-yellow-500">SHOP</span>
           </h2>
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-md">
+          <div className={`${classes.bg.tertiary} border-l-4 border-red-500 p-4 rounded shadow-md`}>
             <div className="flex items-center">
               <svg className="h-6 w-6 text-red-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-red-700">{error}</p>
+              <p className={`${classes.text.primary}`}>{error}</p>
             </div>
             <button
               onClick={fetchProducts}
@@ -489,12 +505,12 @@ export default function Products() {
 
   // Desktop view
   return (
-    <section id="products" className="py-8 sm:py-12 bg-white">
+    <section id="products" className={`py-8 sm:py-12 ${classes.bg.primary}`}>
       <div className="container mx-auto py-4 sm:py-8 px-2 sm:px-4">
         <ErrorNotice />
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <h2 className="text-4xl font-bold">
+          <h2 className={`text-4xl font-bold ${classes.text.primary}`}>
             OUR <span className="text-yellow-500">SHOP</span>
           </h2>
           
@@ -506,7 +522,7 @@ export default function Products() {
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-2 pl-9 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none"
+                className={`w-full p-2 pl-9 border rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none ${classes.input.primary}`}
               />
               <svg className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -517,7 +533,7 @@ export default function Products() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-sm"
+              className={`p-2 border rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-sm ${classes.input.primary}`}
             >
               <option value="default">Sort by</option>
               <option value="price-low-high">Price: Low to High</option>
@@ -529,7 +545,7 @@ export default function Products() {
             {/* Cart button */}
             <button 
               onClick={() => setShowCart(true)}
-              className="relative p-2 text-gray-600 hover:text-yellow-500 transition"
+              className={`relative p-2 ${classes.text.secondary} hover:text-yellow-500 transition`}
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -551,7 +567,7 @@ export default function Products() {
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none"
+              className={`w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none ${classes.input.primary}`}
             />
             <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -569,7 +585,7 @@ export default function Products() {
                 className={`px-4 py-2 rounded-md text-sm ${
                   selectedCategory === category
                     ? 'bg-yellow-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : `${classes.bg.tertiary} ${classes.text.secondary} hover:${classes.bg.secondary}`
                 }`}
               >
                 {category}
@@ -579,12 +595,12 @@ export default function Products() {
         </div>
         
         {filteredProducts.length === 0 ? (
-          <div className="bg-gray-50 rounded-lg p-8 text-center">
-            <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className={`${classes.bg.secondary} rounded-lg p-8 text-center`}>
+            <svg className={`w-16 h-16 mx-auto ${classes.text.tertiary} mb-4`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-500 mb-6">Try adjusting your search or filter to find what you're looking for.</p>
+            <h3 className={`text-lg font-medium ${classes.text.primary} mb-2`}>No products found</h3>
+            <p className={`${classes.text.secondary} mb-6`}>Try adjusting your search or filter to find what you're looking for.</p>
             <button
               onClick={() => {
                 setSelectedCategory('All');
@@ -604,9 +620,9 @@ export default function Products() {
             {filteredProducts.map((product) => (
               <div 
                 key={product.product_id} 
-                className="bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+                className={`${classes.card.primary} p-4 rounded-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2`}
               >
-                <div className="mb-4 h-48 bg-gray-50 flex items-center justify-center overflow-hidden rounded-lg relative group">
+                <div className={`mb-4 h-48 ${classes.bg.secondary} flex items-center justify-center overflow-hidden rounded-lg relative group`}>
                   {product.image_url ? (
                     <img 
                       src={getImageUrl(product)}
@@ -653,11 +669,11 @@ export default function Products() {
                   </div>
                 </div>
                 
-                <h3 className="text-lg font-semibold mb-1 text-gray-800 truncate">{product.name}</h3>
+                <h3 className={`text-lg font-semibold mb-1 ${classes.text.primary} truncate`}>{product.name}</h3>
                 
                 {product.category && (
                   <div className="mb-2">
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                    <span className={`text-xs ${classes.bg.tertiary} ${classes.text.secondary} px-2 py-1 rounded`}>
                       {product.category}
                     </span>
                   </div>
@@ -665,11 +681,11 @@ export default function Products() {
                 
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <span className="text-xl font-bold text-gray-800">
+                    <span className={`text-xl font-bold ${classes.text.primary}`}>
                       AFN {parseFloat(product.price).toFixed(2)}
                     </span>
                     {product.compare_at_price && (
-                      <span className="ml-2 text-sm text-gray-500 line-through">
+                      <span className={`ml-2 text-sm ${classes.text.tertiary} line-through`}>
                         AFN {parseFloat(product.compare_at_price).toFixed(2)}
                       </span>
                     )}

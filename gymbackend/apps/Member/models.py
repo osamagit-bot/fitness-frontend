@@ -5,7 +5,7 @@ from django.core.validators import MinLengthValidator
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.models import User
-
+from decimal import Decimal
 
 import uuid
 
@@ -125,7 +125,14 @@ class Member(models.Model):
         ordering = ['-start_date']
 
     def __str__(self):
-     return f"{self.first_name} {self.last_name}" + (" (Inactive)" if not self.is_active else "")
+        return f"{self.first_name} {self.last_name} (ID: {self.athlete_id})"
+    
+    @property
+    def user_status(self):
+        """Check if member has valid user relationship"""
+        if hasattr(self, 'user') and self.user:
+            return f"User: {self.user.username} (Active: {self.user.is_active})"
+        return "No user relationship"
 
 
 
@@ -181,3 +188,58 @@ class Training(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()} with {self.trainer.first_name} ({self.datetime.strftime('%Y-%m-%d %H:%M')})"
+
+
+class MembershipRevenue(models.Model):
+    """Track cumulative membership revenue to prevent resets when members are deleted"""
+    month = models.DateField()  # First day of the month
+    total_revenue = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    member_count = models.IntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['month']
+    
+    @classmethod
+    def update_current_month_revenue(cls):
+        """Update revenue for current month based on active members"""
+        from datetime import datetime
+        
+        current_month = datetime.now().replace(day=1).date()
+        
+        # Calculate current revenue from active members
+        current_revenue = Member.objects.aggregate(
+            total=models.Sum('monthly_fee')
+        )['total'] or Decimal('0')
+        
+        current_count = Member.objects.count()
+        
+        # Get or create revenue record for current month
+        revenue_record, created = cls.objects.get_or_create(
+            month=current_month,
+            defaults={
+                'total_revenue': current_revenue,
+                'member_count': current_count
+            }
+        )
+        
+        # Only update if current revenue is higher (prevents resets)
+        if current_revenue > revenue_record.total_revenue:
+            revenue_record.total_revenue = current_revenue
+            revenue_record.member_count = current_count
+            revenue_record.save()
+        
+        return revenue_record.total_revenue
+    
+    @classmethod
+    def get_current_month_revenue(cls):
+        """Get persistent revenue for current month"""
+        from datetime import datetime
+        
+        current_month = datetime.now().replace(day=1).date()
+        
+        try:
+            revenue_record = cls.objects.get(month=current_month)
+            return revenue_record.total_revenue
+        except cls.DoesNotExist:
+            return cls.update_current_month_revenue()

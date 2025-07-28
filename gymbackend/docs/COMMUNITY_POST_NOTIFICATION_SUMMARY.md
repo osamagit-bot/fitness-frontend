@@ -58,7 +58,7 @@ if (notificationType === 'community_post')
 {notif.notification_type === 'community_post' && notif.post_id && (
   <button
     onClick={() => navigate(`/admin/community/post/${notif.post_id}`)}
-    className="ml-2 px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+    className="ml-2 px-2 py-1 bg-amber-600 text-white rounded hover:bg-blue-600 text-sm"
   >
     View Post
   </button>
@@ -107,7 +107,7 @@ if (notificationType === 'community_post')
 
 #### **Button Styling:**
 ```css
-className="ml-2 px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm transition-colors"
+className="ml-2 px-2 py-1 bg-amber-600 text-white rounded hover:bg-blue-600 text-sm transition-colors"
 ```
 
 ### **🔧 Database Migration:**

@@ -1,5 +1,6 @@
-// utils/api.js - Production-ready with dev/prod compatibility
+// utils/api.js - Fixed with redirect loop prevention
 import axios from 'axios';
+
 
 // Environment-aware base URL
 const getBaseURL = () => {
@@ -11,105 +12,152 @@ const getBaseURL = () => {
   return baseURL.endsWith('/') ? baseURL : `${baseURL}/`;
 };
 
-// Main API instance with authentication (for regular frontend components)
+// Prevent multiple simultaneous operations
+let isRedirecting = false;
+let refreshingToken = false;
+let pendingRequests = [];
+
+// Main API instance
 const api = axios.create({
   baseURL: getBaseURL(),
-  timeout: 30000, // 30 second timeout
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 30000,
 });
 
-// Request interceptor for authentication
+// Request interceptor
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  // Determine which token to use based on current route
+  const currentPath = window.location.pathname;
+  let token;
+  
+  if (currentPath.startsWith('/admin')) {
+    token = localStorage.getItem('admin_access_token');
+  } else if (currentPath.startsWith('/member-dashboard')) {
+    token = localStorage.getItem('member_access_token');
+  } else {
+    // Fallback to either token if available
+    token = localStorage.getItem('admin_access_token') || localStorage.getItem('member_access_token');
+  }
+  
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
   
-  // Add request ID for tracking
   config.metadata = { startTime: new Date() };
+  // console.log('API Request', { url: config.url, method: config.method });
   
   return config;
 }, (error) => {
-  console.error('Request interceptor error:', error);
+  // console.log('Request interceptor error', error);
   return Promise.reject(error);
 });
 
-// Response interceptor with enhanced error handling
+// Enhanced response interceptor with circuit breaker
 api.interceptors.response.use(
   (response) => {
-    // Log response time in development
-    if (import.meta.env.VITE_ENVIRONMENT === 'development') {
-      const duration = new Date() - response.config.metadata.startTime;
-      console.log(`API Response: ${response.config.url} took ${duration}ms`);
-    }
+    const duration = new Date() - response.config.metadata.startTime;
+    // console.log('API Success', { url: response.config.url, status: response.status, duration: `${duration}ms` });
+    
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
+    
+    // console.log('API Error', { url: originalRequest?.url, status: error.response?.status, message: error.message });
 
     // Handle network errors
     if (!error.response) {
-      console.error('Network error:', error.message);
+      // console.log('Network error detected');
       return Promise.reject(new Error('Network connection failed. Please check your internet connection.'));
     }
 
-    // Handle 401 errors with token refresh
+    // Handle 401 errors with enhanced logic
     if (error.response.status === 401 && !originalRequest._retry) {
+      // console.log('401 Unauthorized - attempting token refresh');
+
       originalRequest._retry = true;
-      const refreshToken = localStorage.getItem('refreshToken');
+
+      // Prevent multiple simultaneous token refresh attempts
+      if (refreshingToken) {
+        // console.log('Token refresh already in progress, queuing request');
+        
+        return new Promise((resolve, reject) => {
+          pendingRequests.push({ resolve, reject, config: originalRequest });
+        });
+      }
+
+      refreshingToken = true;
+      
+      // Get the appropriate refresh token based on current route
+      const currentPath = window.location.pathname;
+      let refreshToken;
+      
+      if (currentPath.startsWith('/admin')) {
+        refreshToken = localStorage.getItem('admin_refresh_token');
+      } else if (currentPath.startsWith('/member-dashboard')) {
+        refreshToken = localStorage.getItem('member_refresh_token');
+      } else {
+        refreshToken = localStorage.getItem('admin_refresh_token') || localStorage.getItem('member_refresh_token');
+      }
 
       if (refreshToken) {
         try {
+          // console.log('Attempting token refresh');
+          
           const response = await axios.post(`${getBaseURL()}token/refresh/`, {
             refresh: refreshToken,
           });
 
           const newAccessToken = response.data.access;
-          localStorage.setItem('access_token', newAccessToken);
-          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError.response?.data);
           
-          // Handle user deletion
+          // Store the new token in the correct role-specific key
+          if (currentPath.startsWith('/admin')) {
+            localStorage.setItem('admin_access_token', newAccessToken);
+          } else if (currentPath.startsWith('/member-dashboard')) {
+            localStorage.setItem('member_access_token', newAccessToken);
+          } else {
+            // Fallback - store in both if unsure
+            localStorage.setItem('admin_access_token', newAccessToken);
+            localStorage.setItem('member_access_token', newAccessToken);
+          }
+          
+          // console.log('Token refresh successful');
+          
+          // Update original request and retry
+          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+          
+          // Process any pending requests
+          pendingRequests.forEach(({ resolve, config }) => {
+            config.headers['Authorization'] = `Bearer ${newAccessToken}`;
+            resolve(api(config));
+          });
+          pendingRequests = [];
+          
+          refreshingToken = false;
+          // Token refresh successful
+          
+          return api(originalRequest);
+          
+        } catch (refreshError) {
+          refreshingToken = false;
+          pendingRequests = [];
+          
+          // console.log('Token refresh failed', { status: refreshError.response?.status, error: refreshError.response?.data });
+          
+          // Handle specific refresh errors
           if (refreshError.response?.data?.code === 'user_deleted') {
-            console.log('User account deleted - forcing logout');
-            const currentUserType = localStorage.getItem('userType');
-            
-            // Clear all auth data
-            const keysToRemove = [
-              'access_token', 'refreshToken', 'userType', 'userId', 
-              'memberId', 'memberID', 'name', 'username', 'isAuthenticated'
-            ];
-            keysToRemove.forEach(key => localStorage.removeItem(key));
-            
-            // Redirect based on user type
-            const redirectPath = currentUserType === 'admin' ? '/admin-login' : '/login';
-            if (!window.location.pathname.includes('login')) {
-              window.location.href = redirectPath;
-            }
+            // console.log('User account deleted - forcing logout');
+            await handleAuthError('user_deleted');
             return Promise.reject(new Error('Account has been deleted'));
           }
           
-          // Clear session and redirect for other refresh errors
-          const keysToRemove = [
-            'access_token', 'refreshToken', 'userType', 'userId', 
-            'memberId', 'memberID', 'name', 'username', 'isAuthenticated'
-          ];
-          keysToRemove.forEach(key => localStorage.removeItem(key));
-          
-          if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
-          }
+          // Handle other refresh failures
+          await handleAuthError('refresh_failed');
           return Promise.reject(refreshError);
         }
       } else {
-        // No refresh token - redirect to login
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
+        refreshingToken = false;
+        // console.log('No refresh token available');
+        await handleAuthError('no_refresh_token');
       }
     }
 
@@ -117,37 +165,59 @@ api.interceptors.response.use(
   }
 );
 
-// Public API instance for kiosk and unauthenticated endpoints
+// Centralized auth error handling
+async function handleAuthError(reason) {
+  // console.log('Handling auth error', { reason });
+  
+  // Don't redirect if already on login page or already redirecting
+  if (window.location.pathname.includes('/login') || isRedirecting) {
+    // console.log('Skipping redirect - already on login or redirecting');
+    return;
+  }
+  
+  // Clear authentication data
+  const keysToRemove = [
+    'access_token', 'refreshToken', 'userType', 'userId', 
+    'memberId', 'name', 'username', 'isAuthenticated', 'sessionStart'
+  ];
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  
+  // Safe redirect with circuit breaker
+  isRedirecting = true;
+  
+  setTimeout(() => {
+    isRedirecting = false;
+  }, 3000);
+  
+  const currentUserType = localStorage.getItem('userType');
+  const redirectPath = currentUserType === 'admin' ? '/admin-login' : '/login';
+  
+  // console.log('Redirecting to login', { path: redirectPath });
+  
+  // Use replace to avoid adding to history
+  window.location.replace(redirectPath);
+}
+
+// Public API instance
 const publicApi = axios.create({
   baseURL: getBaseURL(),
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
-// Public API response interceptor (no auth handling)
 publicApi.interceptors.response.use(
   (response) => {
-    if (import.meta.env.VITE_ENVIRONMENT === 'development') {
-      console.log(`Public API Response: ${response.config.url}`);
-    }
+    // console.log('Public API Success', { url: response.config.url });
     return response;
   },
   (error) => {
+    // console.log('Public API Error', { url: error.config?.url, status: error.response?.status });
+    
     if (!error.response) {
-      console.error('Public API Network error:', error.message);
       return Promise.reject(new Error('Network connection failed'));
     }
     return Promise.reject(error);
   }
 );
 
-// Export both instances
 export { api, publicApi };
-export default api; // Default export (for backward compatibility)
-
-
-
-
-
+export default api;

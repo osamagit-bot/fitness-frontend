@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const Footer = () => {
   // State to control button visibility based on scroll position
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const { classes } = useTheme();
 
   // Function to scroll to top
   const scrollToTop = () => {
@@ -37,7 +39,7 @@ const Footer = () => {
       {/* Fixed Back to Top Button - Always available */}
       <button
         onClick={scrollToTop}
-        className={`fixed bottom-6 right-6 bg-yellow-400 text-black w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-yellow-500 transition-all duration-300 z-50 ${
+        className={`fixed bottom-6 right-6 ${classes.button.primary} w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 z-50 ${
           showScrollButton ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
         }`}
         aria-label="Back to top"
@@ -58,31 +60,31 @@ const Footer = () => {
         </svg>
       </button>
 
-      <footer className="bg-black/90 text-gray-300 pt-16 pb-8 px-4 md:px-12 relative">
+      <footer className={`${classes.bg.tertiary} ${classes.text.secondary} pt-16 pb-8 px-4 md:px-12 relative`}>
         <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-10">
           {/* Brand & Tagline */}
           <div>
-            <h1 className="text-2xl font-bold text-yellow-400 mb-4">Atalan Gym</h1>
-            <p className="text-sm text-gray-400">
+            <h1 className={`text-2xl font-bold ${classes.text.accent} mb-4`}>Atalan Gym</h1>
+            <p className={`text-sm ${classes.text.tertiary}`}>
               Transform your body and mind. Join the ultimate fitness experience today.
             </p>
           </div>
 
           {/* Navigation Links */}
           <div>
-            <h3 className="text-lg font-semibold text-yellow-400 mb-3">Quick Links</h3>
+            <h3 className={`text-lg font-semibold ${classes.text.accent} mb-3`}>Quick Links</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-yellow-400">Home</a></li>
-              <li><a href="#" className="hover:text-yellow-400">About Us</a></li>
-              <li><a href="#" className="hover:text-yellow-400">Classes</a></li>
-              <li><a href="#" className="hover:text-yellow-400">Trainers</a></li>
-              <li><a href="#" className="hover:text-yellow-400">Contact</a></li>
+              <li><a href="#" className={`${classes.text.secondary} hover:${classes.text.accent.replace('text-', 'text-')}`}>Home</a></li>
+              <li><a href="#" className={`${classes.text.secondary} hover:${classes.text.accent.replace('text-', 'text-')}`}>About Us</a></li>
+              <li><a href="#" className={`${classes.text.secondary} hover:${classes.text.accent.replace('text-', 'text-')}`}>Classes</a></li>
+              <li><a href="#" className={`${classes.text.secondary} hover:${classes.text.accent.replace('text-', 'text-')}`}>Trainers</a></li>
+              <li><a href="#" className={`${classes.text.secondary} hover:${classes.text.accent.replace('text-', 'text-')}`}>Contact</a></li>
             </ul>
           </div>
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-lg font-semibold text-yellow-400 mb-3">Contact</h3>
+            <h3 className={`text-lg font-semibold ${classes.text.accent} mb-3`}>Contact</h3>
             <ul className="text-sm space-y-2">
               <li>
                 <i className="bx bx-map text-yellow-400 mr-2"></i>

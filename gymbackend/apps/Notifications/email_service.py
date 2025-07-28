@@ -63,14 +63,24 @@ class EmailNotificationService:
     def send_admin_notification_email(subject, message, admin_emails=None, check_preferences=True):
         """
         Send email notification to admin users with preference checking.
-        
-        Args:
-            subject (str): Email subject line
-            message (str): Main message content
-            admin_emails (list, optional): List of admin email addresses
-            check_preferences (bool): Whether to check user email preferences
         """
         print("EMAIL SERVICE: Starting email send process...")
+
+        # Check global notification toggle from database (not Django settings)
+        try:
+            from apps.Management.models import SiteSettings
+            site_settings = SiteSettings.get_settings()
+            if not site_settings.email_notifications_enabled:
+                print("Global email notifications are DISABLED in database. No email will be sent.")
+                logger.info("Email notification skipped: Global email notifications disabled")
+                return False
+        except Exception as e:
+            print(f"Could not check global email settings: {e}")
+            # Fallback to Django settings if database check fails
+            if not getattr(settings, 'EMAIL_NOTIFICATIONS_ENABLED', True):
+                print("Global email notifications are DISABLED. No email will be sent.")
+                logger.info("Email notification skipped: EMAIL_NOTIFICATIONS_ENABLED is False")
+                return False
         
         # Auto-fetch admin emails if not provided
         if not admin_emails:
@@ -232,6 +242,7 @@ class EmailNotificationService:
         except Exception as e:
             logger.error(f"Failed to fetch admin emails: {str(e)}")
             return []
+
 
 
 

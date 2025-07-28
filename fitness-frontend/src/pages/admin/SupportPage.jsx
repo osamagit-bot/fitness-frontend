@@ -218,7 +218,7 @@ function AdminSupportManagement() {
         <div className="text-red-500 mb-4">{error}</div>
         <button
           onClick={fetchSupportData}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-blue-600 transition-colors"
         >
           Retry
         </button>
@@ -230,8 +230,8 @@ function AdminSupportManagement() {
     <>
       <div className="container mx-auto p-4 max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Support Management</h1>
-          <p className="text-gray-600">Manage support tickets and FAQs for your platform</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Support Management</h1>
+          <p className="text-gray-300">Manage support tickets and FAQs for your platform</p>
         </div>
 
       {/* Tabs */}
@@ -241,8 +241,8 @@ function AdminSupportManagement() {
             onClick={() => setActiveTab('tickets')}
             className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
               activeTab === 'tickets'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-yellow-500 text-yellow-500'
+                : 'border-transparent text-gray-300 hover:text-white hover:border-gray-500'
             }`}
           >
             <FiMessageSquare className="h-5 w-5" />
@@ -252,8 +252,8 @@ function AdminSupportManagement() {
             onClick={() => setActiveTab('faqs')}
             className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
               activeTab === 'faqs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-yellow-500 text-yellow-500'
+                : 'border-transparent text-gray-300 hover:text-white hover:border-gray-500'
             }`}
           >
             <FiHelpCircle className="h-5 w-5" />
@@ -264,14 +264,14 @@ function AdminSupportManagement() {
 
       {/* Content based on active tab */}
       {activeTab === 'tickets' && (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-gray-700 rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 border-b border-gray-600">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <h2 className="text-xl font-semibold text-gray-800">Support Tickets</h2>
+              <h2 className="text-xl font-semibold text-white">Support Tickets</h2>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative">
                   <select
-                    className="appearance-none pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    className="appearance-none pl-4 pr-10 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white"
                     value={ticketFilter}
                     onChange={(e) => setTicketFilter(e.target.value)}
                   >
@@ -280,7 +280,7 @@ function AdminSupportManagement() {
                     <option value="closed">Closed Tickets</option>
                     <option value="responded">Responded Tickets</option>
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-300">
                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                       <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                     </svg>
@@ -291,12 +291,14 @@ function AdminSupportManagement() {
           </div>
 
           {filteredTickets.length > 0 ? (
-            <div className="divide-y divide-gray-200">
-              {filteredTickets.map(ticket => (
+            <div className="divide-y divide-gray-600">
+              {filteredTickets.map(ticket => {
+                console.log('Ticket data:', ticket); // Debug log
+                return (
                 <div
                   key={ticket.id}
                   className={`transition-all duration-200 ${
-                    activeTicket === ticket.id ? 'bg-blue-50' : 'hover:bg-gray-50'
+                    activeTicket === ticket.id ? 'bg-gray-600' : 'hover:bg-gray-600'
                   }`}
                 >
                   <div
@@ -324,11 +326,11 @@ function AdminSupportManagement() {
                             )}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-800">{ticket.subject}</h3>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 mt-1">
+                            <h3 className="font-semibold text-white">{ticket.subject}</h3>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-300 mt-1">
                               <p>From: {ticket.member_name}</p>
                               <p>Type: {ticket.type}</p>
-                              <p>Date: {formatDate(ticket.date_created)}</p>
+                              <p>Date: {ticket.date_created ? formatDate(ticket.date_created) : ticket.created_at ? formatDate(ticket.created_at) : ticket.timestamp ? formatDate(ticket.timestamp) : new Date().toLocaleDateString()}</p>
                             </div>
                           </div>
                         </div>
@@ -359,25 +361,25 @@ function AdminSupportManagement() {
                   </div>
 
                   {activeTicket === ticket.id && (
-                    <div className="px-6 pb-6 pt-2 bg-white">
-                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium text-gray-700 mb-2">Original Message:</h4>
-                        <p className="text-gray-700 whitespace-pre-line">{ticket.message}</p>
+                    <div className="px-6 pb-6 pt-2 bg-gray-700">
+                      <div className="mt-4 p-4 bg-gray-600 rounded-lg">
+                        <h4 className="font-medium text-white mb-2">Original Message:</h4>
+                        <p className="text-gray-300 whitespace-pre-line">{ticket.message}</p>
                       </div>
 
                       {ticket.responses && ticket.responses.length > 0 && (
                         <div className="mt-6">
-                          <h4 className="font-medium text-gray-700 mb-3">Responses:</h4>
+                          <h4 className="font-medium text-white mb-3">Responses:</h4>
                           <div className="space-y-3">
                             {ticket.responses.map((response, index) => (
-                              <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs">
+                              <div key={index} className="bg-yellow-500/10 p-4 rounded-lg border border-yellow-500/30 shadow-xs">
                                 <div className="flex justify-between items-center mb-2">
-                                  <p className="font-medium text-sm text-gray-800">{response.author}</p>
-                                  <p className="text-xs text-gray-500">
-                                  {formatDateTime(response.date_created)}
+                                  <p className="font-medium text-sm text-white">{response.author}</p>
+                                  <p className="text-xs text-gray-400">
+                                  {response.date_created ? formatDateTime(response.date_created) : response.created_at ? formatDateTime(response.created_at) : new Date().toLocaleDateString()}
                                   </p>
                                 </div>
-                                <p className="text-gray-700 whitespace-pre-line">{response.message}</p>
+                                <p className="text-gray-300 whitespace-pre-line">{response.message}</p>
                               </div>
                             ))}
                           </div>
@@ -386,11 +388,11 @@ function AdminSupportManagement() {
 
                       {ticket.status !== 'closed' && (
                         <div className="mt-6">
-                          <h4 className="font-medium text-gray-700 mb-3">Add Response:</h4>
+                          <h4 className="font-medium text-white mb-3">Add Response:</h4>
                           <div className="space-y-3">
                             <textarea
                               placeholder="Type your response here..."
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white placeholder-gray-400"
                               rows="4"
                               value={ticketResponse}
                               onChange={e => setTicketResponse(e.target.value)}
@@ -401,13 +403,13 @@ function AdminSupportManagement() {
                                   setTicketResponse('');
                                   setActiveTicket(null);
                                 }}
-                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="px-4 py-2 border border-gray-600 text-white rounded-lg hover:bg-gray-600 transition-colors"
                               >
                                 Cancel
                               </button>
                               <button
                                 onClick={() => handleTicketResponse(ticket.id)}
-                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300"
                               >
                                 Send Response
                               </button>
@@ -418,7 +420,8 @@ function AdminSupportManagement() {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="p-10 text-center">
@@ -432,15 +435,15 @@ function AdminSupportManagement() {
       )}
 
       {activeTab === 'faqs' && (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-gray-700 rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 border-b border-gray-600">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <h2 className="text-xl font-semibold text-gray-800">FAQ Management</h2>
+              <h2 className="text-xl font-semibold text-white">FAQ Management</h2>
               <div className="relative w-full md:w-64">
                 <input
                   type="text"
                   placeholder="Search FAQs..."
-                  className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-4 pr-10 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white placeholder-gray-400"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -455,10 +458,10 @@ function AdminSupportManagement() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-6">
             {/* Categories Column */}
-            <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-200">
+            <div className="lg:col-span-1 border-b lg:border-b-0 lg:border-r border-gray-600">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800">Categories</h3>
+                  <h3 className="font-semibold text-white">Categories</h3>
                   <button
                     onClick={() => setIsCreatingCategory(!isCreatingCategory)}
                     className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
@@ -474,14 +477,14 @@ function AdminSupportManagement() {
                       <input
                         type="text"
                         placeholder="New category name"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 px-3 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-gray-800 text-white placeholder-gray-400"
                         value={newFaqCategory}
                         onChange={e => setNewFaqCategory(e.target.value)}
                         autoFocus
                       />
                       <button
                         type="submit"
-                        className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        className="px-3 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300"
                       >
                         Add
                       </button>
@@ -492,31 +495,31 @@ function AdminSupportManagement() {
                 <div className="space-y-2">
                   {filteredCategories.length > 0 ? (
                     filteredCategories.map(category => (
-                      <div key={category.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div key={category.id} className="border border-gray-600 rounded-lg overflow-hidden">
                         <div
-                          className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                          className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-600"
                           onClick={() => toggleCategory(category.id)}
                         >
-                          <span className="font-medium text-gray-800">{category.name}</span>
+                          <span className="font-medium text-white">{category.name}</span>
                           <span className="flex items-center">
-                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full mr-2">
+                            <span className="text-xs bg-gray-600 text-gray-300 px-2 py-1 rounded-full mr-2">
                               {category.faqs?.length || 0}
                             </span>
                             {expandedCategories[category.id] ? (
-                              <FiChevronUp className="h-4 w-4 text-gray-500" />
+                              <FiChevronUp className="h-4 w-4 text-gray-300" />
                             ) : (
-                              <FiChevronDown className="h-4 w-4 text-gray-500" />
+                              <FiChevronDown className="h-4 w-4 text-gray-300" />
                             )}
                           </span>
                         </div>
                         {expandedCategories[category.id] && category.faqs && category.faqs.length > 0 && (
-                          <div className="border-t border-gray-200 divide-y divide-gray-200">
+                          <div className="border-t border-gray-600 divide-y divide-gray-600">
                             {category.faqs.map(faq => (
-                              <div key={faq.id} className="p-3 bg-gray-50">
+                              <div key={faq.id} className="p-3 bg-gray-600">
                                 <div className="flex justify-between items-start">
                                   <div>
-                                    <p className="font-medium text-gray-800">{faq.question}</p>
-                                    <p className="text-sm text-gray-500 line-clamp-2">{faq.answer}</p>
+                                    <p className="font-medium text-white">{faq.question}</p>
+                                    <p className="text-sm text-gray-300 line-clamp-2">{faq.answer}</p>
                                   </div>
                                   <button
                                     onClick={() => handleDeleteFaq(faq.id, category.id)}
@@ -533,7 +536,7 @@ function AdminSupportManagement() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-4 text-gray-500">
+                    <div className="text-center py-4 text-gray-300">
                       No categories found matching your search.
                     </div>
                   )}
@@ -543,15 +546,15 @@ function AdminSupportManagement() {
 
             {/* FAQ Creation Column */}
             <div className="lg:col-span-2 p-6">
-              <h3 className="font-semibold text-gray-800 mb-4">Create New FAQ</h3>
+              <h3 className="font-semibold text-white mb-4">Create New FAQ</h3>
               <form onSubmit={handleCreateFaq} className="space-y-4">
                 <div>
-                  <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="category-select" className="block text-sm font-medium text-white mb-1">
                     Category
                   </label>
                   <select
                     id="category-select"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white"
                     value={newFaq.category}
                     onChange={e => setNewFaq({ ...newFaq, category: e.target.value })}
                     required
@@ -566,14 +569,14 @@ function AdminSupportManagement() {
                 </div>
 
                 <div>
-                  <label htmlFor="question" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="question" className="block text-sm font-medium text-white mb-1">
                     Question
                   </label>
                   <input
                     id="question"
                     type="text"
                     placeholder="What is...?"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white placeholder-gray-400"
                     value={newFaq.question}
                     onChange={e => setNewFaq({ ...newFaq, question: e.target.value })}
                     required
@@ -581,13 +584,13 @@ function AdminSupportManagement() {
                 </div>
 
                 <div>
-                  <label htmlFor="answer" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="answer" className="block text-sm font-medium text-white mb-1">
                     Answer
                   </label>
                   <textarea
                     id="answer"
                     placeholder="Provide a detailed answer..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[150px]"
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white placeholder-gray-400 min-h-[150px]"
                     value={newFaq.answer}
                     onChange={e => setNewFaq({ ...newFaq, answer: e.target.value })}
                     required
@@ -598,13 +601,13 @@ function AdminSupportManagement() {
                   <button
                     type="button"
                     onClick={() => setNewFaq({ category: '', question: '', answer: '' })}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2 border border-gray-600 text-white rounded-lg hover:bg-gray-600 transition-colors"
                   >
                     Clear
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300"
                   >
                     Create FAQ
                   </button>
@@ -614,10 +617,10 @@ function AdminSupportManagement() {
               {/* FAQ Preview */}
               {newFaq.question && (
                 <div className="mt-8">
-                  <h3 className="font-semibold text-gray-800 mb-3">Preview</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h4 className="font-medium text-lg text-gray-800 mb-2">{newFaq.question}</h4>
-                    <div className="prose max-w-none text-gray-700">
+                  <h3 className="font-semibold text-white mb-3">Preview</h3>
+                  <div className="bg-gray-600 p-4 rounded-lg border border-gray-500">
+                    <h4 className="font-medium text-lg text-white mb-2">{newFaq.question}</h4>
+                    <div className="prose max-w-none text-gray-300">
                       {newFaq.answer.split('\n').map((paragraph, i) => (
                         <p key={i}>{paragraph}</p>
                       ))}

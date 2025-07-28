@@ -1,0 +1,72 @@
+/* Offline-first font loading strategy */
+
+/* Font face declarations with fallbacks */
+@font-face {
+  font-family: 'Poppins-Fallback';
+  src: local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('Arial');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oxanium-Fallback';
+  src: local('Arial Black'), local('Impact'), local('Arial');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Load Google Fonts with fallback strategy */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&family=Lilita+One&family=Righteous&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hammersmith+One&display=swap');
+
+/* CSS Custom Properties with comprehensive fallbacks */
+:root {
+  --font-primary: 'Poppins', 'Poppins-Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-heading: 'Oxanium', 'Oxanium-Fallback', 'Arial Black', 'Trebuchet MS', Arial, sans-serif;
+  --font-display: 'Righteous', 'Impact', 'Franklin Gothic Medium', 'Arial Black', Arial, sans-serif;
+  --font-accent: 'Josefin Sans', 'Trebuchet MS', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: 'Hammersmith One', 'Courier New', Courier, monospace;
+}
+
+/* Base font application */
+* {
+  font-family: var(--font-primary);
+}
+
+body {
+  font-family: var(--font-primary);
+  font-display: swap;
+}
+
+/* Heading fonts */
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: var(--font-heading);
+  font-display: swap;
+}
+
+/* Utility classes */
+.font-display {
+  font-family: var(--font-display);
+  font-display: swap;
+}
+
+.font-accent {
+  font-family: var(--font-accent);
+  font-display: swap;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  font-display: swap;
+}
+
+/* Ensure fonts load properly */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    font-display: swap;
+  }
+}

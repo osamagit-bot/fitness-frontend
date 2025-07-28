@@ -7,8 +7,8 @@ import api from "../../utils/api";
 
 function MemberSettingsPage() {
 
-  const token = localStorage.getItem('access_token');
-  const memberId = localStorage.getItem('memberId');
+  const token = localStorage.getItem('member_access_token');
+  const memberId = localStorage.getItem('member_id');
   const [userData, setUserData] = useState({
     name: '',
     email: '',
@@ -194,8 +194,13 @@ function MemberSettingsPage() {
 
   // Logout handler
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('memberId');
+    localStorage.removeItem('member_access_token');
+    localStorage.removeItem('member_refresh_token');
+    localStorage.removeItem('member_user_id');
+    localStorage.removeItem('member_username');
+    localStorage.removeItem('member_name');
+    localStorage.removeItem('member_id');
+    localStorage.removeItem('member_isAuthenticated');
     window.location.href = '/login';
   };
 
@@ -237,7 +242,7 @@ function MemberSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black">
       <ToastContainer position="top-right" autoClose={5000} />
       
       <motion.div
@@ -251,17 +256,17 @@ function MemberSettingsPage() {
           
           {/* Main Content */}
           <div className="flex-1">
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="bg-gray-700 rounded-xl shadow-md overflow-hidden border border-gray-600">
               {/* Header */}
            
               {/* Sections */}
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-600">
                 {/* Profile Section */}
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold text-gray-800">Profile Information</h2>
+                    <h2 className="text-lg font-semibold text-white">Profile Information</h2>
                     <button 
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="text-yellow-400 hover:text-yellow-300 text-sm font-medium"
                       onClick={() => setShowUpdateForm(true)}
                     >
                       Edit
@@ -269,20 +274,20 @@ function MemberSettingsPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-500">Name</p>
-                      <p className="font-medium">{userData.name}</p>
+                      <p className="text-sm text-gray-400">Name</p>
+                      <p className="font-medium text-white">{userData.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{userData.email}</p>
+                      <p className="text-sm text-gray-400">Email</p>
+                      <p className="font-medium text-white">{userData.email}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Phone</p>
-                      <p className="font-medium">{userData.phone || 'Not provided'}</p>
+                      <p className="text-sm text-gray-400">Phone</p>
+                      <p className="font-medium text-white">{userData.phone || 'Not provided'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Member Since</p>
-                      <p className="font-medium">June 2023</p>
+                      <p className="text-sm text-gray-400">Member Since</p>
+                      <p className="font-medium text-white">June 2023</p>
                     </div>
                   </div>
                 </div>
@@ -290,19 +295,19 @@ function MemberSettingsPage() {
                 {/* Security Section */}
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold text-gray-800">Security</h2>
+                    <h2 className="text-lg font-semibold text-white">Security</h2>
                   </div>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center p-4 bg-gray-600 rounded-lg border border-gray-500">
                       <div className="flex items-center space-x-3">
-                        <FiLock className="text-blue-600" />
+                        <FiLock className="text-yellow-400" />
                         <div>
-                          <p className="font-medium">Password</p>
-                          <p className="text-sm text-gray-500">Last changed 3 months ago</p>
+                          <p className="font-medium text-white">Password</p>
+                          <p className="text-sm text-gray-400">Last changed 3 months ago</p>
                         </div>
                       </div>
                       <button 
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-yellow-400 hover:text-yellow-300 text-sm font-medium"
                         onClick={() => setShowPasswordForm(true)}
                       >
                         Change
@@ -316,13 +321,13 @@ function MemberSettingsPage() {
       
                 
                 {/* Danger Zone */}
-                <div className="p-6 bg-red-50 rounded-b-lg">
-                  <h2 className="text-lg font-semibold text-red-800 mb-4">Danger Zone</h2>
+                <div className="p-6 bg-red-900 bg-opacity-20 rounded-b-lg border-t border-red-500">
+                  <h2 className="text-lg font-semibold text-red-400 mb-4">Danger Zone</h2>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center p-4 bg-white rounded-lg border border-red-100">
+                    <div className="flex justify-between items-center p-4 bg-gray-600 rounded-lg border border-red-500">
                       <div>
-                        <p className="font-medium text-red-800">Delete Account</p>
-                        <p className="text-sm text-red-600">Permanently remove your account and all data</p>
+                        <p className="font-medium text-red-400">Delete Account</p>
+                        <p className="text-sm text-red-300">Permanently remove your account and all data</p>
                       </div>
                       <button 
                         className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition"
@@ -349,17 +354,17 @@ function MemberSettingsPage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-xl w-full max-w-md"
+              className="bg-gray-700 rounded-xl w-full max-w-md border border-gray-600"
               initial={{ scale: 0.9, y: 40 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 40 }}
             >
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">Change Password</h3>
+                  <h3 className="text-xl font-bold text-white">Change Password</h3>
                   <button 
                     onClick={() => setShowPasswordForm(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-200"
                   >
                     <FiX size={24} />
                   </button>
@@ -367,10 +372,10 @@ function MemberSettingsPage() {
                 
                 <form onSubmit={handlePasswordSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                    <label className="block text-sm font-medium text-white mb-1">Current Password</label>
                     <div className="relative">
                       <input
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                         type={showCurrentPassword ? "text" : "password"}
                         name="currentPassword"
                         value={passwordData.currentPassword}
@@ -380,7 +385,7 @@ function MemberSettingsPage() {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       >
                         {showCurrentPassword ? <FiEyeOff /> : <FiEye />}
@@ -389,10 +394,10 @@ function MemberSettingsPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                    <label className="block text-sm font-medium text-white mb-1">New Password</label>
                     <div className="relative">
                       <input
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                         type={showNewPassword ? "text" : "password"}
                         name="newPassword"
                         value={passwordData.newPassword}
@@ -402,23 +407,23 @@ function MemberSettingsPage() {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
                         onClick={() => setShowNewPassword(!showNewPassword)}
                       >
                         {showNewPassword ? <FiEyeOff /> : <FiEye />}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters long</p>
+                    <p className="text-xs text-gray-400 mt-1">Must be at least 8 characters long</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                    <label className="block text-sm font-medium text-white mb-1">Confirm New Password</label>
                     <div className="relative">
                       <input
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        className={`w-full px-4 py-2 border rounded-lg bg-gray-600 text-white focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 ${
                           passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword 
                             ? 'border-red-500' 
-                            : 'border-gray-300'
+                            : 'border-gray-600'
                         }`}
                         type={showConfirmPassword ? "text" : "password"}
                         name="confirmPassword"
@@ -429,31 +434,31 @@ function MemberSettingsPage() {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                       </button>
                     </div>
                     {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
-                      <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                      <p className="text-xs text-red-400 mt-1">Passwords do not match</p>
                     )}
                   </div>
                   
                   <div className="flex justify-end space-x-3 pt-4">
                     <button
                       type="button"
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                      className="px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-600 transition"
                       onClick={() => setShowPasswordForm(false)}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className={`px-4 py-2 rounded-lg text-white transition ${
+                      className={`px-4 py-2 rounded-lg text-black transition ${
                         loading || passwordData.newPassword !== passwordData.confirmPassword || passwordData.newPassword.length < 8
-                          ? 'bg-blue-400 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700'
+                          ? 'bg-yellow-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
                       }`}
                       disabled={loading || passwordData.newPassword !== passwordData.confirmPassword || passwordData.newPassword.length < 8}
                     >
@@ -477,17 +482,17 @@ function MemberSettingsPage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-xl w-full max-w-md"
+              className="bg-gray-700 rounded-xl w-full max-w-md border border-gray-600"
               initial={{ scale: 0.9, y: 40 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 40 }}
             >
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">Update Profile</h3>
+                  <h3 className="text-xl font-bold text-white">Update Profile</h3>
                   <button 
                     onClick={() => setShowUpdateForm(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-200"
                   >
                     <FiX size={24} />
                   </button>
@@ -495,9 +500,9 @@ function MemberSettingsPage() {
                 
                 <form onSubmit={handleUpdateSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <label className="block text-sm font-medium text-white mb-1">Full Name</label>
                     <input
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                       type="text"
                       name="name"
                       value={userData.name}
@@ -508,13 +513,13 @@ function MemberSettingsPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <label className="block text-sm font-medium text-white mb-1">Email</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <FiMail className="text-gray-400" />
                       </div>
                       <input
-                        className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full pl-10 px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                         type="email"
                         name="email"
                         value={userData.email}
@@ -526,13 +531,13 @@ function MemberSettingsPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <label className="block text-sm font-medium text-white mb-1">Phone Number</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <FiPhone className="text-gray-400" />
                       </div>
                       <input
-                        className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full pl-10 px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
                         type="tel"
                         name="phone"
                         value={userData.phone}
@@ -545,15 +550,15 @@ function MemberSettingsPage() {
                   <div className="flex justify-end space-x-3 pt-4">
                     <button
                       type="button"
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                      className="px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-600 transition"
                       onClick={() => setShowUpdateForm(false)}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className={`px-4 py-2 rounded-lg text-white transition ${
-                        loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                      className={`px-4 py-2 rounded-lg text-black transition ${
+                        loading ? 'bg-yellow-400 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
                       }`}
                       disabled={loading}
                     >
@@ -577,26 +582,26 @@ function MemberSettingsPage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-xl w-full max-w-md"
+              className="bg-gray-700 rounded-xl w-full max-w-md border border-gray-600"
               initial={{ scale: 0.9, y: 40 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 40 }}
             >
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-red-600">Request Account Deletion</h3>
+                  <h3 className="text-xl font-bold text-red-400">Request Account Deletion</h3>
                   <button 
                     onClick={() => setShowDeleteModal(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-200"
                   >
                     <FiX size={24} />
                   </button>
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-                    <h4 className="font-medium text-red-800 mb-2">What happens when you request deletion?</h4>
-                    <ul className="text-sm text-red-700 space-y-2 list-disc list-inside">
+                  <div className="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-500">
+                    <h4 className="font-medium text-red-400 mb-2">What happens when you request deletion?</h4>
+                    <ul className="text-sm text-red-300 space-y-2 list-disc list-inside">
                       <li>Your account will be deactivated immediately</li>
                       <li>Our team will review your request within 48 hours</li>
                       <li>All your personal data will be permanently deleted</li>
@@ -604,9 +609,9 @@ function MemberSettingsPage() {
                     </ul>
                   </div>
                   
-                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
-                    <h4 className="font-medium text-yellow-800 mb-2">Consider these alternatives</h4>
-                    <ul className="text-sm text-yellow-700 space-y-2">
+                  <div className="bg-yellow-900 bg-opacity-20 p-4 rounded-lg border border-yellow-500">
+                    <h4 className="font-medium text-yellow-400 mb-2">Consider these alternatives</h4>
+                    <ul className="text-sm text-yellow-300 space-y-2">
                       <li>• Temporarily deactivate your account instead</li>
                       <li>• Update your notification preferences</li>
                       <li>• Contact support for assistance</li>
@@ -614,17 +619,17 @@ function MemberSettingsPage() {
                   </div>
                   
                   <div className="pt-4">
-                    <p className="text-sm text-gray-600 mb-4">To confirm, please type <span className="font-bold">"DELETE MY ACCOUNT"</span> below:</p>
+                    <p className="text-sm text-gray-300 mb-4">To confirm, please type <span className="font-bold text-white">"DELETE MY ACCOUNT"</span> below:</p>
                     <input
                       type="text"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
+                      className="w-full px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg mb-4"
                       placeholder="DELETE MY ACCOUNT"
                     />
                   </div>
                   
                   <div className="flex justify-end space-x-3">
                     <button
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                      className="px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-600 transition"
                       onClick={() => setShowDeleteModal(false)}
                     >
                       Cancel

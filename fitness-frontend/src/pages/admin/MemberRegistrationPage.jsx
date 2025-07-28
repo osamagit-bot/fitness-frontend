@@ -19,6 +19,7 @@ import {
 } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../utils/api";
+
 const ConfirmationPrompt = ({
   isOpen,
   onClose,
@@ -88,7 +89,7 @@ const ConfirmationPrompt = ({
               <div className="ml-4 flex-shrink-0 flex">
                 <button
                   onClick={onClose}
-                  className="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  className="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600 transition-colors"
                 >
                   <span className="sr-only">Close</span>
                   <FiX className="h-5 w-5" />
@@ -100,7 +101,7 @@ const ConfirmationPrompt = ({
             <button
               type="button"
               onClick={onClose}
-              className={`w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 ${currentColor.button} text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm transition-all hover:shadow-lg`}
+              className={`w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 ${currentColor.button} text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-600 sm:ml-3 sm:w-auto sm:text-sm transition-all hover:shadow-lg`}
             >
               Close
             </button>
@@ -121,7 +122,7 @@ const FormField = ({
   tooltip,
 }) => (
   <div className="space-y-2">
-    <label className="flex items-center text-sm font-medium text-gray-700">
+    <label className="flex items-center text-sm font-medium text-gray-200">
       {Icon && <Icon className="h-4 w-4 mr-2 text-gray-500" />}
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
@@ -171,10 +172,10 @@ const CredentialsCard = ({ credentials, onContinue }) => {
   };
 
   return (
-    <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 shadow-lg">
+    <div className="mb-8 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-600 rounded-2xl p-6 shadow-lg">
       <div className="flex items-center mb-4">
-        <div className="bg-blue-100 p-2 rounded-full mr-3">
-          <FiUser className="h-6 w-6 text-blue-600" />
+        <div className="bg-yellow-600 p-2 rounded-full mr-3">
+          <FiUser className="h-6 w-6 text-white" />
         </div>
         <h2 className="text-xl font-bold text-gray-800">
           Member Login Credentials
@@ -192,7 +193,7 @@ const CredentialsCard = ({ credentials, onContinue }) => {
             </div>
             <button
               onClick={() => copyToClipboard(credentials.username, "username")}
-              className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
+              className="p-2 text-gray-500 hover:text-yellow-700 transition-colors"
             >
               {copied.username ? (
                 <FiCheck className="h-5 w-5" />
@@ -213,7 +214,7 @@ const CredentialsCard = ({ credentials, onContinue }) => {
             </div>
             <button
               onClick={() => copyToClipboard(credentials.email, "email")}
-              className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
+              className="p-2 text-gray-500 hover:text-yellow-700 transition-colors"
             >
               {copied.email ? (
                 <FiCheck className="h-5 w-5" />
@@ -234,7 +235,7 @@ const CredentialsCard = ({ credentials, onContinue }) => {
                 </p>
                 <button
                   onClick={() => setShowPassword(!showPassword)}
-                  className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
+                  className="p-1 text-gray-500 hover:text-yellow-700 transition-colors"
                 >
                   {showPassword ? (
                     <FiEyeOff className="h-4 w-4" />
@@ -246,7 +247,7 @@ const CredentialsCard = ({ credentials, onContinue }) => {
             </div>
             <button
               onClick={() => copyToClipboard(credentials.password, "password")}
-              className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
+              className="p-2 text-gray-500 hover:text-yellow-700 transition-colors"
             >
               {copied.password ? (
                 <FiCheck className="h-5 w-5" />
@@ -274,7 +275,7 @@ const CredentialsCard = ({ credentials, onContinue }) => {
       <div className="mt-6 flex justify-end">
         <button
           onClick={onContinue}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center"
+          className="px-6 py-3 bg-yellow-700 hover:bg-yellow-800 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center"
         >
           Continue to Members Page
           <FiUsers className="ml-2 h-4 w-4" />
@@ -455,10 +456,10 @@ const RegisterPage = () => {
     const checkAuth = async () => {
       setPageReady(false);
 
-      const token = localStorage.getItem("access_token");
-      const isAuthenticated = localStorage.getItem("isAuthenticated");
+      const adminToken = localStorage.getItem("admin_access_token");
+      const adminAuth = localStorage.getItem("admin_isAuthenticated");
 
-      if (!token || isAuthenticated !== "true") {
+      if (!adminToken || adminAuth !== "true") {
         navigate("/login");
         return;
       }
@@ -492,7 +493,7 @@ const RegisterPage = () => {
 
   const testAuth = async () => {
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       const response = await api.get("test/", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -507,7 +508,7 @@ const RegisterPage = () => {
 
   const refreshStats = async () => {
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       if (!token) return;
 
       await api.get("admin-dashboard/stats/", {
@@ -536,7 +537,7 @@ const RegisterPage = () => {
 
   const renewMembership = async () => {
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       if (!token) {
         throw new Error("No authentication token found. Please login again.");
       }
@@ -560,7 +561,7 @@ const RegisterPage = () => {
 
   const getMemberData = async (athleteId) => {
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       if (!token)
         throw new Error("No authentication token found. Please login again.");
 
@@ -639,7 +640,7 @@ const RegisterPage = () => {
     setShowCredentials(false);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       if (!token)
         throw new Error("No authentication token found. Please login again.");
 
@@ -754,9 +755,9 @@ const RegisterPage = () => {
 
   if (!pageReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex justify-center items-center">
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-amber-100 flex justify-center items-center">
         <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-700 border-t-transparent"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -764,7 +765,7 @@ const RegisterPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <ConfirmationPrompt
         isOpen={showPrompt}
         onClose={() => setShowPrompt(false)}
@@ -776,16 +777,16 @@ const RegisterPage = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <div className="bg-black/30 rounded-2xl shadow-lg p-6 mb-6">
             <div className="flex items-center justify-center mb-4">
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-3 rounded-full">
+              <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 p-3 rounded-full">
                 <FiUsers className="h-8 w-8 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-200 mb-2">
               {isRenewal ? "Renew Membership" : "Register New Athlete"}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-300">
               {isRenewal
                 ? "Extend the membership duration for an existing athlete"
                 : "Add a new athlete to the system with their membership details"}
@@ -802,14 +803,17 @@ const RegisterPage = () => {
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white">
+        <div className="bg-black/20 rounded-2xl shadow-xl overflow-hidden">
+          <div className="flex items-center space-x-3 mb-6 p-6">
+            <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-2 rounded-lg">
+              <FiUsers className="text-white w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-200">
               {isRenewal ? "Membership Renewal Form" : "Registration Form"}
             </h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Athlete ID */}
               <FormField
@@ -825,13 +829,13 @@ const RegisterPage = () => {
                   name="athlete_id"
                   value={memberData.athlete_id}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.athlete_id
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.athlete_id
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
                   placeholder="Enter athlete ID (e.g., A12345)"
                   disabled={isRenewal}
                 />
@@ -850,13 +854,13 @@ const RegisterPage = () => {
                   name="first_name"
                   value={memberData.first_name}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.first_name
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.first_name
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
                   placeholder="Enter first name"
                   disabled={isRenewal}
                 />
@@ -875,13 +879,13 @@ const RegisterPage = () => {
                   name="last_name"
                   value={memberData.last_name}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.last_name
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.last_name
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
                   placeholder="Enter last name"
                   disabled={isRenewal}
                 />
@@ -901,13 +905,13 @@ const RegisterPage = () => {
                   name="email"
                   value={memberData.email}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.email
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.email
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
                   placeholder="Enter email address"
                   disabled={isRenewal}
                 />
@@ -927,13 +931,13 @@ const RegisterPage = () => {
                   name="phone"
                   value={memberData.phone}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.phone
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.phone
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
                   placeholder="07XXXXXXXXX"
                   disabled={isRenewal}
                 />
@@ -953,44 +957,18 @@ const RegisterPage = () => {
                   name="monthly_fee"
                   value={memberData.monthly_fee}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.monthly_fee
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.monthly_fee
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
                   placeholder="Enter monthly fee"
                   min="0"
                   step="0.01"
                   disabled={isRenewal}
                 />
-              </FormField>
-
-              {/* Membership Type */}
-              <FormField
-                label="Membership Type"
-                icon={FiUsers}
-                required
-                error={fieldErrors.membership_type}
-                success={fieldSuccess.membership_type}
-              >
-                <select
-                  name="membership_type"
-                  value={memberData.membership_type}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                    fieldErrors.membership_type
-                      ? "border-red-300 bg-red-50"
-                      : fieldSuccess.membership_type
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                  disabled={isRenewal}
-                >
-                  <option value="gym">Gym Membership</option>
-                  <option value="fitness">Fitness Only</option>
-                </select>
               </FormField>
 
               {/* Box Number */}
@@ -1006,15 +984,45 @@ const RegisterPage = () => {
                   name="box_number"
                   value={memberData.box_number}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.box_number
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.box_number
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
+                      ? "border-green-500"
+                      : "border-gray-600"
                   }`}
                   placeholder="Enter box number (optional)"
                 />
+              </FormField>
+
+              {/* Membership Type */}
+              <FormField
+                label="Membership Type"
+                icon={FiUsers}
+                required
+                error={fieldErrors.membership_type}
+                success={fieldSuccess.membership_type}
+              >
+                <select
+                  name="membership_type"
+                  value={memberData.membership_type}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
+                    fieldErrors.membership_type
+                      ? "border-red-500"
+                      : fieldSuccess.membership_type
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-600 cursor-not-allowed" : ""}`}
+                  disabled={isRenewal}
+                >
+                  <option value="gym" className="text-yellow-500">
+                    Gym Membership
+                  </option>
+                  <option value="fitness" className="text-yellow-500">
+                    Fitness Only
+                  </option>
+                </select>
               </FormField>
 
               {/* Time Slot */}
@@ -1029,18 +1037,27 @@ const RegisterPage = () => {
                   name="time_slot"
                   value={memberData.time_slot}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.time_slot
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.time_slot
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
+                      ? "border-green-500"
+                      : "border-gray-600"
                   }`}
                 >
-                  <option value="morning">Morning (6AM - 12PM)</option>
-                  <option value="afternoon">Afternoon (12PM - 6PM)</option>
-                  <option value="evening">Evening (6PM - 10PM)</option>
-                  <option value="all_day">All Day Access</option>
+                  <option value="morning" className="text-yellow-500">
+                    Morning (6AM - 12PM)
+                  </option>
+                  <option value="afternoon" className="text-yellow-500">
+                    Afternoon (12PM - 6PM)
+                  </option>
+                  <option value="evening" className="text-yellow-500">
+                    {" "}
+                    Evening (6PM - 10PM)
+                  </option>
+                  <option value="all_day" className="text-yellow-500">
+                    All Day Access
+                  </option>
                 </select>
               </FormField>
 
@@ -1057,13 +1074,13 @@ const RegisterPage = () => {
                   name="start_date"
                   value={memberData.start_date}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.start_date
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.start_date
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
-                  } ${isRenewal ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                      ? "border-green-500"
+                      : "border-gray-600"
+                  } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
                   min={new Date().toISOString().split("T")[0]}
                   disabled={isRenewal}
                 />
@@ -1082,12 +1099,12 @@ const RegisterPage = () => {
                   name="expiry_date"
                   value={memberData.expiry_date}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                  className={`w-full px-4 py-3 border rounded-lg text-white bg-gray-800 border-gray-300 focus:outline-none transition-all duration-200 ${
                     fieldErrors.expiry_date
-                      ? "border-red-300 bg-red-50"
+                      ? "border-red-500"
                       : fieldSuccess.expiry_date
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-300 bg-white hover:border-gray-400"
+                      ? "border-green-500"
+                      : "border-gray-600"
                   }`}
                   min={memberData.start_date}
                 />
@@ -1099,7 +1116,7 @@ const RegisterPage = () => {
               <button
                 type="button"
                 onClick={() => navigate("/admin/members")}
-                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-200 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
               >
                 Cancel
               </button>
@@ -1107,10 +1124,10 @@ const RegisterPage = () => {
               <button
                 type="submit"
                 disabled={loading || Object.keys(fieldErrors).length > 0}
-                className={`flex-1 px-6 py-3 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                className={`flex-1 px-6 py-3 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-yellow-600 transition-all duration-200 ${
                   loading || Object.keys(fieldErrors).length > 0
                     ? "bg-gray-400 cursor-not-allowed text-white"
-                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl"
+                    : "bg-gradient-to-r from-yellow-700 to-yellow-600 hover:from-yellow-600 hover:to-yellow-900 text-white shadow-lg hover:shadow-xl"
                 }`}
               >
                 {loading ? (

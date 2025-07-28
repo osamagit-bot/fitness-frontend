@@ -45,7 +45,7 @@ function TrainersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('admin_access_token');
       const response = await api.get('trainers/', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -109,7 +109,7 @@ function TrainersPage() {
     }
 
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('admin_access_token');
       
       // Create FormData for file upload
       const formData = new FormData();
@@ -186,7 +186,7 @@ function TrainersPage() {
   const deleteTrainer = async (trainerId) => {
     if (window.confirm('Are you sure you want to delete this trainer?')) {
       try {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('admin_access_token');
         
         await api.delete(`trainers/${trainerId}/`, {
           headers: {
@@ -214,18 +214,18 @@ function TrainersPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-2 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black p-2 md:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
             Trainers Management
           </h1>
-          <div className="w-24 h-1 bg-blue-500 mx-auto rounded-full"></div>
-          <p className="text-blue-700 mt-4">Manage your fitness trainers and their profiles</p>
+          <div className="w-24 h-1 bg-yellow-500 mx-auto rounded-full"></div>
+          <p className="text-gray-300 mt-4">Manage your fitness trainers and their profiles</p>
         </div>
         
         {error && (
-          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200">
+          <div className="mb-6 p-4 bg-red-900/30 text-red-300 rounded-xl border border-red-500/50">
             <p className="font-semibold">Error</p>
             <p className="text-sm whitespace-pre-line">{error}</p>
           </div>
@@ -233,13 +233,13 @@ function TrainersPage() {
         
         {/* Enhanced Add Trainer Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl shadow-xl border border-blue-200 mb-8 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+          <div className="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 mb-8 overflow-hidden">
+            <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-white">Add New Trainer</h2>
+                <h2 className="text-xl font-bold text-black">Add New Trainer</h2>
                 <button 
                   onClick={() => setShowAddForm(false)}
-                  className="text-white hover:text-blue-200 transition-colors"
+                  className="text-black hover:text-gray-700 transition-colors"
                 >
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -251,24 +251,24 @@ function TrainersPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">Trainer ID</label>
+                    <label className="block text-sm font-semibold text-white mb-2">Trainer ID</label>
                     <input
                       type="text"
                       name="trainer_id"
                       value={newTrainer.trainer_id}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white placeholder-gray-400 transition-all"
                       placeholder="Enter trainer ID"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">Specialization</label>
+                    <label className="block text-sm font-semibold text-white mb-2">Specialization</label>
                     <select
                       name="specialization"
                       value={newTrainer.specialization}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white transition-all"
                       required
                     >
                       <option value="">Select specialization</option>
@@ -281,25 +281,25 @@ function TrainersPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">First Name</label>
+                    <label className="block text-sm font-semibold text-white mb-2">First Name</label>
                     <input
                       type="text"
                       name="first_name"
                       value={newTrainer.first_name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white placeholder-gray-400 transition-all"
                       placeholder="Enter first name"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">Last Name</label>
+                    <label className="block text-sm font-semibold text-white mb-2">Last Name</label>
                     <input
                       type="text"
                       name="last_name"
                       value={newTrainer.last_name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white placeholder-gray-400 transition-all"
                       placeholder="Enter last name"
                       required
                     />
@@ -308,25 +308,25 @@ function TrainersPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">Email</label>
+                    <label className="block text-sm font-semibold text-white mb-2">Email</label>
                     <input
                       type="email"
                       name="email"
                       value={newTrainer.email}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white placeholder-gray-400 transition-all"
                       placeholder="Enter email address"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">Phone</label>
+                    <label className="block text-sm font-semibold text-white mb-2">Phone</label>
                     <input
                       type="tel"
                       name="phone"
                       value={newTrainer.phone}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white placeholder-gray-400 transition-all"
                       placeholder="Enter phone number"
                       required
                     />
@@ -335,38 +335,38 @@ function TrainersPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">Monthly Salary</label>
+                    <label className="block text-sm font-semibold text-white mb-2">Monthly Salary</label>
                     <input
                       type="number"
                       name="monthly_salary"
                       value={newTrainer.monthly_salary}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white placeholder-gray-400 transition-all"
                       placeholder="Enter monthly salary"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-black mb-2">Start Date</label>
+                    <label className="block text-sm font-semibold text-white mb-2">Start Date</label>
                     <input
                       type="date"
                       name="start_date"
                       value={newTrainer.start_date}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
+                      className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white transition-all"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-black mb-2">Profile Image</label>
+                  <label className="block text-sm font-semibold text-white mb-2">Profile Image</label>
                   <input
                     type="file"
                     name="image"
                     onChange={handleImageChange}
                     accept="image/*"
-                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-black hover:file:bg-yellow-100"
+                    className="w-full px-4 py-3 rounded-lg border-2 border-gray-600 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 bg-gray-700 text-white transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-500 file:text-black hover:file:bg-yellow-400"
                   />
                 </div>
 
@@ -374,14 +374,14 @@ function TrainersPage() {
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-semibold"
+                    className="px-6 py-3 border-2 border-gray-600 text-white rounded-lg hover:bg-gray-600 transition-all font-semibold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-semibold shadow-lg disabled:opacity-50"
+                    className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all font-semibold shadow-lg disabled:opacity-50"
                   >
                     {isLoading ? 'Adding...' : 'Add Trainer'}
                   </button>
@@ -392,21 +392,21 @@ function TrainersPage() {
         )}
         
         {/* Enhanced Trainers Display */}
-        <div className="bg-white rounded-2xl shadow-xl border border-blue-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+        <div className="bg-gray-700 rounded-2xl shadow-xl border border-gray-600 overflow-hidden">
+          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-              <h2 className="text-xl font-bold text-white mb-2 md:mb-0">Trainers List</h2>
+              <h2 className="text-xl font-bold text-black mb-2 md:mb-0">Trainers List</h2>
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                 <button 
                   onClick={() => setShowAddForm(true)} 
-                  className="bg-white text-blue-600 py-2 px-6 rounded-lg hover:bg-blue-50 transition-all font-semibold shadow-lg w-full sm:w-auto"
+                  className="bg-black text-yellow-500 py-2 px-6 rounded-lg hover:bg-gray-800 transition-all font-semibold shadow-lg w-full sm:w-auto"
                   disabled={showAddForm}
                 >
                   Add New Trainer
                 </button>
                 <button 
                   onClick={fetchTrainers}
-                  className="bg-blue-700 text-white py-2 px-6 rounded-lg hover:bg-blue-800 transition-all font-semibold shadow-lg w-full sm:w-auto"
+                  className="bg-gray-800 text-white py-2 px-6 rounded-lg hover:bg-gray-900 transition-all font-semibold shadow-lg w-full sm:w-auto"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Refreshing...' : 'Refresh'}
@@ -418,7 +418,7 @@ function TrainersPage() {
           <div className="p-6">
             {isLoading ? (
               <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-500 border-t-transparent"></div>
               </div>
             ) : (
               <>
@@ -426,11 +426,11 @@ function TrainersPage() {
                 <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {trainers.length > 0 ? (
                     trainers.map(trainer => (
-                      <div key={trainer.id} className="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-lg border border-blue-200 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                      <div key={trainer.id} className="bg-gradient-to-br from-gray-600 to-gray-700 rounded-xl shadow-lg border border-gray-500 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                         <div className="relative h-48">
                           {imageErrors.has(trainer.id) ? (
-                            <div className="h-full w-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                              <span className="text-blue-600 text-4xl">👤</span>
+                            <div className="h-full w-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center">
+                              <span className="text-yellow-400 text-4xl">👤</span>
                             </div>
                           ) : (
                             <img 
@@ -441,41 +441,41 @@ function TrainersPage() {
                             />
                           )}
                           <div className="absolute top-4 right-4">
-                            <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                            <span className="bg-yellow-500 text-black px-3 py-1 rounded-full text-xs font-bold">
                               ID: {trainer.trainer_id}
                             </span>
                           </div>
                         </div>
                         <div className="p-6">
-                          <h3 className="text-xl font-bold text-blue-900 mb-2">
+                          <h3 className="text-xl font-bold text-white mb-2">
                             {trainer.first_name} {trainer.last_name}
                           </h3>
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                              <span className="text-gray-600">Specialization:</span>
-                              <span className="ml-1 font-semibold capitalize">{trainer.specialization}</span>
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                              <span className="text-gray-300">Specialization:</span>
+                              <span className="ml-1 font-semibold text-white capitalize">{trainer.specialization}</span>
                             </div>
                             <div className="flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                              <span className="text-gray-600">Email:</span>
-                              <span className="ml-1 font-semibold">{trainer.email}</span>
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                              <span className="text-gray-300">Email:</span>
+                              <span className="ml-1 font-semibold text-white">{trainer.email}</span>
                             </div>
                             <div className="flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                              <span className="text-gray-600">Phone:</span>
-                              <span className="ml-1 font-semibold">{trainer.phone}</span>
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                              <span className="text-gray-300">Phone:</span>
+                              <span className="ml-1 font-semibold text-white">{trainer.phone}</span>
                             </div>
                             <div className="flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                              <span className="text-gray-600">Salary:</span>
-                              <span className="ml-1 font-semibold">${trainer.monthly_salary}</span>
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                              <span className="text-gray-300">Salary:</span>
+                              <span className="ml-1 font-semibold text-white">${trainer.monthly_salary}</span>
                             </div>
                           </div>
-                          <div className="mt-4 pt-4 border-t border-blue-200">
+                          <div className="mt-4 pt-4 border-t border-gray-500">
                             <button
                               onClick={() => deleteTrainer(trainer.id)}
-                              className="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-all font-semibold"
+                              className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-2 px-4 rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-semibold"
                             >
                               Delete Trainer
                             </button>
@@ -485,8 +485,8 @@ function TrainersPage() {
                     ))
                   ) : (
                     <div className="col-span-full text-center py-8">
-                      <div className="text-4xl text-blue-400 mb-2">👥</div>
-                      <p className="text-gray-500">No trainers found</p>
+                      <div className="text-4xl text-yellow-400 mb-2">👥</div>
+                      <p className="text-gray-300">No trainers found</p>
                     </div>
                   )}
                 </div>
@@ -495,39 +495,39 @@ function TrainersPage() {
                 <div className="md:hidden space-y-4">
                   {trainers.length > 0 ? (
                     trainers.map(trainer => (
-                      <div key={trainer.id} className="bg-gradient-to-r from-blue-50 to-white rounded-xl shadow-lg border border-blue-200 overflow-hidden">
+                      <div key={trainer.id} className="bg-gradient-to-r from-gray-700 to-gray-600 rounded-xl shadow-lg border border-gray-500 overflow-hidden">
                         <div className="p-4">
                           <div className="flex justify-between items-start mb-3">
-                            <h3 className="font-bold text-lg text-blue-900">
+                            <h3 className="font-bold text-lg text-white">
                               {trainer.first_name} {trainer.last_name}
                             </h3>
                             <button
                               onClick={() => deleteTrainer(trainer.id)}
-                              className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                              className="text-red-400 hover:text-red-300 font-semibold text-sm"
                             >
                               Delete
                             </button>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div>
-                              <span className="text-gray-500">ID:</span>
-                              <span className="ml-1 font-semibold">{trainer.trainer_id}</span>
+                              <span className="text-gray-300">ID:</span>
+                              <span className="ml-1 font-semibold text-white">{trainer.trainer_id}</span>
                             </div>
                             <div>
-                              <span className="text-gray-500">Specialization:</span>
-                              <span className="ml-1 font-semibold capitalize">{trainer.specialization}</span>
+                              <span className="text-gray-300">Specialization:</span>
+                              <span className="ml-1 font-semibold text-white capitalize">{trainer.specialization}</span>
                             </div>
                             <div className="col-span-2">
-                              <span className="text-gray-500">Email:</span>
-                              <span className="ml-1 font-semibold">{trainer.email}</span>
+                              <span className="text-gray-300">Email:</span>
+                              <span className="ml-1 font-semibold text-white">{trainer.email}</span>
                             </div>
                             <div>
-                              <span className="text-gray-500">Phone:</span>
-                              <span className="ml-1 font-semibold">{trainer.phone}</span>
+                              <span className="text-gray-300">Phone:</span>
+                              <span className="ml-1 font-semibold text-white">{trainer.phone}</span>
                             </div>
                             <div>
-                              <span className="text-gray-500">Salary:</span>
-                              <span className="ml-1 font-semibold">${trainer.monthly_salary}</span>
+                              <span className="text-gray-300">Salary:</span>
+                              <span className="ml-1 font-semibold text-white">${trainer.monthly_salary}</span>
                             </div>
                           </div>
                         </div>
@@ -535,8 +535,8 @@ function TrainersPage() {
                     ))
                   ) : (
                     <div className="text-center py-8">
-                      <div className="text-4xl text-blue-400 mb-2">👥</div>
-                      <p className="text-gray-500">No trainers found</p>
+                      <div className="text-4xl text-yellow-400 mb-2">👥</div>
+                      <p className="text-gray-300">No trainers found</p>
                     </div>
                   )}
                 </div>

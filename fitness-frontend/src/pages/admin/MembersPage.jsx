@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
@@ -26,18 +27,29 @@ function MembersPage() {
     setIsLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("admin_access_token");
       const response = await api.get("members/", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
+      console.log("🔍 Full API response:", response.data);
+      console.log("🔍 Response structure:", {
+        hasResults: !!response.data.results,
+        isArray: Array.isArray(response.data),
+        dataType: typeof response.data,
+        dataKeys: Object.keys(response.data || {}),
+      });
+
       const athletesData = response.data.results || response.data;
+      console.log("🔍 Athletes data:", athletesData);
+      console.log("🔍 Athletes count:", Array.isArray(athletesData) ? athletesData.length : 'Not an array');
+
       setAthletes(Array.isArray(athletesData) ? athletesData : []);
       setFilteredAthletes(Array.isArray(athletesData) ? athletesData : []);
     } catch (error) {
-      console.error("Error fetching athletes:", error);
+      console.error("❌ Error fetching athletes:", error);
       setError(error.response?.data?.message || "Failed to fetch athletes");
     } finally {
       setIsLoading(false);
@@ -147,7 +159,7 @@ function MembersPage() {
   const deleteAthlete = async (athleteId) => {
     if (window.confirm("Are you sure you want to delete this athlete?")) {
       try {
-        const token = localStorage.getItem("access_token");
+        const token = localStorage.getItem("admin_access_token");
         await api.delete(`members/${athleteId}/`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -222,10 +234,20 @@ function MembersPage() {
 
   return (
     <>
-      <div className="p-2 md:p-0">
-        <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="p-2 md:p-0 min-h-screen bg-gray-900"
+      >
+        <motion.h1 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="text-xl md:text-2xl lg:ml-6 font-bold mb-4 md:mb-6 text-yellow-400"
+        >
           Athletes/Members Management
-        </h1>
+        </motion.h1>
 
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
@@ -240,7 +262,12 @@ function MembersPage() {
           </div>
         )}
 
-        <div className="bg-white p-3 md:p-6 rounded-lg shadow-md">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="bg-gray-800 p-3 md:p-6 rounded-lg shadow-md border border-gray-700"
+        >
           {/* Search Bar */}
           <div className="mb-4">
             <div className="relative">
@@ -252,7 +279,7 @@ function MembersPage() {
                 placeholder="Search by name, ID, membership type, box number, or time slot..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-600 rounded-md leading-5 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:placeholder-gray-300 focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 text-sm"
               />
               {searchTerm && (
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -268,7 +295,7 @@ function MembersPage() {
           </div>
 
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
-            <h2 className="text-lg md:text-xl font-semibold">Members List</h2>
+            <h2 className="text-lg md:text-xl font-semibold text-white">Members List</h2>
 
             <div className="flex flex-wrap items-center gap-2 md:gap-4">
               <div
@@ -276,21 +303,21 @@ function MembersPage() {
                 onClick={() => handleStatusFilter("expired")}
               >
                 <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
-                <span className="text-xs md:text-sm">Expired</span>
+                <span className="text-xs md:text-sm text-gray-300">Expired</span>
               </div>
               <div
                 className="flex items-center cursor-pointer"
                 onClick={() => handleStatusFilter("expiringSoon")}
               >
                 <div className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></div>
-                <span className="text-xs md:text-sm">Expiring Soon</span>
+                <span className="text-xs md:text-sm text-gray-300">Expiring Soon</span>
               </div>
               <div
                 className="flex items-center cursor-pointer"
                 onClick={() => handleStatusFilter("active")}
               >
                 <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
-                <span className="text-xs md:text-sm">Active</span>
+                <span className="text-xs md:text-sm text-gray-300">Active</span>
               </div>
 
               <button
@@ -308,15 +335,15 @@ function MembersPage() {
           {(dateFilter.filterType !== "all" ||
             statusFilter !== "all" ||
             searchTerm.trim()) && (
-            <div className="mb-4 p-2 bg-gray-50 rounded-md text-sm flex items-center justify-between">
-              <div>
+            <div className="mb-4 p-2 bg-gray-700 rounded-md text-sm flex items-center justify-between">
+              <div className="text-gray-300">
                 Showing {statusFilter !== "all" && `${statusFilter} `}
                 {searchTerm.trim() && `search results for "${searchTerm}" `}(
                 {filteredAthletes.length} of {athletes.length} members)
               </div>
               <button
                 onClick={resetDateFilters}
-                className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                className="text-yellow-400 hover:text-yellow-300 text-sm flex items-center"
               >
                 <FiX className="mr-1" /> Clear all filters
               </button>
@@ -324,42 +351,42 @@ function MembersPage() {
           )}
           {/* Large Screen Table */}
           <div className="hidden md:block">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-600">
+              <thead className="bg-gray-700">
                 <tr>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     ID
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Box
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Time
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Fee
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Registered On
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Expiry Date
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-2 md:py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-gray-600 divide-y text-white divide-gray-400">
                 {filteredAthletes.length === 0 ? (
                   <tr>
                     <td
@@ -393,7 +420,7 @@ function MembersPage() {
                 }
                 ${
                   !isExpired && !isExpiringSoon
-                    ? "hover:bg-gray-50 text-sm"
+                    ? "hover:bg-gray-500 text-sm"
                     : ""
                 }
               `}
@@ -450,7 +477,7 @@ function MembersPage() {
                             {isExpired && (
                               <button
                                 onClick={() => handleRenew(athlete)}
-                                className="text-white p-2 rounded-md bg-blue-500 hover:text-blue-300 mr-2"
+                                className="text-white p-2 rounded-md bg-amber-600 hover:text-blue-300 mr-2"
                               >
                                 Renew
                               </button>
@@ -609,11 +636,12 @@ function MembersPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
       <AppToastContainer />
     </>
   );
 }
 
 export default MembersPage;
+

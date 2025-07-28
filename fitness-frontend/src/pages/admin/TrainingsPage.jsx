@@ -109,7 +109,8 @@ function TrainingsPage() {
       const formData = new FormData();
       formData.append('trainer', parseInt(newTraining.trainer));
       formData.append('type', newTraining.type);
-      formData.append('datetime', `${newTraining.date}T${newTraining.time}:00`);
+      const localDate = new Date(`${newTraining.date}T${newTraining.time}:00`);
+      formData.append('datetime', localDate.toISOString());
       formData.append('duration', parseInt(newTraining.duration));
       formData.append('capacity', parseInt(newTraining.capacity));
       formData.append('description', newTraining.description || '');
@@ -124,7 +125,7 @@ function TrainingsPage() {
       const response = await api.post('trainings/', formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type, let browser set it for FormData
+          
         },
         timeout: 10000
       });
@@ -232,16 +233,16 @@ function TrainingsPage() {
   return (
     <>
       <AppToastContainer />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-2 md:p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black p-2 md:p-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-2">Training Management</h1>
-            <div className="w-24 h-1 bg-blue-500 mx-auto rounded-full"></div>
-            <p className="text-blue-700 mt-4">Schedule and manage training sessions</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Training Management</h1>
+            <div className="w-24 h-1 bg-yellow-500 mx-auto rounded-full"></div>
+            <p className="text-gray-300 mt-4">Schedule and manage training sessions</p>
           </div>
           
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-xl border border-red-200">
+            <div className="mb-4 p-3 bg-red-900/30 text-red-300 rounded-xl border border-red-500/50">
               <p className="font-semibold">Error</p>
               <p className="text-sm md:text-base whitespace-pre-line">{error}</p>
             </div>
@@ -249,13 +250,13 @@ function TrainingsPage() {
           
           {/* Schedule Training Form */}
           {showScheduleForm && (
-            <div className="bg-white rounded-2xl shadow-xl border border-blue-200 mb-8 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div className="bg-gray-700 rounded-2xl shadow-xl border border-gray-600 mb-8 overflow-hidden">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-4">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold text-white">Schedule New Training</h2>
+                  <h2 className="text-xl font-bold text-black">Schedule New Training</h2>
                   <button 
                     onClick={handleCloseForm}
-                    className="text-white hover:text-blue-200 transition-colors"
+                    className="text-black hover:text-gray-700 transition-colors"
                   >
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -267,12 +268,12 @@ function TrainingsPage() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Training Type</label>
+                      <label className="block text-sm font-medium text-white">Training Type</label>
                       <select
                         name="type"
                         value={newTraining.type}
                         onChange={handleInputChange}
-                        className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white"
                         required
                       >
                         <option value="">Select a type</option>
@@ -283,12 +284,12 @@ function TrainingsPage() {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Trainer</label>
+                      <label className="block text-sm font-medium text-white">Trainer</label>
                       <select
                         name="trainer"
                         value={newTraining.trainer}
                         onChange={handleInputChange}
-                        className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white"
                         required
                       >
                         <option value="">Select a trainer</option>
@@ -303,37 +304,37 @@ function TrainingsPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Date</label>
+                      <label className="block text-sm font-medium text-white">Date</label>
                       <input
                         type="date"
                         name="date"
                         value={newTraining.date}
                         onChange={handleInputChange}
-                        className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white"
                         required
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Time</label>
+                      <label className="block text-sm font-medium text-white">Time</label>
                       <input
                         type="time"
                         name="time"
                         value={newTraining.time}
                         onChange={handleInputChange}
-                        className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white"
                         required
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+                      <label className="block text-sm font-medium text-white">Duration (minutes)</label>
                       <input
                         type="number"
                         name="duration"
                         value={newTraining.duration}
                         onChange={handleInputChange}
-                        className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white"
                         required
                         min="1"
                       />
@@ -342,40 +343,40 @@ function TrainingsPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Capacity (people)</label>
+                      <label className="block text-sm font-medium text-white">Capacity (people)</label>
                       <input
                         type="number"
                         name="capacity"
                         value={newTraining.capacity}
                         onChange={handleInputChange}
-                        className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white"
                         required
                         min="1"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>
+                      <label className="block text-sm font-medium text-white">Description (Optional)</label>
                       <textarea
                         name="description"
                         value={newTraining.description}
                         onChange={handleInputChange}
-                        className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white placeholder-gray-400"
                         rows="2"
                       />
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Training Image</label>
+                    <label className="block text-sm font-medium text-white">Training Image</label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleImageChange}
-                      className="mt-1 p-2 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 p-2 block w-full rounded-md border border-gray-600 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 bg-gray-800 text-white"
                     />
                     {newTraining.image && (
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-gray-300">
                         Selected: {newTraining.image.name}
                       </p>
                     )}
@@ -385,14 +386,14 @@ function TrainingsPage() {
                     <button
                       type="button"
                       onClick={handleCloseForm}
-                      className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-semibold"
+                      className="px-6 py-3 border-2 border-gray-600 text-white rounded-lg hover:bg-gray-600 transition-all font-semibold"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all font-semibold shadow-lg disabled:opacity-50"
+                      className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all font-semibold shadow-lg disabled:opacity-50"
                     >
                       {isLoading ? 'Scheduling...' : 'Schedule Training'}
                     </button>
@@ -403,21 +404,21 @@ function TrainingsPage() {
           )}
           
           {/* Training Sessions Display */}
-          <div className="bg-white rounded-2xl shadow-xl border border-blue-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+          <div className="bg-gray-700 rounded-2xl shadow-xl border border-gray-600 overflow-hidden">
+            <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                <h2 className="text-xl font-bold text-white mb-2 md:mb-0">Upcoming Training Sessions</h2>
+                <h2 className="text-xl font-bold text-black mb-2 md:mb-0">Upcoming Training Sessions</h2>
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                   <button 
                     onClick={() => setShowScheduleForm(true)} 
-                    className="bg-white text-blue-600 py-2 px-4 rounded-lg hover:bg-blue-50 transition-all font-semibold w-full sm:w-auto"
+                    className="bg-black text-yellow-500 py-2 px-4 rounded-lg hover:bg-gray-800 transition-all font-semibold w-full sm:w-auto"
                     disabled={showScheduleForm || trainers.length === 0}
                   >
                     Schedule New Training
                   </button>
                   <button 
                     onClick={fetchTrainingSessions}
-                    className="bg-blue-700 text-white py-2 px-4 rounded-lg hover:bg-blue-800 transition-all font-semibold w-full sm:w-auto"
+                    className="bg-gray-800 text-white py-2 px-4 rounded-lg hover:bg-gray-900 transition-all font-semibold w-full sm:w-auto"
                     disabled={isLoading}
                   >
                     {isLoading ? 'Refreshing...' : 'Refresh'}
@@ -429,33 +430,33 @@ function TrainingsPage() {
             <div className="p-6">
               {isLoading ? (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-500 border-t-transparent"></div>
                 </div>
               ) : (
                 <>
                   {/* Desktop Table View */}
                   <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-blue-200">
-                      <thead className="bg-blue-50">
+                    <table className="min-w-full divide-y divide-gray-600">
+                      <thead className="bg-gray-600">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Image</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Training ID</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Type</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Trainer</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Date & Time</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Duration</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Capacity</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Actions</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Image</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Training ID</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Type</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Trainer</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Date & Time</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Duration</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Capacity</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-blue-100">
+                      <tbody className="bg-gray-700 divide-y divide-gray-600">
                         {trainingSessions.length > 0 ? (
                           trainingSessions.map(session => (
-                            <tr key={session.id} className="hover:bg-blue-50 transition-colors">
+                            <tr key={session.id} className="hover:bg-gray-600 transition-colors">
                               <td className="px-4 py-3 whitespace-nowrap">
                                 {imageErrors.has(session.id) ? (
-                                  <div className="h-12 w-12 bg-blue-100 rounded flex items-center justify-center">
-                                    <span className="text-xs text-blue-600">🏋️</span>
+                                  <div className="h-12 w-12 bg-gray-600 rounded flex items-center justify-center">
+                                    <span className="text-xs text-yellow-400">🏋️</span>
                                   </div>
                                 ) : (
                                   <img 
@@ -466,30 +467,30 @@ function TrainingsPage() {
                                   />
                                 )}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-900">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
                                 #{session.id}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
-                                <span className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full capitalize">
+                                <span className="px-2 py-1 text-xs font-semibold bg-yellow-500 text-black rounded-full capitalize">
                                   {session.type}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
                                 {session.trainer_name || 'TBA'}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                                {formatDateTime(session.scheduled_datetime)}
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
+                                {formatDateTime(session.datetime)}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
                                 {formatDuration(session.duration)}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
                                 {session.capacity || '—'}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                                 <button
                                   onClick={() => deleteTraining(session.id)}
-                                  className="text-red-600 hover:text-red-900 font-semibold"
+                                  className="text-red-400 hover:text-red-300 font-semibold"
                                 >
                                   Cancel
                                 </button>
@@ -498,8 +499,8 @@ function TrainingsPage() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
-                              <div className="text-4xl text-blue-400 mb-2">📅</div>
+                            <td colSpan="8" className="px-4 py-8 text-center text-gray-300">
+                              <div className="text-4xl text-yellow-400 mb-2">📅</div>
                               No training sessions scheduled
                             </td>
                           </tr>
@@ -513,7 +514,7 @@ function TrainingsPage() {
                     {trainingSessions.length > 0 ? (
                       <div className="space-y-4">
                         {trainingSessions.map(session => (
-                          <div key={session.id} className="bg-gradient-to-r from-blue-50 to-white border border-blue-200 rounded-xl p-3 shadow-lg">
+                          <div key={session.id} className="bg-gradient-to-r from-gray-700 to-gray-600 border border-gray-500 rounded-xl p-3 shadow-lg">
                             {/* Add image display */}
                             {session.image && !imageErrors.has(session.id) ? (
                               <div className="mb-2">
@@ -525,34 +526,34 @@ function TrainingsPage() {
                                 />
                               </div>
                             ) : imageErrors.has(session.id) ? (
-                              <div className="mb-2 w-full h-32 bg-blue-100 rounded flex items-center justify-center">
-                                <span className="text-blue-600 text-2xl">🏋️</span>
+                              <div className="mb-2 w-full h-32 bg-gray-600 rounded flex items-center justify-center">
+                                <span className="text-yellow-400 text-2xl">🏋️</span>
                               </div>
                             ) : null}
                             <div className="flex justify-between">
-                              <span className="font-semibold text-blue-900">
+                              <span className="font-semibold text-white">
                                 #{session.id} - {session.type}
                               </span>
                               <button
                                 onClick={() => deleteTraining(session.id)}
-                                className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                className="text-red-400 hover:text-red-300 font-semibold text-sm"
                               >
                                 Cancel
                               </button>
                             </div>
                             <div className="mt-2 space-y-1 text-sm">
-                              <div><span className="text-gray-600">Trainer:</span> <span className="font-medium">{session.trainer_name || 'TBA'}</span></div>
-                              <div><span className="text-gray-600">Date:</span> <span className="font-medium">{formatDateTime(session.scheduled_datetime)}</span></div>
-                              <div><span className="text-gray-600">Duration:</span> <span className="font-medium">{formatDuration(session.duration)}</span></div>
-                              <div><span className="text-gray-600">Capacity:</span> <span className="font-medium">{session.capacity || '—'}</span></div>
+                              <div><span className="text-gray-400">Trainer:</span> <span className="font-medium text-white">{session.trainer_name || 'TBA'}</span></div>
+                              <div><span className="text-gray-400">Date:</span> <span className="font-medium text-white">{formatDateTime(session.datetime)}</span></div>
+                              <div><span className="text-gray-400">Duration:</span> <span className="font-medium text-white">{formatDuration(session.duration)}</span></div>
+                              <div><span className="text-gray-400">Capacity:</span> <span className="font-medium text-white">{session.capacity || '—'}</span></div>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <div className="text-4xl text-blue-400 mb-2">📅</div>
-                        <p className="text-gray-500">No training sessions scheduled</p>
+                        <div className="text-4xl text-yellow-400 mb-2">📅</div>
+                        <p className="text-gray-300">No training sessions scheduled</p>
                       </div>
                     )}
                   </div>
@@ -567,6 +568,7 @@ function TrainingsPage() {
 }
 
 export default TrainingsPage;
+
 
 
 

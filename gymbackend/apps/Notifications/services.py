@@ -65,9 +65,10 @@ class NotificationService:
     def _send_email_notification(self, message):
         """Send email notification to admins if email notifications are enabled"""
         try:
-            # Check if email notifications are enabled globally
-            from django.conf import settings
-            if not getattr(settings, 'EMAIL_NOTIFICATIONS_ENABLED', True):
+            # Check if email notifications are enabled globally from database
+            from apps.Management.models import SiteSettings
+            site_settings = SiteSettings.get_settings()
+            if not site_settings.email_notifications_enabled:
                 return False
             
             # Send email with preference checking enabled
@@ -84,10 +85,13 @@ class NotificationService:
     def _send_whatsapp_notification(self, message):
         """Send WhatsApp notification to admins if WhatsApp notifications are enabled"""
         try:
-            from django.conf import settings
-            if getattr(settings, 'WHATSAPP_NOTIFICATIONS_ENABLED', False):
-                return self.whatsapp_service.send_admin_whatsapp_notification(message)
-            return False
+            # Check if WhatsApp notifications are enabled globally from database
+            from apps.Management.models import SiteSettings
+            site_settings = SiteSettings.get_settings()
+            if not site_settings.whatsapp_notifications_enabled:
+                return False
+            
+            return self.whatsapp_service.send_admin_whatsapp_notification(message)
         except Exception as e:
             logger.error(f"Failed to send WhatsApp notification: {str(e)}")
             return False
@@ -185,6 +189,8 @@ class NotificationService:
 
 # Global notification service instance
 notification_service = NotificationService()
+
+
 
 
 

@@ -1,72 +1,77 @@
-// components/SessionSwitcher.jsx
-import { useState, useEffect } from 'react';
-import { switchToMemberSession, switchToAdminSession, getAvailableSessions, getCurrentSession } from '../../features/auth/sessionManager';
+import { useState } from 'react';
+import useMultiAuth from '../../hooks/useMultiAuth';
 
 const SessionSwitcher = () => {
-  const [availableSessions, setAvailableSessions] = useState({ member: false, admin: false });
-  const [currentSession, setCurrentSession] = useState(null);
-
-  useEffect(() => {
-    setAvailableSessions(getAvailableSessions());
-    setCurrentSession(getCurrentSession());
-  }, []);
-
-  const handleSwitchSession = (sessionType) => {
-    if (sessionType === 'member' && availableSessions.member) {
-      if (switchToMemberSession()) {
-        window.location.href = '/member-dashboard';
-      }
-    } else if (sessionType === 'admin' && availableSessions.admin) {
-      if (switchToAdminSession()) {
-        window.location.href = '/admin/dashboard';
-      }
-    }
-  };
-
-  // Show always for debugging
-  console.log('SessionSwitcher state:', { availableSessions, currentSession });
+  const [isOpen, setIsOpen] = useState(false);
+  const { authState, switchSession, hasAdminSession, hasMemberSession, getCurrentSession } = useMultiAuth();
   
-  // Only show if multiple sessions are available
-  if (!availableSessions.member || !availableSessions.admin) {
-    return (
-      <div className="fixed top-4 right-4 bg-red-100 shadow-lg rounded-lg p-4 border z-50">
-        <h3 className="text-sm font-semibold mb-2">Debug: Sessions</h3>
-        <div className="text-xs">
-          <p>Member: {availableSessions.member ? '✅' : '❌'}</p>
-          <p>Admin: {availableSessions.admin ? '✅' : '❌'}</p>
-          <p>Current: {currentSession || 'None'}</p>
-        </div>
-      </div>
-    );
+  const currentSession = getCurrentSession();
+  
+  // Don't show if only one session is active
+  if (!hasAdminSession || !hasMemberSession) {
+    return null;
   }
 
+  const handleSwitch = (role) => {
+    switchSession(role);
+    setIsOpen(false);
+  };
+
   return (
-    <div className="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 border z-50">
-      <h3 className="text-sm font-semibold mb-2">Switch Session</h3>
-      <div className="space-y-2">
-        <button
-          onClick={() => handleSwitchSession('member')}
-          disabled={currentSession === 'member'}
-          className={`w-full px-3 py-1 text-sm rounded ${
-            currentSession === 'member'
-              ? 'bg-blue-500 text-white cursor-not-allowed'
-              : 'bg-gray-100 hover:bg-gray-200'
-          }`}
-        >
-          Member {currentSession === 'member' && '(Current)'}
-        </button>
-        <button
-          onClick={() => handleSwitchSession('admin')}
-          disabled={currentSession === 'admin'}
-          className={`w-full px-3 py-1 text-sm rounded ${
-            currentSession === 'admin'
-              ? 'bg-blue-500 text-white cursor-not-allowed'
-              : 'bg-gray-100 hover:bg-gray-200'
-          }`}
-        >
-          Admin {currentSession === 'admin' && '(Current)'}
-        </button>
-      </div>
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+        title="Switch Session"
+      >
+        <i className={`bx ${currentSession === 'admin' ? 'bx-shield-alt-2' : 'bx-user'} text-lg`}></i>
+        <span className="text-sm font-medium">
+          {currentSession === 'admin' ? 'Admin' : 'Member'}
+        </span>
+        <i className={`bx bx-chevron-down text-sm transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+          <div className="p-2">
+            <div className="text-xs text-gray-500 px-2 py-1 mb-1">Switch to:</div>
+            
+            {currentSession !== 'admin' && hasAdminSession && (
+              <button
+                onClick={() => handleSwitch('admin')}
+                className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-blue-50 rounded-md transition-colors duration-200"
+              >
+                <i className="bx bx-shield-alt-2 text-blue-500"></i>
+                <div>
+                  <div className="text-sm font-medium text-gray-900">Admin Panel</div>
+                  <div className="text-xs text-gray-500">{authState.admin.user?.name}</div>
+                </div>
+              </button>
+            )}
+            
+            {currentSession !== 'member' && hasMemberSession && (
+              <button
+                onClick={() => handleSwitch('member')}
+                className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-green-50 rounded-md transition-colors duration-200"
+              >
+                <i className="bx bx-user text-green-500"></i>
+                <div>
+                  <div className="text-sm font-medium text-gray-900">Member Dashboard</div>
+                  <div className="text-xs text-gray-500">{authState.member.user?.name}</div>
+                </div>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Overlay to close dropdown */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
     </div>
   );
 };

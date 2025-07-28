@@ -1,10 +1,12 @@
-import { useEffect, useState, useRef } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { useEffect, useRef, useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 function Hero() {
   const [isVisible, setIsVisible] = useState(false);
   const heroRef = useRef(null);
+  const { isDarkMode, classes } = useTheme();
 
   useEffect(() => {
     setIsVisible(true);
@@ -96,12 +98,12 @@ function Hero() {
             opacity: 0,
           }}
         >
-          <button className="relative overflow-hidden group text-yellow-400 hover:text-black border border-yellow-400 px-8 py-3.5 w-full sm:w-44 md:w-52 text-base rounded-md font-medium transition-all duration-300">
+          <button className="relative overflow-hidden group border border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black px-8 py-3.5 w-full sm:w-44 md:w-52 text-base rounded-md font-medium transition-all duration-300">
             <span className="relative z-10">Learn More</span>
             <span className="absolute left-0 top-0 h-full w-0 bg-yellow-400 transition-all duration-500 ease-in-out group-hover:w-full z-0 rounded-md"></span>
           </button>
 
-          <button className="relative overflow-hidden group text-black hover:text-yellow-400 border border-yellow-400 bg-yellow-400 px-8 py-3.5 w-full sm:w-44 md:w-52 text-base rounded-md font-medium transition-all duration-300">
+          <button className="relative overflow-hidden group bg-yellow-500 hover:bg-yellow-600 text-black border border-yellow-500 px-8 py-3.5 w-full sm:w-44 md:w-52 text-base rounded-md font-medium transition-all duration-300">
             <span className="relative z-10">Join Now</span>
             <span className="absolute left-0 top-0 h-0 w-full bg-black transition-all duration-500 ease-in-out group-hover:h-full z-0 rounded-md"></span>
           </button>
@@ -122,7 +124,7 @@ function Hero() {
           <div
             key={i}
             className={`group relative overflow-hidden w-full h-64 md:h-80 ${
-              i % 2 === 0 ? 'bg-gray-900 text-yellow-400' : 'bg-yellow-400 text-black'
+              i % 2 === 0 ? (isDarkMode ? 'bg-gray-900 text-yellow-400' : 'bg-white text-gray-900') : 'bg-yellow-400 text-black'
             } py-8 px-6 flex flex-col items-center justify-center transition-all duration-500 hover:scale-[1.02] hover:shadow-xl`}
             style={{
               animation: 'fadeIn 0.5s ease-out forwards',

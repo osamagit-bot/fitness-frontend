@@ -7,6 +7,7 @@ from apps.Community.models import Post,Announcement,Challenge,SupportTicket
 from apps.Attendance.models import Attendance
 from django.utils import timezone
 import pytz
+import os
         
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -19,61 +20,153 @@ channel_layer = get_channel_layer()
 
 @receiver(post_save, sender=Member)
 def member_created_notification(sender, instance, created, **kwargs):
-    """Send notification when a new member is created"""
-    if created:
-        message = f"New member registered: {instance.first_name} {instance.last_name}"
+    """Send notification when a new member is registered"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
         
-        # Create in-app notification
-        notification = Notification.objects.create(message=message)
+    if created:
+        try:
+            # Create notification for new member registration
+            message = f"New member registered: {instance.first_name} {instance.last_name}\n"
+            message += f"Phone: {getattr(instance, 'phone_number', getattr(instance, 'phone', 'N/A'))}\n"
+            message += f"Email: {instance.user.email if instance.user else 'N/A'}\n"
+            message += f"Membership: {getattr(instance, 'membership_type', 'N/A')}"
+            
+            # Get all admin users
+            from apps.Authentication.models import CustomUser
+            admin_users = CustomUser.objects.filter(is_staff=True)
+            
+            notification = None
+            for admin in admin_users:
+                notification = Notification.objects.create(
+                    user=admin,
+                    title="New Member Registration",
+                    message=message,
+                    notification_type='member_registration'
+                )
+            
+            # If no admin users, create a general notification
+            if not admin_users.exists():
+                notification = Notification.objects.create(
+                    title="New Member Registration",
+                    message=message,
+                    notification_type='member_registration'
+                )
+                
+        except Exception as e:
+            # Log the error but don't break the member creation process
+            print(f"Error creating member notification: {str(e)}")
+            # Create a simple notification as fallback
+            try:
+                notification = Notification.objects.create(
+                    message=f"New member registered: {instance.first_name} {instance.last_name}"
+                )
+            except:
+                notification = None
         
         # Send email notification only to admins with email notifications enabled
-        from .email_service import EmailNotificationService
-        email_service = EmailNotificationService()
-        
-        email_success = email_service.send_admin_notification_email(
-            subject="New Member Registration",
-            message=f"A new member has been registered:\n\n"
-                   f"Name: {instance.first_name} {instance.last_name}\n"
-                   f"Athlete ID: {instance.athlete_id}\n"
-                   f"Email: {instance.user.email if instance.user else 'N/A'}\n"
-                   f"Membership Type: {instance.get_membership_type_display()}\n"
-                   f"Monthly Fee: ${instance.monthly_fee}\n"
-                   f"Start Date: {instance.start_date}\n"
-                   f"Expiry Date: {instance.expiry_date}",
-            check_preferences=True  # Enable preference checking
-        )
-        
-        print(f"📧 Email notification sent: {email_success}")
+        try:
+            from .email_service import EmailNotificationService
+            email_service = EmailNotificationService()
+            
+            email_success = email_service.send_admin_notification_email(
+                subject="New Member Registration",
+                message=f"A new member has been registered:\n\n"
+                       f"Name: {instance.first_name} {instance.last_name}\n"
+                       f"Athlete ID: {instance.athlete_id}\n"
+                       f"Email: {instance.user.email if instance.user else 'N/A'}\n"
+                       f"Membership Type: {getattr(instance, 'membership_type', 'N/A')}\n"
+                       f"Monthly Fee: ${getattr(instance, 'monthly_fee', 'N/A')}\n"
+                       f"Start Date: {getattr(instance, 'start_date', 'N/A')}\n"
+                       f"Expiry Date: {getattr(instance, 'expiry_date', 'N/A')}",
+                check_preferences=True  # Enable preference checking
+            )
+            
+            print(f"📧 Email notification sent: {email_success}")
+        except Exception as e:
+            print(f"📧 Email notification failed: {str(e)}")
         
         # Send real-time WebSocket notification
-        send_realtime_notification(message, notification.id)
-        logger.info(f"Member registration notification sent: {message}")
+        try:
+            if notification:
+                send_realtime_notification(message, notification.id)
+                logger.info(f"Member registration notification sent: {message}")
+        except Exception as e:
+            print(f"WebSocket notification failed: {str(e)}")
 
 @receiver(post_save, sender=Member)
 def member_updated_notification(sender, instance, created, **kwargs):
     """Send notification when a member profile is updated"""
-    if not created:  # Only for updates, not creation
-        message = f"Member profile updated: {instance.first_name} {instance.last_name}"
-        notification = Notification.objects.create(message=message)
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
         
-        # Send real-time WebSocket notification
-        send_realtime_notification(message, notification.id)
-        logger.info(f"Member update notification sent: {message}")
+    if not created:  # Only for updates, not creation
+        try:
+            message = f"Member profile updated: {instance.first_name} {instance.last_name}"
+            notification = Notification.objects.create(message=message)
+            
+            # Send real-time WebSocket notification
+            send_realtime_notification(message, notification.id)
+            logger.info(f"Member update notification sent: {message}")
+        except Exception as e:
+            print(f"Member update notification failed: {str(e)}")
 
 @receiver(post_save, sender=Trainer)
 def trainer_created_notification(sender, instance, created, **kwargs):
     """Send notification when a new trainer is registered"""
-    if created:
-        message = f"New trainer registered: {instance.first_name} {instance.last_name}"
-        notification = Notification.objects.create(message=message)
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
         
-        # Send real-time WebSocket notification
-        send_realtime_notification(message, notification.id)
-        logger.info(f"Trainer registration notification sent: {message}")
+    if created:
+        try:
+            message = f"New trainer registered: {instance.first_name} {instance.last_name}"
+            notification = Notification.objects.create(message=message)
+            
+            # Send real-time WebSocket notification
+            send_realtime_notification(message, notification.id)
+            logger.info(f"Trainer registration notification sent: {message}")
+        except Exception as e:
+            print(f"Trainer registration notification failed: {str(e)}")
+
+@receiver(post_delete, sender=Trainer)
+def trainer_deleted_notification(sender, instance, **kwargs):
+    """Send notification when a trainer is deleted"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
+    message = f"Trainer deleted: {instance.first_name} {instance.last_name}"
+    
+    # Create in-app notification
+    notification = Notification.objects.create(message=message)
+    
+    # Send email notification
+    from .email_service import EmailNotificationService
+    email_service = EmailNotificationService()
+    
+    email_success = email_service.send_admin_notification_email(
+        subject="Trainer Deleted",
+        message=f"A trainer has been deleted from the system:\n\n"
+               f"Name: {instance.first_name} {instance.last_name}\n"
+               f"Trainer ID: {instance.trainer_id}\n"
+               f"Email: {getattr(instance, 'email', 'N/A')}\n"
+               f"Phone: {getattr(instance, 'phone', 'N/A')}\n"
+               f"Monthly Salary: ${getattr(instance, 'monthly_salary', 'N/A')}\n"
+               f"Specialization: {getattr(instance, 'specialization', 'N/A')}\n"
+               f"Start Date: {getattr(instance, 'start_date', 'N/A')}"
+    )
+    
+    print(f"📧 Trainer deletion email notification sent: {email_success}")
+    
+    # Send real-time WebSocket notification
+    send_realtime_notification(message, notification.id)
+    logger.info(f"Trainer deletion notification sent: {message}")
 
 @receiver(post_save, sender=Challenge)
 def challenge_created_notification(sender, instance, created, **kwargs):
     """Send notification when a new challenge is created"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
     if created:
         message = f"New admin challenge created: {instance.title}"
         notification = Notification.objects.create(message=message)
@@ -85,6 +178,9 @@ def challenge_created_notification(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Announcement)
 def announcement_created_notification(sender, instance, created, **kwargs):
     """Send notification when a new announcement is created"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
     if created:
         message = f"New admin announcement created: {instance.title}"
         notification = Notification.objects.create(message=message)
@@ -96,6 +192,9 @@ def announcement_created_notification(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Challenge)
 def challenge_deleted_notification(sender, instance, **kwargs):
     """Send notification when a challenge is deleted"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
     message = f"Admin deleted challenge: {instance.title}"
     notification = Notification.objects.create(message=message)
     
@@ -106,6 +205,9 @@ def challenge_deleted_notification(sender, instance, **kwargs):
 @receiver(post_delete, sender=Announcement)
 def announcement_deleted_notification(sender, instance, **kwargs):
     """Send notification when an announcement is deleted"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
     message = f"Admin deleted announcement: {instance.title}"
     notification = Notification.objects.create(message=message)
     
@@ -116,6 +218,9 @@ def announcement_deleted_notification(sender, instance, **kwargs):
 @receiver(post_save, sender=Post)
 def post_created_notification(sender, instance, created, **kwargs):
     """Send notification when a new community post is created"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
     if created:
         # Get the member who created the post
         try:
@@ -188,6 +293,9 @@ def send_realtime_notification(message, notification_id):
 @receiver(post_delete, sender=Member)
 def member_deleted_notification(sender, instance, **kwargs):
     """Send notification when a member is deleted"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
     message = f"Member deleted: {instance.first_name} {instance.last_name}"
     
     # Create in-app notification
@@ -218,6 +326,9 @@ def member_deleted_notification(sender, instance, **kwargs):
 @receiver(post_save, sender=Attendance)
 def member_checkin_notification(sender, instance, created, **kwargs):
     """Send notification when a member checks in"""
+    if os.environ.get('DJANGO_DISABLE_SIGNALS'):
+        return
+        
     if created:  # Only for new check-ins
         member = instance.member
         message = f"Member checked in: {member.first_name} {member.last_name}"
@@ -251,6 +362,13 @@ def member_checkin_notification(sender, instance, created, **kwargs):
         # Send real-time WebSocket notification
         send_realtime_notification(message, notification.id)
         logger.info(f"Member check-in notification sent: {message}")
+
+
+
+
+
+
+
 
 
 
