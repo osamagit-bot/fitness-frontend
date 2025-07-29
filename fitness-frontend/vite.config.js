@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     publicDir: "public",
-    base: "./",
+    base: "/",
     plugins: [react()],
     resolve: {
       alias: {

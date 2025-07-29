@@ -484,17 +484,25 @@ const KioskCheckIn = () => {
   };
 
   return (
-    <div className="kiosk-container min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 text-white overflow-hidden">
+    <div className="kiosk-container min-h-screen bg-gradient-to-br from-gray-900/80 via-black/90 to-gray-900/80 text-white overflow-hidden">
       {/* Header */}
-      <div className="kiosk-header bg-black/30 px-4 sm:px-8 py-3 sm:py-4">
+      <div className="kiosk-header bg-gray-900/80 backdrop-blur-md px-4 sm:px-8 py-3 sm:py-4 border-b border-yellow-500/20">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0">
           <div className="text-center sm:text-left">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-500">Atalan Fitness Club</h1>
-            <p className="text-sm sm:text-base text-gray-300">Attendance Kiosk</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+              Atalan Fitness Club
+            </h1>
+            <p className="text-sm sm:text-base text-gray-300">
+              Attendance Kiosk
+            </p>
           </div>
           <div className="text-center sm:text-right">
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{formatTime(currentTime)}</div>
-            <div className="text-xs sm:text-sm lg:text-base text-gray-300">{formatDateDisplay(currentTime)}</div>
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
+              {formatTime(currentTime)}
+            </div>
+            <div className="text-xs sm:text-sm lg:text-base text-gray-300">
+              {formatDateDisplay(currentTime)}
+            </div>
           </div>
         </div>
       </div>
@@ -512,13 +520,13 @@ const KioskCheckIn = () => {
                 exit={{ scale: 0.8, opacity: 0 }}
                 className="text-center"
               >
-                <div className="w-32 h-32 mx-auto mb-6 bg-green-500 rounded-full flex items-center justify-center">
+                <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg border-2 border-yellow-400/50">
                   <i className="bx bx-check text-6xl text-white"></i>
                 </div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-green-400 text-center">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent text-center">
                   {welcomeMessage.message}
                 </h2>
-                <p className="text-lg sm:text-xl text-green-200 text-center">
+                <p className="text-lg sm:text-xl text-gray-300 text-center">
                   {welcomeMessage.submessage}
                 </p>
                 <div className="mt-4 text-gray-200">
@@ -536,8 +544,12 @@ const KioskCheckIn = () => {
                 <div className="w-32 h-32 mx-auto mb-6 bg-red-500 rounded-full flex items-center justify-center">
                   <i className="bx bx-x text-6xl text-white"></i>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-red-400 text-center">Error</h2>
-                <p className="text-lg sm:text-xl text-red-200 text-center px-4">{errorMessage}</p>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-red-400 text-center">
+                  Error
+                </h2>
+                <p className="text-lg sm:text-xl text-red-200 text-center px-4">
+                  {errorMessage}
+                </p>
               </motion.div>
             ) : (
               <motion.div
@@ -562,11 +574,11 @@ const KioskCheckIn = () => {
                   }
                   className={`w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 mx-auto mb-6 sm:mb-8 rounded-full flex items-center justify-center ${
                     isProcessing
-                      ? "bg-yellow-500 shadow-lg shadow-yellow-500/50"
-                      : "bg-yellow-600 shadow-lg shadow-yellow-500/50"
+                      ? "bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg border-2 border-yellow-400/50"
+                      : "bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg border-2 border-yellow-400/50"
                   } ${
                     !isProcessing && !isAutoMode
-                      ? "cursor-pointer hover:bg-yellow-600"
+                      ? "cursor-pointer hover:from-yellow-500 hover:to-yellow-700"
                       : ""
                   }`}
                 >
@@ -580,7 +592,7 @@ const KioskCheckIn = () => {
                 <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
                   {isProcessing ? "Processing..." : "Touch to Check In"}
                 </h2>
-                <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-200 text-center px-4">
+                <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 text-center px-4">
                   {isProcessing
                     ? "Verifying your fingerprint..."
                     : "Place your finger on the sensor to check in"}
@@ -613,8 +625,8 @@ const KioskCheckIn = () => {
                           transition={{ repeat: Infinity, duration: 2 }}
                           className="mb-4"
                         >
-                          <i className="bx bx-wifi text-3xl text-green-400 mb-2"></i>
-                          <p className="text-lg text-green-400 font-semibold">
+                          <i className="bx bx-wifi text-3xl text-yellow-400 mb-2"></i>
+                          <p className="text-lg text-yellow-400 font-semibold">
                             Auto mode - Listening for fingerprint...
                           </p>
                         </motion.div>
@@ -637,7 +649,7 @@ const KioskCheckIn = () => {
                           onClick={enableAutoMode}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="bg-yellow-600 hover:bg-yellow-700 text-white px-8 py-4 rounded-xl text-xl font-semibold shadow-lg transition-colors mb-4"
+                          className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black px-8 py-4 rounded-xl text-xl font-semibold shadow-lg transition-all duration-200 mb-4"
                         >
                           <i className="bx bx-fingerprint text-2xl mr-2"></i>
                           Enable Auto Sensor
@@ -663,27 +675,35 @@ const KioskCheckIn = () => {
         </div>
 
         {/* Right Side - Stats & Recent Check-ins */}
-        <div className="w-full lg:w-96 bg-black/30 p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-gray-600">
+        <div className="w-full lg:w-96 bg-gray-900/80 backdrop-blur-md p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-yellow-500/20">
           {/* Today's Stats */}
           <div className="mb-6 sm:mb-8">
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-yellow-500">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
               Today's Stats
             </h3>
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
-              <div className="bg-black/20 rounded-lg p-3 sm:p-4 border border-gray-600">
-                <div className="text-xl sm:text-2xl font-bold text-white">{stats.todayCount}</div>
-                <div className="text-sm sm:text-base text-gray-200">Check-ins Today</div>
+              <div className="bg-gray-800/60 backdrop-blur-md rounded-lg p-3 sm:p-4 border border-yellow-500/30">
+                <div className="text-xl sm:text-2xl font-bold text-white">
+                  {stats.todayCount}
+                </div>
+                <div className="text-sm sm:text-base text-gray-300">
+                  Check-ins Today
+                </div>
               </div>
-              <div className="bg-black/20 rounded-lg p-3 sm:p-4 border border-gray-600">
-                <div className="text-xl sm:text-2xl font-bold text-white">{stats.totalMembers}</div>
-                <div className="text-sm sm:text-base text-gray-200">Total Members</div>
+              <div className="bg-gray-800/60 backdrop-blur-md rounded-lg p-3 sm:p-4 border border-yellow-500/30">
+                <div className="text-xl sm:text-2xl font-bold text-white">
+                  {stats.totalMembers}
+                </div>
+                <div className="text-sm sm:text-base text-gray-300">
+                  Total Members
+                </div>
               </div>
             </div>
           </div>
 
           {/* Recent Check-ins */}
           <div>
-            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-yellow-500">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
               Recent Check-ins
             </h3>
             <div className="space-y-2 sm:space-y-3 max-h-64 sm:max-h-96 overflow-y-auto">
@@ -699,17 +719,19 @@ const KioskCheckIn = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-black/20 rounded-lg p-2 sm:p-3 border border-gray-600"
+                    className="bg-gray-800/60 backdrop-blur-md rounded-lg p-2 sm:p-3 border border-yellow-500/30"
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-gray-200 text-sm sm:text-base truncate">{checkIn.member_name}</div>
+                        <div className="font-medium text-white text-sm sm:text-base truncate">
+                          {checkIn.member_name}
+                        </div>
                         <div className="text-xs sm:text-sm text-gray-300">
                           ID: {checkIn.member_id}
                         </div>
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
-                        <div className="text-xs sm:text-sm font-medium text-gray-200">
+                        <div className="text-xs sm:text-sm font-medium text-white">
                           {formatTime(checkIn.check_in_datetime)}
                         </div>
                         <div className="text-xs text-gray-300">
@@ -726,9 +748,12 @@ const KioskCheckIn = () => {
       </div>
 
       {/* Footer */}
-      <div className="kiosk-footer bg-black/30 px-4 sm:px-8 py-2 text-center">
+      <div className="kiosk-footer bg-gray-800/80 backdrop-blur-md px-4 sm:px-8 py-2 text-center border-t border-yellow-500/20">
         <p className="text-xs sm:text-sm text-gray-400">
-          <span className="hidden sm:inline">Kiosk Mode Active • WebAuthn Fingerprint Authentication •</span>
+          <span className="hidden sm:inline">
+            Kiosk Mode <span className="text-yellow-500">Active</span> • WebAuthn Fingerprint Authentication
+            •
+          </span>
           <span className="sm:hidden">Kiosk Active •</span>
           {isProcessing ? " Processing..." : " Ready for Check-in"}
         </p>

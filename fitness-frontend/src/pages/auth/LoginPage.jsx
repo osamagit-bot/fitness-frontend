@@ -167,7 +167,7 @@ const LoginPage = () => {
     <div
       className="min-h-screen bg-cover bg-center bg-no-repeat relative"
       style={{
-        backgroundImage: `url('/images/gymlogin.jpg')`,
+        backgroundImage: `url('/images/login2.jpeg')`,
       }}
     >
       {/* Dark Overlay */}

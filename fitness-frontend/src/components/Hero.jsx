@@ -27,7 +27,7 @@ function Hero() {
   return (
     <div
       ref={heroRef}
-      className="relative w-full flex flex-col justify-center items-center bg-cover bg-center bg-fixed bg-[url('/images/body6.jpg')] min-h-screen sm:min-h-[700px] overflow-hidden"
+      className="relative w-full flex flex-col justify-center items-center bg-cover bg-center bg-fixed bg-[url('/images/login2.jpeg')] min-h-screen sm:min-h-[700px] overflow-hidden"
     >
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-0" />

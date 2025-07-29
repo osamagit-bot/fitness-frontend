@@ -1,1 +1,7 @@
 /*    /index.html   200
+
+# Set correct MIME types for JavaScript modules
+/assets/*.js
+  Content-Type: application/javascript
+/assets/*.mjs
+  Content-Type: application/javascript
