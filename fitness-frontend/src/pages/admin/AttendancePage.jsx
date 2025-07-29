@@ -203,22 +203,23 @@ const AttendancePage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-200 mb-2">Attendance Management</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-200 mb-2">Attendance Management</h1>
             <p className="text-gray-300">Monitor and manage member attendance</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={() => setShowManualEntry(!showManualEntry)}
-              className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
+              className="bg-yellow-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               <i className="bx bx-plus"></i>
-              Manual Entry
+              <span className="hidden sm:inline">Manual Entry</span>
+              <span className="sm:hidden">Manual</span>
             </button>
             <button
               onClick={exportAttendance}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              className="bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               <i className="bx bx-download"></i>
               Export
@@ -305,7 +306,7 @@ const AttendancePage = () => {
                 <label className="block text-sm font-medium text-white mb-1">
                   Select Member
                 </label>
-                <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="">Choose a member...</option>
                   {members.map(member => (
                     <option key={member.athlete_id} value={member.athlete_id}>
@@ -332,7 +333,7 @@ const AttendancePage = () => {
                 </button>
                 <button
                   onClick={() => setShowManualEntry(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
@@ -358,7 +359,7 @@ const AttendancePage = () => {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           
@@ -369,7 +370,7 @@ const AttendancePage = () => {
             <select
               value={selectedMember}
               onChange={(e) => setSelectedMember(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Members</option>
               {members.map(member => (
@@ -446,8 +447,8 @@ const AttendancePage = () => {
                   <tr key={record.id} className="hover:bg-gray-600">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                          <i className="bx bx-user text-blue-600"></i>
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+                          <i className="bx bx-user text-white"></i>
                         </div>
                         <div>
                           <div className="text-sm font-medium text-white">
@@ -464,7 +465,7 @@ const AttendancePage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white">
                         <i className="bx bx-fingerprint mr-1"></i>
                         {record.verification_method}
                       </span>

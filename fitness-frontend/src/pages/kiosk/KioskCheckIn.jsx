@@ -486,23 +486,23 @@ const KioskCheckIn = () => {
   return (
     <div className="kiosk-container min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 text-white overflow-hidden">
       {/* Header */}
-      <div className="kiosk-header bg-black/30 px-8 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-yellow-500">Elite Fitness Club</h1>
-            <p className="text-gray-300">Attendance Kiosk</p>
+      <div className="kiosk-header bg-black/30 px-4 sm:px-8 py-3 sm:py-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0">
+          <div className="text-center sm:text-left">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-500">Atalan Fitness Club</h1>
+            <p className="text-sm sm:text-base text-gray-300">Attendance Kiosk</p>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-white">{formatTime(currentTime)}</div>
-            <div className="text-gray-300">{formatDateDisplay(currentTime)}</div>
+          <div className="text-center sm:text-right">
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{formatTime(currentTime)}</div>
+            <div className="text-xs sm:text-sm lg:text-base text-gray-300">{formatDateDisplay(currentTime)}</div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="kiosk-main flex min-h-[calc(100vh-100px)] h-auto">
+      <div className="kiosk-main flex flex-col lg:flex-row min-h-[calc(100vh-120px)] h-auto">
         {/* Left Side - Check-in Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
           <AnimatePresence mode="wait">
             {welcomeMessage ? (
               <motion.div
@@ -515,10 +515,10 @@ const KioskCheckIn = () => {
                 <div className="w-32 h-32 mx-auto mb-6 bg-green-500 rounded-full flex items-center justify-center">
                   <i className="bx bx-check text-6xl text-white"></i>
                 </div>
-                <h2 className="text-4xl font-bold mb-2 text-green-400">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-green-400 text-center">
                   {welcomeMessage.message}
                 </h2>
-                <p className="text-xl text-green-200">
+                <p className="text-lg sm:text-xl text-green-200 text-center">
                   {welcomeMessage.submessage}
                 </p>
                 <div className="mt-4 text-gray-200">
@@ -536,8 +536,8 @@ const KioskCheckIn = () => {
                 <div className="w-32 h-32 mx-auto mb-6 bg-red-500 rounded-full flex items-center justify-center">
                   <i className="bx bx-x text-6xl text-white"></i>
                 </div>
-                <h2 className="text-3xl font-bold mb-2 text-red-400">Error</h2>
-                <p className="text-xl text-red-200">{errorMessage}</p>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2 text-red-400 text-center">Error</h2>
+                <p className="text-lg sm:text-xl text-red-200 text-center px-4">{errorMessage}</p>
               </motion.div>
             ) : (
               <motion.div
@@ -560,7 +560,7 @@ const KioskCheckIn = () => {
                   onClick={() =>
                     !isProcessing && !isAutoMode && handleFingerprintClick()
                   }
-                  className={`w-40 h-40 mx-auto mb-8 rounded-full flex items-center justify-center ${
+                  className={`w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 mx-auto mb-6 sm:mb-8 rounded-full flex items-center justify-center ${
                     isProcessing
                       ? "bg-yellow-500 shadow-lg shadow-yellow-500/50"
                       : "bg-yellow-600 shadow-lg shadow-yellow-500/50"
@@ -571,16 +571,16 @@ const KioskCheckIn = () => {
                   }`}
                 >
                   <i
-                    className={`bx bx-fingerprint text-8xl text-white ${
+                    className={`bx bx-fingerprint text-6xl sm:text-7xl lg:text-8xl text-white ${
                       isProcessing ? "animate-pulse" : ""
                     }`}
                   ></i>
                 </motion.div>
 
-                <h2 className="text-5xl font-bold mb-4">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
                   {isProcessing ? "Processing..." : "Touch to Check In"}
                 </h2>
-                <p className="text-2xl text-gray-200">
+                <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-200 text-center px-4">
                   {isProcessing
                     ? "Verifying your fingerprint..."
                     : "Place your finger on the sensor to check in"}
@@ -663,30 +663,30 @@ const KioskCheckIn = () => {
         </div>
 
         {/* Right Side - Stats & Recent Check-ins */}
-        <div className="w-96 bg-black/30 p-6">
+        <div className="w-full lg:w-96 bg-black/30 p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-gray-600">
           {/* Today's Stats */}
-          <div className="mb-8">
-            <h3 className="text-xl font-bold mb-4 text-yellow-500">
+          <div className="mb-6 sm:mb-8">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-yellow-500">
               Today's Stats
             </h3>
-            <div className="grid grid-cols-1 gap-4">
-              <div className="bg-black/20 rounded-lg p-4 border border-gray-600">
-                <div className="text-2xl font-bold text-white">{stats.todayCount}</div>
-                <div className="text-gray-200">Check-ins Today</div>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
+              <div className="bg-black/20 rounded-lg p-3 sm:p-4 border border-gray-600">
+                <div className="text-xl sm:text-2xl font-bold text-white">{stats.todayCount}</div>
+                <div className="text-sm sm:text-base text-gray-200">Check-ins Today</div>
               </div>
-              <div className="bg-black/20 rounded-lg p-4 border border-gray-600">
-                <div className="text-2xl font-bold text-white">{stats.totalMembers}</div>
-                <div className="text-gray-200">Total Members</div>
+              <div className="bg-black/20 rounded-lg p-3 sm:p-4 border border-gray-600">
+                <div className="text-xl sm:text-2xl font-bold text-white">{stats.totalMembers}</div>
+                <div className="text-sm sm:text-base text-gray-200">Total Members</div>
               </div>
             </div>
           </div>
 
           {/* Recent Check-ins */}
           <div>
-            <h3 className="text-xl font-bold mb-4 text-yellow-500">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-yellow-500">
               Recent Check-ins
             </h3>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-64 sm:max-h-96 overflow-y-auto">
               {recentCheckIns.length === 0 ? (
                 <div className="text-gray-400 text-center py-8">
                   <i className="bx bx-time text-3xl mb-2"></i>
@@ -699,17 +699,17 @@ const KioskCheckIn = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-black/20 rounded-lg p-3 border border-gray-600"
+                    className="bg-black/20 rounded-lg p-2 sm:p-3 border border-gray-600"
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-200">{checkIn.member_name}</div>
-                        <div className="text-sm text-gray-300">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-gray-200 text-sm sm:text-base truncate">{checkIn.member_name}</div>
+                        <div className="text-xs sm:text-sm text-gray-300">
                           ID: {checkIn.member_id}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-200">
+                      <div className="text-left sm:text-right flex-shrink-0">
+                        <div className="text-xs sm:text-sm font-medium text-gray-200">
                           {formatTime(checkIn.check_in_datetime)}
                         </div>
                         <div className="text-xs text-gray-300">
@@ -726,9 +726,10 @@ const KioskCheckIn = () => {
       </div>
 
       {/* Footer */}
-      <div className="kiosk-footer bg-black/30 px-8 py-2 text-center">
-        <p className="text-gray-400">
-          Kiosk Mode Active • WebAuthn Fingerprint Authentication •
+      <div className="kiosk-footer bg-black/30 px-4 sm:px-8 py-2 text-center">
+        <p className="text-xs sm:text-sm text-gray-400">
+          <span className="hidden sm:inline">Kiosk Mode Active • WebAuthn Fingerprint Authentication •</span>
+          <span className="sm:hidden">Kiosk Active •</span>
           {isProcessing ? " Processing..." : " Ready for Check-in"}
         </p>
       </div>

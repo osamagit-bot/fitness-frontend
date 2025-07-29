@@ -848,37 +848,38 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-black px-4 sm:px-6 lg:px-8">
+    <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-black px-2 sm:px-4 lg:px-8">
       {/* Modern Header with Glass Effect */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gray-600/20 backdrop-blur-lg"></div>
-        <div className="relative px-2 sm:px-6 pt-8 pb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+        <div className="relative px-2 sm:px-4 lg:px-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
             <div className="space-y-2">
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3"
+                className="flex items-center gap-2 sm:gap-3"
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <i className="bx bx-stats text-2xl text-black"></i>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <i className="bx bx-stats text-xl sm:text-2xl text-black"></i>
                 </div>
                 <div>
-                  <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
                     Elite Fitness Dashboard
                   </h1>
-                  <p className="text-gray-400 text-sm font-medium">
+                  <p className="text-gray-400 text-xs sm:text-sm font-medium">
                     Real-time insights and analytics
                   </p>
                 </div>
               </motion.div>
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Live • Last updated: {formatDateTime(lastUpdate)}</span>
+                <span className="hidden sm:inline">Live • Last updated: {formatDateTime(lastUpdate)}</span>
+                <span className="sm:hidden">Live • Updated</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
               {/* Modern Refresh Button */}
               <motion.button
                 whileHover={{ scale: 1.02, y: -2 }}
@@ -904,23 +905,23 @@ const DashboardPage = () => {
                   }
                 }}
                 disabled={isInitializing}
-                className="group relative overflow-hidden px-6 py-3 bg-gradient-to-r from-yellow-500 via-yellow-600 to-yellow-700 text-black rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 disabled:opacity-50"
+                className="group relative overflow-hidden px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-yellow-500 via-yellow-600 to-yellow-700 text-black rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 disabled:opacity-50"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative flex items-center gap-2">
+                <div className="relative flex items-center justify-center gap-2">
                   <FiRefreshCw
                     className={`h-4 w-4 ${
                       isInitializing ? "animate-spin" : "group-hover:rotate-180"
                     } transition-transform duration-300`}
                   />
-                  <span className="font-medium">
+                  <span className="font-medium text-sm sm:text-base">
                     {isInitializing ? "Refreshing..." : "Refresh Data"}
                   </span>
                 </div>
               </motion.button>
 
               {/* Quick Stats Indicator */}
-              <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-yellow-500/20">
+              <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-yellow-500/20">
                 <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                 <span className="text-sm font-medium text-gray-300">
                   {stats.activeMembers} Active
@@ -931,7 +932,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <div className="px-2 sm:px-4 space-y-8">
+      <div className="px-2 sm:px-4 space-y-6 sm:space-y-8">
         {/* Modern Error Banner */}
         <AnimatePresence>
           {error && (
@@ -956,7 +957,7 @@ const DashboardPage = () => {
         </AnimatePresence>
 
         {/* Modern Stats Grid */}
-        <div className="grid grid-cols-1 lg:mt-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8 lg:mt-10">
           <StatCard
             title="Membership Revenue"
             value={formatCurrency(stats.monthlyRevenue)}
@@ -1017,7 +1018,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Performance Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1127,7 +1128,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Revenue Trend */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -1259,7 +1260,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Membership Analytics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1382,7 +1383,7 @@ const DashboardPage = () => {
               </h3>
               <Link
                 to="/admin/members"
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+                className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 font-medium"
               >
                 View All
                 <FiEye className="w-4 h-4" />
@@ -1390,23 +1391,24 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Member
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Membership
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Joined
                   </th>
                 </tr>
@@ -1459,16 +1461,16 @@ const DashboardPage = () => {
                           transition={{ delay: index * 0.1 }}
                           className="hover:bg-gray-600"
                         >
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="h-10 w-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-black font-semibold">
+                              <div className="h-8 w-8 lg:h-10 lg:w-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-black font-semibold text-xs lg:text-sm">
                                 {memberName.charAt(0).toUpperCase() || "M"}
                               </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-white">
+                              <div className="ml-2 lg:ml-4">
+                                <div className="text-xs lg:text-sm font-medium text-white">
                                   {memberName || "Unknown Member"}
                                 </div>
-                                <div className="text-sm text-gray-300">
+                                <div className="text-xs text-gray-300">
                                   {member.email ||
                                     member.user_email ||
                                     "No email"}
@@ -1476,17 +1478,17 @@ const DashboardPage = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                          <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-white">
                             {member.athlete_id || member.id || "N/A"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                          <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
                               {member.membership_type || "Standard"}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                 isExpired
                                   ? "bg-red-100 text-red-800"
                                   : "bg-green-100 text-green-800"
@@ -1495,7 +1497,7 @@ const DashboardPage = () => {
                               {isExpired ? "Expired" : "Active"}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-gray-300">
                             {member.start_date
                               ? formatDate(member.start_date)
                               : member.created_at
@@ -1509,6 +1511,94 @@ const DashboardPage = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Mobile Cards */}
+          <div className="md:hidden">
+            {recentMembers.length === 0
+              ? Array(3)
+                  .fill(0)
+                  .map((_, index) => (
+                    <div key={index} className="p-4 border-b border-gray-600 animate-pulse">
+                      <div className="flex items-center mb-3">
+                        <div className="h-10 w-10 bg-gray-500 rounded-full"></div>
+                        <div className="ml-3 flex-1">
+                          <div className="h-4 bg-gray-500 rounded w-3/4 mb-1"></div>
+                          <div className="h-3 bg-gray-500 rounded w-1/2"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              : recentMembers.map((member, index) => {
+                  const isExpired =
+                    member.expiry_date &&
+                    new Date(member.expiry_date) < new Date();
+                  const memberName =
+                    member.name ||
+                    `${member.first_name || ""} ${
+                      member.last_name || ""
+                    }`.trim();
+
+                  return (
+                    <motion.div
+                      key={member.athlete_id || member.id || index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="p-4 border-b border-gray-600 last:border-b-0"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-black font-semibold">
+                            {memberName.charAt(0).toUpperCase() || "M"}
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-white">
+                              {memberName || "Unknown Member"}
+                            </div>
+                            <div className="text-xs text-gray-300">
+                              ID: {member.athlete_id || member.id || "N/A"}
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            isExpired
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {isExpired ? "Expired" : "Active"}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <div className="text-gray-400 text-xs">Email</div>
+                          <div className="text-white text-xs truncate">
+                            {member.email || member.user_email || "No email"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs">Membership</div>
+                          <div className="text-white text-xs capitalize">
+                            {member.membership_type || "Standard"}
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-gray-400 text-xs">Joined</div>
+                          <div className="text-white text-xs">
+                            {member.start_date
+                              ? formatDate(member.start_date)
+                              : member.created_at
+                              ? formatDate(member.created_at)
+                              : "N/A"}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+          </div>
         </motion.div>
         {/* Quick Actions */}
         <motion.div
@@ -1517,7 +1607,7 @@ const DashboardPage = () => {
           className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 rounded-2xl shadow-2xl p-6 hover:shadow-gray-500/10 transition-all duration-300"
         >
           <h3 className="text-xl font-bold text-white mb-6">Quick Actions</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4">
             {[
               {
                 to: "/admin/register",

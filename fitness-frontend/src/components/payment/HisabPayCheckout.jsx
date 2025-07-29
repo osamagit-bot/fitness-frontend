@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import api from '../../utils/api';
 const HisabPayCheckout = ({ 
   isOpen, 
@@ -8,6 +9,7 @@ const HisabPayCheckout = ({
   onPaymentSuccess, 
   onPaymentFailure 
 }) => {
+  const { classes } = useTheme();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -121,12 +123,12 @@ const HisabPayCheckout = ({
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+      <div className={`relative ${classes.bg.card} rounded-lg shadow-xl w-full max-w-md p-6`}>
         <div className="absolute top-3 right-3">
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="text-gray-400 hover:text-gray-600 focus:outline-none"
+            className={`${classes.text.tertiary} hover:${classes.text.secondary} focus:outline-none`}
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -136,25 +138,25 @@ const HisabPayCheckout = ({
         
         <div className="text-center mb-6">
           <div className="flex justify-center mb-3">
-            <div className="bg-green-50 rounded-full p-3">
-              <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="bg-yellow-500/10 rounded-full p-3">
+              <svg className="w-8 h-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           </div>
-          <h3 className="text-xl font-bold text-gray-900">Pay with Hisab</h3>
-          <p className="mt-1 text-gray-500">Enter your phone number to complete payment</p>
+          <h3 className={`text-xl font-bold ${classes.text.primary}`}>Pay with Hisab</h3>
+          <p className={`mt-1 ${classes.text.secondary}`}>Enter your phone number to complete payment</p>
         </div>
         
         {errorMessage && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
+          <div className={`mb-4 p-3 ${classes.bg.tertiary} text-red-400 rounded-md text-sm border border-red-500/20`}>
             {errorMessage}
           </div>
         )}
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="phone" className={`block text-sm font-medium ${classes.text.primary} mb-1`}>
               Phone Number
             </label>
             <input
@@ -163,19 +165,19 @@ const HisabPayCheckout = ({
               placeholder="07XXXXXXXX or +937XXXXXXXX"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500"
+              className={`w-full px-4 py-3 border ${classes.border.primary} ${classes.bg.secondary} ${classes.text.primary} rounded-md focus:ring-yellow-500 focus:border-yellow-500`}
               required
               disabled={isProcessing}
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className={`mt-1 text-xs ${classes.text.tertiary}`}>
               Enter your Hisab Pay registered phone number
             </p>
           </div>
           
-          <div className="mb-4 p-3 bg-gray-50 rounded-md">
+          <div className={`mb-4 p-3 ${classes.bg.tertiary} rounded-md`}>
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Amount:</span>
-              <span className="font-bold">AFN {total.toFixed(2)}</span>
+              <span className={classes.text.secondary}>Total Amount:</span>
+              <span className={`font-bold ${classes.text.primary}`}>AFN {total.toFixed(2)}</span>
             </div>
           </div>
           
@@ -200,7 +202,7 @@ const HisabPayCheckout = ({
           </button>
           
           <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
+            <p className={`text-xs ${classes.text.tertiary}`}>
               By clicking "Pay Now", you agree to Hisab Pay's terms and conditions.
             </p>
           </div>

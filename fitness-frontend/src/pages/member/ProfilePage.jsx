@@ -229,51 +229,39 @@ function MemberProfilePage() {
     <>
       <AppToastContainer />
       <motion.div
-        className="p-4 mt-5 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
+        className="p-3 sm:p-4 mt-5 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">My Profile</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 sm:gap-0">
+        <h1 className="text-xl sm:text-2xl font-bold text-white">My Profile</h1>
         <button 
           onClick={() => window.location.reload()}
-          className="text-sm bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded"
+          className="text-xs sm:text-sm bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded w-full sm:w-auto"
         >
           Refresh Data
         </button>
       </div>
 
-      {/* Debug Data */}
-      <motion.div
-        className="mb-4 mt-5 p-2 bg-gray-700 rounded text-xs text-gray-300"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <details>
-          <summary className="cursor-pointer font-bold">API Debug Data (Click to expand)</summary>
-          <pre className="mt-2 overflow-auto max-h-40">{JSON.stringify(member, null, 2)}</pre>
-          <p className="mt-2">Member ID: {memberId}</p>
-        </details>
-      </motion.div>
+
 
       {/* Profile Header */}
       <motion.div
-        className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black p-6 rounded-xl mb-6 shadow-lg"
+        className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black p-4 sm:p-6 rounded-xl mb-6 shadow-lg"
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
       >
-        <div className="flex flex-col sm:flex-row items-center sm:items-start">
-          <div className="bg-black text-yellow-400 rounded-full w-24 h-24 flex items-center justify-center text-4xl font-bold mb-4 sm:mb-0 sm:mr-6 shadow-md">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left">
+          <div className="bg-black text-yellow-400 rounded-full w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center text-2xl sm:text-4xl font-bold mb-4 sm:mb-0 sm:mr-6 shadow-md">
             {member.first_name ? member.first_name[0].toUpperCase() : 'M'}
           </div>
-          <div>
-            <h2 className="text-2xl font-bold">{member.first_name} {member.last_name}</h2>
-            <p className="text-gray-800 capitalize">{member.membership_type}</p>
+          <div className="flex-1">
+            <h2 className="text-lg sm:text-2xl font-bold">{member.first_name} {member.last_name}</h2>
+            <p className="text-gray-800 capitalize text-sm sm:text-base">{member.membership_type}</p>
             <div className="mt-2">
-              <span className="bg-black text-yellow-400 text-xs font-semibold px-3 py-1 rounded-full">
+              <span className="bg-black text-yellow-400 text-xs font-semibold px-2 sm:px-3 py-1 rounded-full">
                 Premium Member
               </span>
             </div>
@@ -283,22 +271,22 @@ function MemberProfilePage() {
 
       {/* Personal Information */}
       <motion.div
-        className="bg-gray-700 p-6 rounded-lg shadow mb-6"
+        className="bg-gray-700 p-4 sm:p-6 rounded-lg shadow mb-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <h3 className="text-xl font-bold mb-6 text-white">Personal Information</h3>
-        <div className="space-y-4">
+        <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-white">Personal Information</h3>
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-start">
-            <div className="bg-yellow-500/20 p-2 rounded mr-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+            <div className="bg-yellow-500/20 p-2 rounded mr-3 sm:mr-4 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 01-1-1z" clipRule="evenodd" />
               </svg>
             </div>
-            <div>
-              <p className="text-sm text-gray-300">Member ID</p>
-              <p className="font-semibold text-white">MEM-{member.athlete_id}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-gray-300">Member ID</p>
+              <p className="font-semibold text-white text-sm sm:text-base break-all">MEM-{member.athlete_id}</p>
             </div>
           </div>
           <div className="flex items-start">
@@ -359,15 +347,15 @@ function MemberProfilePage() {
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button 
-            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-200"
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-bold py-2 px-4 rounded-lg shadow-md transition-all duration-200 text-sm sm:text-base"
             onClick={() => setShowUpdateForm(true)}
           >
             Update Profile
           </button>
           <button 
-            className="bg-gray-600 border-2 border-yellow-500 text-yellow-400 hover:bg-gray-500 font-bold py-2 px-4 rounded-lg transition-all duration-200"
+            className="bg-gray-600 border-2 border-yellow-500 text-yellow-400 hover:bg-gray-500 font-bold py-2 px-4 rounded-lg transition-all duration-200 text-sm sm:text-base"
             onClick={() => setShowPasswordForm(true)}
           >
             Change Password
@@ -385,7 +373,7 @@ function MemberProfilePage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-800 rounded-lg mt-16 lg:ml-64 w-full max-w-md p-6"
+              className="bg-gray-800 rounded-lg w-full max-w-md mx-4 p-4 sm:p-6"
               initial={{ scale: 0.9, y: 40 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 40 }}
@@ -452,7 +440,7 @@ function MemberProfilePage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-800 mt-10 lg:ml-20 rounded-lg w-full max-w-md p-6"
+              className="bg-gray-800 rounded-lg w-full max-w-md mx-4 p-4 sm:p-6"
               initial={{ scale: 0.9, y: 40 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 40 }}

@@ -104,7 +104,7 @@ class CommunityViewSet(viewsets.ViewSet):
             member = get_object_or_404(Member, athlete_id=member_id)
 
             if ChallengeParticipant.objects.filter(challenge=challenge, member=member).exists():
-                return Response({"detail": "Already joined this challenge"}, status=400)
+                return Response({"error": "You have already joined this challenge"}, status=400)
 
             ChallengeParticipant.objects.create(challenge=challenge, member=member)
 

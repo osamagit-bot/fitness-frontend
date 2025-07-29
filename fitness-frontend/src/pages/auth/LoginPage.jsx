@@ -174,13 +174,14 @@ const LoginPage = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900/80 via-black/90 to-gray-900/80"></div>
 
       {/* Back to Main Website Button */}
-      <div className="absolute top-6 left-6 z-50">
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50">
         <button
           onClick={() => window.location.href = '/'}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800/80 hover:bg-gray-700/80 text-white rounded-lg transition-all duration-200 backdrop-blur-sm border border-yellow-500/30 cursor-pointer"
+          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-gray-800/80 hover:bg-gray-700/80 text-white rounded-md sm:rounded-lg transition-all duration-200 backdrop-blur-sm border border-yellow-500/30 cursor-pointer"
         >
-          <i className="bx bx-arrow-back text-lg"></i>
-          <span className="text-sm font-medium">Back to Main Website</span>
+          <i className="bx bx-arrow-back text-base sm:text-lg"></i>
+          <span className="text-xs sm:text-sm font-medium sm:hidden">Back</span>
+          <span className="text-xs sm:text-sm font-medium hidden sm:inline">Back to main website</span>
         </button>
       </div>
 

@@ -561,7 +561,7 @@ const fetchGlobalNotificationSettings = async () => {
       <ToastContainer position="top-right" autoClose={5000} />
 
       <motion.div
-        className="container mx-auto px-4 py-8"
+        className="container mx-auto px-2 sm:px-4 py-4 sm:py-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
@@ -571,19 +571,19 @@ const fetchGlobalNotificationSettings = async () => {
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1, duration: 0.5 }}
-          className="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8"
         >
           <div>
-            <h1 className="text-3xl font-bold text-white">Admin Settings</h1>
-            <p className="text-gray-300">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Settings</h1>
+            <p className="text-gray-300 text-sm sm:text-base">
               Manage member accounts and system settings
             </p>
           </div>
           <button
             onClick={handleLogout}
-            className="mt-4 md:mt-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black rounded-lg transition-all duration-300"
+            className="mt-3 sm:mt-0 flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black rounded-lg transition-all duration-300 text-sm sm:text-base font-medium"
           >
-            <FiLogOut /> Logout
+            <FiLogOut className="h-4 w-4" /> Logout
           </button>
         </motion.div>
 
@@ -594,31 +594,31 @@ const fetchGlobalNotificationSettings = async () => {
           transition={{ delay: 0.2, duration: 0.5 }}
           className="bg-gray-700 rounded-xl shadow-md overflow-hidden mb-8 border border-gray-600"
         >
-          <div className="p-6 border-b border-gray-600">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <h2 className="text-xl font-semibold text-white">
+          <div className="p-4 sm:p-6 border-b border-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">
                 Member Credentials
               </h2>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                 <button
                   onClick={() => {
                     setSearch("");
                     setRefreshLoading(true);
                     fetchMembers();
                   }}
-                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black rounded-lg transition-all duration-300"
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black rounded-lg transition-all duration-300 text-sm font-medium"
                   disabled={refreshLoading}
                 >
                   <FiRefreshCw
-                    className={refreshLoading ? "animate-spin" : ""}
+                    className={`h-4 w-4 ${refreshLoading ? "animate-spin" : ""}`}
                   />
                   <span>Refresh</span>
                 </button>
                 <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <input
                     type="text"
-                    className="pl-10 pr-4 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white placeholder-gray-400 w-full md:w-64"
+                    className="pl-9 pr-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-gray-800 text-white placeholder-gray-400 w-full sm:w-48 md:w-64 text-sm"
                     placeholder="Search members..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -628,26 +628,27 @@ const fetchGlobalNotificationSettings = async () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-600">
               <thead className="bg-gray-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                     ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                     Member
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                     Membership
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">
+                  <th className="px-3 lg:px-6 py-3 text-right text-xs font-bold text-white uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -657,7 +658,7 @@ const fetchGlobalNotificationSettings = async () => {
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center">
                       <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
                       </div>
                     </td>
                   </tr>
@@ -695,7 +696,7 @@ const fetchGlobalNotificationSettings = async () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-800 font-medium">
                               {member.first_name?.charAt(0)}
                               {member.last_name?.charAt(0)}
                             </div>
@@ -756,8 +757,8 @@ const fetchGlobalNotificationSettings = async () => {
                             }
                             className={`px-4 py-2 rounded-md text-white ${
                               resetMemberLoading && resetMemberId === memberId
-                                ? "bg-blue-400 cursor-not-allowed"
-                                : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
                             }`}
                           >
                             {resetMemberLoading && resetMemberId === memberId
@@ -772,6 +773,126 @@ const fetchGlobalNotificationSettings = async () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Mobile Cards */}
+          <div className="md:hidden">
+            {membersLoading ? (
+              <div className="p-8 text-center">
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
+                </div>
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="p-8 text-center text-gray-300">
+                {search
+                  ? "No matching members found"
+                  : "No members available"}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-600">
+                {filteredMembers.map((member) => {
+                  const isExpired = isMembershipExpired(member.expiry_date);
+                  const isExpiringSoon = isMembershipExpiringSoon(
+                    member.expiry_date
+                  );
+                  const daysRemaining = getDaysRemaining(member.expiry_date);
+                  const memberId = member.athlete_id || member.id;
+
+                  return (
+                    <div
+                      key={memberId}
+                      className={`p-4 ${
+                        isExpired ? "bg-red-900/20" : ""
+                      } ${
+                        isExpiringSoon ? "bg-yellow-900/20" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-800 font-medium text-sm">
+                            {member.first_name?.charAt(0)}
+                            {member.last_name?.charAt(0)}
+                          </div>
+                          <div className="ml-3">
+                            <div
+                              className={`text-sm font-medium ${
+                                isExpired ? "text-red-400" : "text-white"
+                              }`}
+                            >
+                              {member.first_name} {member.last_name}
+                            </div>
+                            <div className="text-xs text-gray-300">
+                              ID: {memberId} • @{member.username || "no-username"}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {isExpired ? (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                              Expired
+                            </span>
+                          ) : isExpiringSoon ? (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                              Expires in {daysRemaining}d
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3 mb-3 text-sm">
+                        <div>
+                          <div className="text-gray-400 text-xs">Email</div>
+                          <div className="text-white text-sm break-all">{member.user_email || member.email || 'No email'}</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-gray-400 text-xs">Phone</div>
+                            <div className="text-white">{member.phone || member.phone_number || "No phone"}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-400 text-xs">Membership</div>
+                            <div className="text-white">{member.membership_type || "None"}</div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-gray-400 text-xs">Expiry</div>
+                            <div className="text-white">
+                              {member.expiry_date
+                                ? formatDate(member.expiry_date)
+                                : "No expiry"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() =>
+                          handleGeneratePasswordClick(memberId)
+                        }
+                        disabled={
+                          resetMemberLoading && resetMemberId === memberId
+                        }
+                        className={`w-full px-4 py-2 rounded-md text-white text-sm font-medium ${
+                          resetMemberLoading && resetMemberId === memberId
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
+                        }`}
+                      >
+                        {resetMemberLoading && resetMemberId === memberId
+                          ? "Resetting..."
+                          : "Reset Password"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </motion.div>
         
 
@@ -780,16 +901,16 @@ const fetchGlobalNotificationSettings = async () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
         >
           {/* Notifications Card */}
           <div className="bg-gray-700 rounded-xl shadow-md overflow-hidden">
-            <div className="p-6 border-b border-gray-600">
-              <h2 className="text-xl font-semibold text-white">
+            <div className="p-4 sm:p-6 border-b border-gray-600">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">
                 Notification Preferences
               </h2>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-600 rounded-lg">
                   <div>
@@ -844,7 +965,7 @@ const fetchGlobalNotificationSettings = async () => {
                       <button
                         onClick={handleTestEmail}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        className="flex-1 px-3 py-2 text-xs bg-yellow-600 text-black rounded-lg hover:bg-yellow-700 disabled:opacity-50 transition-colors"
                       >
                         {loading ? 'Sending...' : 'Send Test'}
                       </button>
@@ -883,12 +1004,12 @@ const fetchGlobalNotificationSettings = async () => {
 
           {/* System Settings Card */}
           <div className="bg-gray-700 rounded-xl shadow-md overflow-hidden">
-            <div className="p-6 border-b border-gray-600">
-              <h2 className="text-xl font-semibold text-white">
+            <div className="p-4 sm:p-6 border-b border-gray-600">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">
                 System Settings
               </h2>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Database Backup & Restore Section */}
               <div>
                 <h3 className="text-lg font-medium text-white mb-3">
@@ -903,7 +1024,7 @@ const fetchGlobalNotificationSettings = async () => {
                     className={`px-6 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 ${
                       loading
                         ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
-                        : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg hover:shadow-xl"
+                        : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-lg hover:shadow-xl"
                     }`}
                   >
                     <div className="flex items-center justify-center gap-3">
@@ -958,8 +1079,8 @@ const fetchGlobalNotificationSettings = async () => {
                   <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-gray-600">
                     <h3 className="text-xl font-bold text-white mb-4">⚠️ Restore Database</h3>
                     
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                      <p className="text-red-800 text-sm">
+                    <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mb-4">
+                      <p className="text-red-300 text-sm">
                         <strong>Warning:</strong> This will replace your current database with the selected backup. 
                         An emergency backup will be created automatically.
                       </p>
@@ -992,10 +1113,10 @@ const fetchGlobalNotificationSettings = async () => {
                     
                     {/* Backup inspection results */}
                     {inspectionLoading && (
-                      <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+                      <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
                         <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
-                          <span className="text-sm text-blue-300">Inspecting backup...</span>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400"></div>
+                          <span className="text-sm text-yellow-300">Inspecting backup...</span>
                         </div>
                       </div>
                     )}
@@ -1259,8 +1380,8 @@ const fetchGlobalNotificationSettings = async () => {
                     <button
                       className={`px-4 py-2 rounded-lg text-white transition ${
                         resetMemberLoading
-                          ? "bg-blue-400 cursor-not-allowed"
-                          : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
                       }`}
                       onClick={handleGenerateMemberPassword}
                       disabled={resetMemberLoading}
@@ -1318,7 +1439,7 @@ const fetchGlobalNotificationSettings = async () => {
                       <span className="font-medium text-white">New Password:</span>
                       <button
                         onClick={copyToClipboard}
-                        className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                        className="flex items-center gap-1 text-yellow-400 hover:text-yellow-300"
                       >
                         <FiCopy /> Copy
                       </button>
@@ -1333,7 +1454,7 @@ const fetchGlobalNotificationSettings = async () => {
 
                   <div className="pt-2 flex justify-end">
                     <button
-                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all duration-300"
+                      className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-black rounded-lg transition-all duration-300"
                       onClick={() => {
                         setResetMemberId(null);
                         setGeneratedPassword("");

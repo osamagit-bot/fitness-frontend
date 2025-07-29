@@ -5,13 +5,13 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 function Navbar() {
   const [showCategoriesDropdown, setShowCategoriesDropdown] = useState(false);
-  const [showTrainingsDropdown, setShowTrainingsDropdown] = useState(false);
+
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
   const [scrolled, setScrolled] = useState(false);
   
   const categoriesRef = useRef(null);
-  const trainingsRef = useRef(null);
+
   const mobileMenuRef = useRef(null);
   const timeoutRef = useRef(null);
   
@@ -39,9 +39,7 @@ function Navbar() {
         if (categoriesRef.current && !categoriesRef.current.contains(event.target)) {
           setShowCategoriesDropdown(false);
         }
-        if (trainingsRef.current && !trainingsRef.current.contains(event.target)) {
-          setShowTrainingsDropdown(false);
-        }
+
       }
     };
 
@@ -61,13 +59,7 @@ function Navbar() {
   }, [isMobile, scrolled]);
 
   const toggleCategoriesDropdown = () => {
-    if (showTrainingsDropdown) setShowTrainingsDropdown(false);
     setShowCategoriesDropdown(!showCategoriesDropdown);
-  };
-
-  const toggleTrainingsDropdown = () => {
-    if (showCategoriesDropdown) setShowCategoriesDropdown(false);
-    setShowTrainingsDropdown(!showTrainingsDropdown);
   };
 
   const handleCategoriesMouseEnter = () => {
@@ -75,29 +67,13 @@ function Navbar() {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    if (showTrainingsDropdown) {
-      setShowTrainingsDropdown(false);
-    }
     setShowCategoriesDropdown(true);
-  };
-
-  const handleTrainingsMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (showCategoriesDropdown) {
-      setShowCategoriesDropdown(false);
-    }
-    setShowTrainingsDropdown(true);
   };
 
   const handleDropdownMouseLeave = (dropdownType) => {
     timeoutRef.current = setTimeout(() => {
       if (dropdownType === 'categories') {
         setShowCategoriesDropdown(false);
-      } else if (dropdownType === 'trainings') {
-        setShowTrainingsDropdown(false);
       }
     }, 150);
   };
@@ -121,6 +97,14 @@ function Navbar() {
 
   const goToSchedule = () => {
     navigate('/schedule');
+    setShowMobileMenu(false);
+  };
+
+  const goToTrainings = () => {
+    const trainingSection = document.getElementById('training');
+    if (trainingSection) {
+      trainingSection.scrollIntoView({ behavior: 'smooth' });
+    }
     setShowMobileMenu(false);
   };
 
@@ -177,7 +161,7 @@ function Navbar() {
           <nav className="hidden lg:flex items-center space-x-8">
             <ul className={`flex space-x-8 items-center text-base font-medium ${classes.text.accent}`}>
               <li>
-                <button onClick={goToHome} className="hover:text-yellow-300 transition duration-150 ease-in-out focus:outline-none">
+                <button onClick={goToHome} className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}>
                   HOME
                 </button>
               </li>
@@ -188,7 +172,7 @@ function Navbar() {
                 onMouseLeave={() => !isMobile && handleDropdownMouseLeave('categories')}
               >
                 <button
-                  className="flex items-center hover:text-yellow-300 transition duration-150 ease-in-out focus:outline-none"
+                  className={`flex items-center ${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}
                   onClick={toggleCategoriesDropdown}
                   onMouseEnter={() => !isMobile && handleCategoriesMouseEnter()}
                 >
@@ -205,77 +189,49 @@ function Navbar() {
                 >
                   <div className={`py-1 rounded-md ${classes.dropdown.primary} shadow-xs ${classes.border.accent}/20`}>
                     {[
-                      'Mass Gainer', 'Essentials', 'Pre-Workout', 'Whey Protein', 'Casein Protein',
-                      'Fat Burner', 'BCAA', 'Isolate Protein', 'Power And Strength',
-                      'Creatine', 'Energy Bar'
+                      'Supplements', 'Equipment'
                     ].map((item) => (
-                      <a
+                      <button
                         key={item}
-                        href="#"
-                        className={`block px-4 py-2 text-sm ${classes.dropdown.item} transition-colors duration-150`}
+                        onClick={() => {
+                          navigate(`/category/${item.toLowerCase().replace(/\s+/g, '-')}`);
+                          setShowCategoriesDropdown(false);
+                        }}
+                        className={`block w-full text-left px-4 py-2 text-sm ${classes.dropdown.item} transition-colors duration-150`}
                       >
                         {item}
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>
               </li>
 
-              <li 
-                ref={trainingsRef} 
-                className="relative"
-                onMouseLeave={() => !isMobile && handleDropdownMouseLeave('trainings')}
-              >
-                <button
-                  className="flex items-center hover:text-yellow-300 transition duration-150 ease-in-out focus:outline-none"
-                  onClick={toggleTrainingsDropdown}
-                  onMouseEnter={() => !isMobile && handleTrainingsMouseEnter()}
-                >
+              <li>
+                <a href="#training" className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`} style={{scrollBehavior: 'smooth'}}>
                   TRAININGS
-                  <i className={`bx bx-chevron-down ml-1 transition-transform ${showTrainingsDropdown ? 'rotate-180' : ''}`}></i>
-                </button>
-                <div 
-                  className={`absolute left-0 mt-2 w-56 rounded-md shadow-lg ${classes.dropdown.primary} ring-1 ring-black ring-opacity-5 transition-all duration-200 ease-in-out z-20 ${
-                    showTrainingsDropdown 
-                      ? 'transform opacity-100 scale-100' 
-                      : 'transform opacity-0 scale-95 pointer-events-none'
-                  }`}
-                  onMouseEnter={handleDropdownContentMouseEnter}
-                >
-                  <div className={`py-1 rounded-md ${classes.dropdown.primary} shadow-xs ${classes.border.accent}/20`}>
-                    {['Chest Workout', 'Fat Burning', 'Fitness', 'Bicep Workout', 'Tricep Workout', 'ABS'].map((item) => (
-                      <a
-                        key={item}
-                        href="#"
-                        className={`block px-4 py-2 text-sm ${classes.dropdown.item} transition-colors duration-150`}
-                      >
-                        {item}
-                      </a>
-                    ))}
-                  </div>
-                </div>
+                </a>
               </li>
               
               <li>
-                <a href="#products" className="hover:text-yellow-300 transition duration-150 ease-in-out focus:outline-none">
+                <a href="#products" className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`} style={{scrollBehavior: 'smooth'}}>
                   PRODUCTS
                 </a>
               </li>
 
               <li>
-                <button onClick={goToSchedule} className="hover:text-yellow-300 transition duration-150 ease-in-out focus:outline-none">
+                <button onClick={goToSchedule} className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}>
                   SCHEDULE
                 </button>
               </li>
 
            <li>
-  <a href="#about" className="hover:text-yellow-300 transition duration-150 ease-in-out focus:outline-none">
+  <a href="#about" className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`} style={{scrollBehavior: 'smooth'}}>
     ABOUT US
   </a>
 </li>
 
               <li>
-                <button onClick={goToHelpandSupport} className="hover:text-yellow-300 transition duration-150 ease-in-out focus:outline-none">
+                <button onClick={goToHelpandSupport} className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}>
                   HELP & SUPPORT
                 </button>
               </li>
@@ -347,46 +303,29 @@ function Navbar() {
                 }`}
               >
                 {[
-                  'Mass Gainer', 'Essentials', 'Pre-Workout', 'Whey Protein', 'Casein Protein',
-                  'Fat Burner', 'BCAA', 'Isolate Protein', 'Power And Strength',
-                  'Creatine', 'Energy Bar'
+                  'Supplements', 'Equipment'
                 ].map((item) => (
-                  <a
+                  <button
                     key={item}
-                    href="#"
-                    className={`block px-3 py-2 ml-4 text-sm ${classes.text.secondary} rounded-md hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
+                    onClick={() => {
+                      navigate(`/category/${item.toLowerCase().replace(/\s+/g, '-')}`);
+                      setShowMobileMenu(false);
+                      setShowCategoriesDropdown(false);
+                    }}
+                    className={`block w-full text-left px-3 py-2 ml-4 text-sm ${classes.text.secondary} rounded-md hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
                   >
                     {item}
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
 
-            <div className="mt-1">
-              <button
-                onClick={toggleTrainingsDropdown}
-                className={`flex items-center justify-between w-full px-3 py-2 ${classes.text.accent} font-medium rounded-md hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
-              >
-                <span>TRAININGS</span>
-                <i className={`bx bx-chevron-down transition-transform ${showTrainingsDropdown ? 'rotate-180' : ''}`}></i>
-              </button>
-              
-              <div 
-                className={`mt-1 transition-all duration-300 ease-in-out overflow-hidden ${
-                  showTrainingsDropdown ? 'max-h-[300px]' : 'max-h-0'
-                }`}
-              >
-                {['Chest Workout', 'Fat Burning', 'Fitness', 'Bicep Workout', 'Tricep Workout', 'ABS'].map((item) => (
-                  <a
-                    key={item}
-                    href="#"
-                    className={`block px-3 py-2 ml-4 text-sm ${classes.text.secondary} rounded-md hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
-                  >
-                    {item}
-                  </a>
-                ))}
-              </div>
-            </div>
+            <button 
+              onClick={goToTrainings}
+              className={`mt-1 block w-full text-left px-3 py-2 rounded-md ${classes.text.accent} font-medium hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
+            >
+              TRAININGS
+            </button>
 
             <button 
               onClick={goToProducts}

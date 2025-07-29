@@ -266,7 +266,8 @@ const handleLike = async (postId) => {
       showToast.success("You have joined the challenge!");
     } catch (err) {
       console.error("Join challenge error:", err);
-      showToast.error("Failed to join challenge. Please try again.");
+      const errorMessage = err.response?.data?.error || "Failed to join challenge. Please try again.";
+      showToast.error(errorMessage);
     }
   };
 
@@ -453,11 +454,11 @@ const handleLike = async (postId) => {
   if (loading) {
     return (
       <motion.div
-        className="flex items-center justify-center min-h-screen"
+        className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-yellow-500"></div>
       </motion.div>
     );
   }
@@ -465,17 +466,19 @@ const handleLike = async (postId) => {
   if (error) {
     return (
       <motion.div
-        className="text-center p-10"
+        className="text-center p-6 sm:p-10 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black flex items-center justify-center"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="text-red-500 mb-4">{error}</div>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-blue-600"
-        >
-          Retry
-        </button>
+        <div>
+          <div className="text-red-400 mb-4 text-sm sm:text-base">{error}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-yellow-600 text-black rounded hover:bg-yellow-700 text-sm sm:text-base"
+          >
+            Retry
+          </button>
+        </div>
       </motion.div>
     );
   }
@@ -484,35 +487,35 @@ const handleLike = async (postId) => {
     <>
       <AppToastContainer />
       <motion.div
-        className="container mx-auto p-4 max-w-6xl min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
+        className="container mx-auto p-3 sm:p-4 max-w-6xl min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
       <motion.div
-        className="mb-8"
+        className="mb-6 sm:mb-8"
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">
           Fitness Community
         </h1>
-        <p className="text-gray-300">
+        <p className="text-sm sm:text-base text-gray-300">
           Connect with fellow gym members and stay updated with gym news.
         </p>
       </motion.div>
 
       <motion.div
-        className="border-b border-gray-600 mb-6"
+        className="border-b border-gray-600 mb-4 sm:mb-6"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
       >
-        <nav className="flex space-x-8">
+        <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto">
           <button
             onClick={() => setActiveTab("feed")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === "feed"
                 ? "border-yellow-500 text-yellow-400"
                 : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500"
@@ -522,7 +525,7 @@ const handleLike = async (postId) => {
           </button>
           <button
             onClick={() => setActiveTab("announcements")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === "announcements"
                 ? "border-yellow-500 text-yellow-400"
                 : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500"
@@ -532,7 +535,7 @@ const handleLike = async (postId) => {
           </button>
           <button
             onClick={() => setActiveTab("challenges")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === "challenges"
                 ? "border-yellow-500 text-yellow-400"
                 : "border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500"
@@ -553,19 +556,19 @@ const handleLike = async (postId) => {
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              className="bg-gray-700 rounded-lg shadow-md p-6 mb-6 border border-gray-600"
+              className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-600"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h2 className="text-xl font-semibold mb-4 text-white">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-white">
                 Create New Post
               </h2>
-              <form onSubmit={handlePostSubmit}>
+              <form onSubmit={handlePostSubmit} className="space-y-3">
                 <input
                   type="text"
                   placeholder="Title"
-                  className="w-full mb-2 p-2 border border-gray-600 bg-gray-600 text-white rounded"
+                  className="w-full p-2 sm:p-3 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
                   value={newPost.title}
                   onChange={(e) =>
                     setNewPost({ ...newPost, title: e.target.value })
@@ -574,8 +577,8 @@ const handleLike = async (postId) => {
                 />
                 <textarea
                   placeholder="Content"
-                  className="w-full mb-2 p-2 border border-gray-600 bg-gray-600 text-white rounded"
-                  rows={4}
+                  className="w-full p-2 sm:p-3 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
+                  rows={3}
                   value={newPost.content}
                   onChange={(e) =>
                     setNewPost({ ...newPost, content: e.target.value })
@@ -584,7 +587,7 @@ const handleLike = async (postId) => {
                 />
                 <button
                   type="submit"
-                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700"
+                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 text-sm sm:text-base font-medium"
                 >
                   Post
                 </button>
@@ -592,23 +595,23 @@ const handleLike = async (postId) => {
             </motion.div>
 
             {posts.length === 0 ? (
-              <p className="text-gray-400">No posts yet.</p>
+              <p className="text-gray-400 text-sm sm:text-base">No posts yet.</p>
             ) : (
               posts.map((post) => (
                 <motion.div
                   key={post.id}
-                  className="bg-gray-700 rounded-lg shadow-md p-6 mb-6 border border-gray-600"
+                  className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-600"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.25 }}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row justify-between items-start mb-3 sm:mb-4 gap-3 sm:gap-0">
+                    <div className="flex-1 min-w-0">
                       {editingPosts[post.id] ? (
                         <div className="space-y-2">
                           <input
                             type="text"
-                            className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded font-bold text-lg"
+                            className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded font-bold text-base sm:text-lg"
                             value={editingPosts[post.id].title}
                             onChange={(e) =>
                               handleEditPostChange(
@@ -619,8 +622,8 @@ const handleLike = async (postId) => {
                             }
                           />
                           <textarea
-                            className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded"
-                            rows={4}
+                            className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
+                            rows={3}
                             value={editingPosts[post.id].content}
                             onChange={(e) =>
                               handleEditPostChange(
@@ -633,32 +636,32 @@ const handleLike = async (postId) => {
                         </div>
                       ) : (
                         <>
-                          <h3 className="text-lg font-bold mb-1 text-white">
+                          <h3 className="text-base sm:text-lg font-bold mb-1 text-white break-words">
                             {post.title}
                           </h3>
-                          <p className="text-gray-300 mb-2 whitespace-pre-wrap">
+                          <p className="text-sm sm:text-base text-gray-300 mb-2 whitespace-pre-wrap break-words">
                             {post.content}
                           </p>
                         </>
                       )}
-                      <div className="text-sm text-gray-400 mb-2">
+                      <div className="text-xs sm:text-sm text-gray-400 mb-2">
                         By {post.author || "Unknown"} on {formatDate(getDateFromObject(post))}
                       </div>
                     </div>
 
                     {isOwner(post) && (
-                      <div className="ml-4 space-x-2">
+                      <div className="flex space-x-2 sm:ml-4 flex-shrink-0">
                         {editingPosts[post.id] ? (
                           <>
                             <button
                               onClick={() => handleEditPostSave(post.id)}
-                              className="text-sm text-green-400 hover:underline"
+                              className="text-xs sm:text-sm text-green-400 hover:underline px-2 py-1"
                             >
                               Save
                             </button>
                             <button
                               onClick={() => handleEditPostCancel(post.id)}
-                              className="text-sm text-gray-300 hover:underline"
+                              className="text-xs sm:text-sm text-gray-300 hover:underline px-2 py-1"
                             >
                               Cancel
                             </button>
@@ -673,13 +676,13 @@ const handleLike = async (postId) => {
                                   post.content
                                 )
                               }
-                              className="text-sm text-yellow-400 hover:underline"
+                              className="text-xs sm:text-sm text-yellow-400 hover:underline px-2 py-1"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => handleDeletePost(post.id)}
-                              className="text-sm text-red-400 hover:underline"
+                              className="text-xs sm:text-sm text-red-400 hover:underline px-2 py-1"
                             >
                               Delete
                             </button>
@@ -693,33 +696,33 @@ const handleLike = async (postId) => {
                     <>
                       <button
                         onClick={() => handleLike(post.id)}
-                        className="text-yellow-400 hover:underline mb-4"
+                        className="text-yellow-400 hover:underline mb-3 sm:mb-4 text-sm sm:text-base"
                         aria-label={`Like post titled ${post.title}`}
                       >
                         Like ({post.likes || 0})
                       </button>
 
-                      <div className="border-t border-gray-600 pt-4">
-                        <h4 className="font-semibold mb-2 text-white">
+                      <div className="border-t border-gray-600 pt-3 sm:pt-4">
+                        <h4 className="font-semibold mb-2 text-white text-sm sm:text-base">
                           Comments ({post.comments || 0})
                         </h4>
 
                         {(post.comments_list || []).map((comment) => (
                           <div
                             key={comment.id}
-                            className="border border-gray-600 rounded p-3 mb-2 bg-gray-600"
+                            className="border border-gray-600 rounded p-2 sm:p-3 mb-2 bg-gray-600"
                           >
-                            <div className="flex justify-between items-center mb-1">
-                              <div>
-                                <span className="font-semibold">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2 sm:gap-0">
+                              <div className="min-w-0 flex-1">
+                                <span className="font-semibold text-sm sm:text-base text-white">
                                   {comment.author}
                                 </span>{" "}
-                                <span className="text-gray-500 text-xs">
+                                <span className="text-gray-400 text-xs">
                                   • {formatDate(getDateFromObject(comment))}
                                 </span>
                               </div>
                               {isOwner(post, comment) && (
-                                <div className="space-x-2">
+                                <div className="flex space-x-2 flex-shrink-0">
                                   {!editingComments[comment.id] ? (
                                     <>
                                       <button
@@ -729,7 +732,7 @@ const handleLike = async (postId) => {
                                             comment.content
                                           )
                                         }
-                                        className="text-sm text-green-600 hover:underline"
+                                        className="text-xs sm:text-sm text-green-400 hover:underline"
                                       >
                                         Edit
                                       </button>
@@ -740,7 +743,7 @@ const handleLike = async (postId) => {
                                             comment.id
                                           )
                                         }
-                                        className="text-sm text-red-600 hover:underline"
+                                        className="text-xs sm:text-sm text-red-400 hover:underline"
                                       >
                                         Delete
                                       </button>
@@ -754,7 +757,7 @@ const handleLike = async (postId) => {
                                             comment.id
                                           )
                                         }
-                                        className="text-sm text-blue-600 hover:underline"
+                                        className="text-xs sm:text-sm text-blue-400 hover:underline"
                                       >
                                         Save
                                       </button>
@@ -762,7 +765,7 @@ const handleLike = async (postId) => {
                                         onClick={() =>
                                           handleEditCommentCancel(comment.id)
                                         }
-                                        className="text-sm text-gray-600 hover:underline"
+                                        className="text-xs sm:text-sm text-gray-400 hover:underline"
                                       >
                                         Cancel
                                       </button>
@@ -773,7 +776,7 @@ const handleLike = async (postId) => {
                             </div>
                             {editingComments[comment.id] ? (
                               <textarea
-                                className="w-full p-2 border border-gray-300 rounded"
+                                className="w-full p-2 border border-gray-500 bg-gray-500 text-white rounded text-sm sm:text-base"
                                 rows={2}
                                 value={editingComments[comment.id]}
                                 onChange={(e) =>
@@ -784,17 +787,17 @@ const handleLike = async (postId) => {
                                 }
                               />
                             ) : (
-                              <p className="whitespace-pre-wrap">
+                              <p className="whitespace-pre-wrap text-sm sm:text-base text-white break-words">
                                 {comment.content}
                               </p>
                             )}
                           </div>
                         ))}
 
-                        <form onSubmit={(e) => handleCommentSubmit(e, post.id)}>
+                        <form onSubmit={(e) => handleCommentSubmit(e, post.id)} className="space-y-2">
                           <textarea
                             placeholder="Add a comment..."
-                            className="w-full p-2 border border-gray-300 rounded mb-2"
+                            className="w-full p-2 border border-gray-500 bg-gray-500 text-white rounded text-sm sm:text-base"
                             rows={2}
                             value={newComments[post.id] || ""}
                             onChange={(e) =>
@@ -803,7 +806,7 @@ const handleLike = async (postId) => {
                           />
                           <button
                             type="submit"
-                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm sm:text-base"
                           >
                             Submit
                           </button>
@@ -827,20 +830,20 @@ const handleLike = async (postId) => {
             className="space-y-6"
           >
             {announcements.length === 0 ? (
-              <p className="text-gray-400">No announcements available.</p>
+              <p className="text-gray-400 text-sm sm:text-base">No announcements available.</p>
             ) : (
               announcements.map((announcement) => (
                 <div
                   key={announcement.id}
-                  className="bg-gray-700 rounded-lg shadow-md p-6 border border-gray-600"
+                  className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 border border-gray-600"
                 >
-                  <h3 className="text-lg font-bold mb-2 text-white">
+                  <h3 className="text-base sm:text-lg font-bold mb-2 text-white break-words">
                     {announcement.title}
                   </h3>
-                  <p className="mb-2 whitespace-pre-wrap text-gray-300">
+                  <p className="mb-2 whitespace-pre-wrap text-gray-300 text-sm sm:text-base break-words">
                     {announcement.content}
                   </p>
-                  <div className="text-sm text-gray-400">
+                  <div className="text-xs sm:text-sm text-gray-400">
                     Posted on {formatDate(getDateFromObject(announcement))}
                   </div>
                 </div>
@@ -859,23 +862,23 @@ const handleLike = async (postId) => {
             className="space-y-6"
           >
             {challenges.length === 0 ? (
-              <p className="text-gray-500">No challenges available.</p>
+              <p className="text-gray-400 text-sm sm:text-base">No challenges available.</p>
             ) : (
               challenges.map((challenge) => (
                 <div
                   key={challenge.id}
-                  className="bg-white rounded-lg shadow-md p-6"
+                  className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 border border-gray-600"
                 >
-                  <h3 className="text-lg font-bold mb-2">{challenge.title}</h3>
-                  <p className="mb-2 whitespace-pre-wrap">
+                  <h3 className="text-base sm:text-lg font-bold mb-2 text-white break-words">{challenge.title}</h3>
+                  <p className="mb-2 whitespace-pre-wrap text-gray-300 text-sm sm:text-base break-words">
                     {challenge.description}
                   </p>
-                  <div className="text-sm text-gray-500 mb-4">
+                  <div className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
                     Participants: {challenge.participants || 0}
                   </div>
                   <button
                     onClick={() => joinChallenge(challenge.id)}
-                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                    className="bg-green-600 text-white px-3 sm:px-4 py-2 rounded hover:bg-green-700 text-sm sm:text-base"
                   >
                     Join Challenge
                   </button>

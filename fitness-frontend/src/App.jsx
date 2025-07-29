@@ -20,6 +20,7 @@ import {
   HelpSupportPage as HelpSupport,
   HomePage as Home,
   SchedulePage,
+  CategoryPage,
 } from "./pages/public";
 
 // Kiosk Pages
@@ -109,6 +110,7 @@ function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/category/:category" element={<CategoryPage />} />
         <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/helpandsupportpage" element={<HelpSupport />} />
         <Route path="/login" element={<LoginPage />} />

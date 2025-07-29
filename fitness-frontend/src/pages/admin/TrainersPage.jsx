@@ -427,7 +427,7 @@ function TrainersPage() {
                   {trainers.length > 0 ? (
                     trainers.map(trainer => (
                       <div key={trainer.id} className="bg-gradient-to-br from-gray-600 to-gray-700 rounded-xl shadow-lg border border-gray-500 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                        <div className="relative h-48">
+                        <div className="relative h-48 sm:h-56">
                           {imageErrors.has(trainer.id) ? (
                             <div className="h-full w-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center">
                               <span className="text-yellow-400 text-4xl">👤</span>
@@ -495,40 +495,59 @@ function TrainersPage() {
                 <div className="md:hidden space-y-4">
                   {trainers.length > 0 ? (
                     trainers.map(trainer => (
-                      <div key={trainer.id} className="bg-gradient-to-r from-gray-700 to-gray-600 rounded-xl shadow-lg border border-gray-500 overflow-hidden">
-                        <div className="p-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <h3 className="font-bold text-lg text-white">
-                              {trainer.first_name} {trainer.last_name}
-                            </h3>
-                            <button
-                              onClick={() => deleteTrainer(trainer.id)}
-                              className="text-red-400 hover:text-red-300 font-semibold text-sm"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <span className="text-gray-300">ID:</span>
-                              <span className="ml-1 font-semibold text-white">{trainer.trainer_id}</span>
+                      <div key={trainer.id} className="bg-gradient-to-br from-gray-600 to-gray-700 rounded-xl shadow-lg border border-gray-500 overflow-hidden">
+                        <div className="relative h-32">
+                          {imageErrors.has(trainer.id) ? (
+                            <div className="h-full w-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center">
+                              <span className="text-yellow-400 text-3xl">👤</span>
                             </div>
-                            <div>
+                          ) : (
+                            <img 
+                              src={getImageUrl(trainer)}
+                              alt={`${trainer.first_name} ${trainer.last_name}`}
+                              className="h-full w-full object-cover"
+                              onError={() => handleImageError(trainer.id)}
+                            />
+                          )}
+                          <div className="absolute top-2 right-2">
+                            <span className="bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+                              ID: {trainer.trainer_id}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="text-lg font-bold text-white mb-3">
+                            {trainer.first_name} {trainer.last_name}
+                          </h3>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
                               <span className="text-gray-300">Specialization:</span>
                               <span className="ml-1 font-semibold text-white capitalize">{trainer.specialization}</span>
                             </div>
-                            <div className="col-span-2">
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
                               <span className="text-gray-300">Email:</span>
                               <span className="ml-1 font-semibold text-white">{trainer.email}</span>
                             </div>
-                            <div>
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
                               <span className="text-gray-300">Phone:</span>
                               <span className="ml-1 font-semibold text-white">{trainer.phone}</span>
                             </div>
-                            <div>
+                            <div className="flex items-center">
+                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
                               <span className="text-gray-300">Salary:</span>
                               <span className="ml-1 font-semibold text-white">${trainer.monthly_salary}</span>
                             </div>
+                          </div>
+                          <div className="mt-4 pt-4 border-t border-gray-500">
+                            <button
+                              onClick={() => deleteTrainer(trainer.id)}
+                              className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-2 px-4 rounded-lg hover:from-red-600 hover:to-red-700 transition-all font-semibold"
+                            >
+                              Delete Trainer
+                            </button>
                           </div>
                         </div>
                       </div>

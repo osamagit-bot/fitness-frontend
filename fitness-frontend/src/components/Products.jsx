@@ -255,29 +255,29 @@ export default function Products() {
       <div className={`fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 ${showQuickView ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}>
         <div className="absolute inset-0 bg-black bg-opacity-75" onClick={closeQuickView}></div>
         <div className={`${classes.bg.card} rounded-lg shadow-xl max-w-4xl w-full mx-auto z-10 overflow-y-auto max-h-[90vh] transform transition-transform duration-300 scale-100`}>
-          <div className="flex flex-col md:flex-row">
-            <div className={`md:w-1/2 p-6 ${classes.bg.secondary} flex items-center justify-center`}>
+          <div className="flex flex-col lg:flex-row">
+            <div className={`lg:w-1/2 p-4 md:p-6 ${classes.bg.secondary} flex items-center justify-center`}>
               {selectedProduct.image_url ? (
                 <img
                   src={selectedProduct.image_url}
                   alt={selectedProduct.name}
-                  className="max-h-80 object-contain"
+                  className="max-h-60 md:max-h-80 object-contain"
                 />
               ) : selectedProduct.image ? (
                 <img
                   src={`http://127.0.0.1:8000${selectedProduct.image}`}
                   alt={selectedProduct.name}
-                  className="max-h-80 object-contain"
+                  className="max-h-60 md:max-h-80 object-contain"
                 />
               ) : (
-                <div className={`h-80 w-full ${classes.bg.tertiary} flex items-center justify-center ${classes.text.tertiary}`}>
-                  <img src="/images/whey.jpg" alt="No image" className="max-h-80 object-contain" />
+                <div className={`h-60 md:h-80 w-full ${classes.bg.tertiary} flex items-center justify-center ${classes.text.tertiary}`}>
+                  <img src="/images/whey.jpg" alt="No image" className="max-h-60 md:max-h-80 object-contain" />
                 </div>
               )}
             </div>
-            <div className="md:w-1/2 p-6">
+            <div className="lg:w-1/2 p-4 md:p-6">
               <div className="flex justify-between items-start">
-                <h3 className={`text-2xl font-bold ${classes.text.primary}`}>{selectedProduct.name}</h3>
+                <h3 className={`text-xl md:text-2xl font-bold ${classes.text.primary}`}>{selectedProduct.name}</h3>
                 <button onClick={closeQuickView} className={`${classes.text.tertiary} hover:${classes.text.secondary}`}>
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -285,9 +285,9 @@ export default function Products() {
                 </button>
               </div>
               <div className="mt-4">
-                <span className={`text-xl font-bold ${classes.text.primary}`}>AFN {parseFloat(selectedProduct.price).toFixed(2)}</span>
+                <span className={`text-lg md:text-xl font-bold ${classes.text.primary}`}>AFN {parseFloat(selectedProduct.price).toFixed(2)}</span>
                 {selectedProduct.compare_at_price && (
-                  <span className={`ml-3 ${classes.text.tertiary} line-through`}>AFN {parseFloat(selectedProduct.compare_at_price).toFixed(2)}</span>
+                  <span className={`ml-3 text-sm md:text-base ${classes.text.tertiary} line-through`}>AFN {parseFloat(selectedProduct.compare_at_price).toFixed(2)}</span>
                 )}
               </div>
               {selectedProduct.description && (
@@ -339,10 +339,10 @@ export default function Products() {
   // Shopping Cart Sidebar
   const ShoppingCartSidebar = () => {
     return (
-      <div className={`fixed inset-y-0 right-0 w-full max-w-full sm:max-w-md md:w-96 ${classes.bg.card} shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${showCart ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-y-0 right-0 w-full max-w-sm sm:max-w-md md:w-96 ${classes.bg.card} shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${showCart ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex flex-col h-full">
-          <div className={`p-3 sm:p-4 border-b ${classes.border.primary} flex items-center justify-between`}>
-            <h3 className={`text-base sm:text-lg font-semibold ${classes.text.primary}`}>Your Cart ({cart.length})</h3>
+          <div className={`p-4 border-b ${classes.border.primary} flex items-center justify-between`}>
+            <h3 className={`text-lg font-semibold ${classes.text.primary}`}>Your Cart ({cart.length})</h3>
             <button onClick={() => setShowCart(false)} className={`${classes.text.tertiary} hover:${classes.text.secondary}`}>
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -367,7 +367,7 @@ export default function Products() {
               <div className="space-y-4">
                 {cart.map(item => (
                   <div key={item.product_id} className={`flex border-b ${classes.border.primary} pb-4`}>
-                    <div className={`w-20 h-20 flex-shrink-0 ${classes.bg.tertiary} rounded overflow-hidden`}>
+                    <div className={`w-16 h-16 md:w-20 md:h-20 flex-shrink-0 ${classes.bg.tertiary} rounded overflow-hidden`}>
                       {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-contain" />
                       ) : item.image ? (
@@ -378,9 +378,9 @@ export default function Products() {
                         </div>
                       )}
                     </div>
-                    <div className="ml-4 flex-1">
-                      <h4 className={`text-sm font-medium ${classes.text.primary}`}>{item.name}</h4>
-                      <p className={`text-sm ${classes.text.tertiary}`}>AFN {parseFloat(item.price).toFixed(2)}</p>
+                    <div className="ml-3 md:ml-4 flex-1">
+                      <h4 className={`text-sm font-medium ${classes.text.primary} line-clamp-2`}>{item.name}</h4>
+                      <p className={`text-xs md:text-sm ${classes.text.tertiary}`}>AFN {parseFloat(item.price).toFixed(2)}</p>
                       <div className="flex items-center mt-2">
                         <button
                           onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}
@@ -509,20 +509,20 @@ export default function Products() {
       <div className="container mx-auto py-4 sm:py-8 px-2 sm:px-4">
         <ErrorNotice />
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <h2 className={`text-4xl font-bold ${classes.text.primary}`}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8">
+          <h2 className={`text-2xl md:text-3xl lg:text-4xl font-bold ${classes.text.primary}`}>
             OUR <span className="text-yellow-500">SHOP</span>
           </h2>
           
           <div className="mt-4 md:mt-0 flex items-center space-x-4">
             {/* Search input */}
-            <div className="relative hidden md:block w-64">
+            <div className="relative hidden md:block w-48 lg:w-64">
               <input
                 type="text"
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full p-2 pl-9 border rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none ${classes.input.primary}`}
+                className={`w-full p-2 pl-9 border rounded-md focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none text-sm ${classes.input.primary}`}
               />
               <svg className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -560,7 +560,7 @@ export default function Products() {
         </div>
         
         {/* Mobile search input */}
-        <div className="md:hidden mb-8">
+        <div className="md:hidden mb-6">
           <div className="relative">
             <input
               type="text"
@@ -576,13 +576,13 @@ export default function Products() {
         </div>
         
         {/* Category filters - horizontal scrollable for mobile */}
-        <div className="mb-8 overflow-x-auto pb-4">
-          <div className="flex space-x-2 min-w-max">
+        <div className="mb-6 md:mb-8 overflow-x-auto pb-2">
+          <div className="flex space-x-2 min-w-max px-1">
             {categories.map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-md text-sm ${
+                className={`px-3 md:px-4 py-2 rounded-md text-sm whitespace-nowrap ${
                   selectedCategory === category
                     ? 'bg-yellow-500 text-white'
                     : `${classes.bg.tertiary} ${classes.text.secondary} hover:${classes.bg.secondary}`
@@ -616,18 +616,18 @@ export default function Products() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map((product) => (
               <div 
                 key={product.product_id} 
-                className={`${classes.card.primary} p-4 rounded-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2`}
+                className={`${classes.card.primary} p-3 md:p-4 rounded-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2`}
               >
-                <div className={`mb-4 h-48 ${classes.bg.secondary} flex items-center justify-center overflow-hidden rounded-lg relative group`}>
+                <div className={`mb-3 md:mb-4 h-40 md:h-48 ${classes.bg.secondary} flex items-center justify-center overflow-hidden rounded-lg relative group`}>
                   {product.image_url ? (
                     <img 
                       src={getImageUrl(product)}
                       alt={product.name} 
-                      className="h-48 object-contain transition-transform duration-500 ease-in-out group-hover:scale-110"
+                      className="h-40 md:h-48 object-contain transition-transform duration-500 ease-in-out group-hover:scale-110"
                       loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
@@ -638,7 +638,7 @@ export default function Products() {
                     <img 
                       src={getImageUrl(product)}
                       alt={product.name} 
-                      className="h-48 object-contain transition-transform duration-500 ease-in-out group-hover:scale-110"
+                      className="h-40 md:h-48 object-contain transition-transform duration-500 ease-in-out group-hover:scale-110"
                       loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
@@ -646,7 +646,7 @@ export default function Products() {
                       }}
                     />
                   ) : (
-                    <div className="h-48 w-full bg-gray-200 flex items-center justify-center text-gray-500">
+                    <div className="h-40 md:h-48 w-full bg-gray-200 flex items-center justify-center text-gray-500">
                       No image
                     </div>
                   )}
@@ -669,7 +669,7 @@ export default function Products() {
                   </div>
                 </div>
                 
-                <h3 className={`text-lg font-semibold mb-1 ${classes.text.primary} truncate`}>{product.name}</h3>
+                <h3 className={`text-base md:text-lg font-semibold mb-1 ${classes.text.primary} truncate`}>{product.name}</h3>
                 
                 {product.category && (
                   <div className="mb-2">
@@ -681,11 +681,11 @@ export default function Products() {
                 
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <span className={`text-xl font-bold ${classes.text.primary}`}>
+                    <span className={`text-lg md:text-xl font-bold ${classes.text.primary}`}>
                       AFN {parseFloat(product.price).toFixed(2)}
                     </span>
                     {product.compare_at_price && (
-                      <span className={`ml-2 text-sm ${classes.text.tertiary} line-through`}>
+                      <span className={`ml-2 text-xs md:text-sm ${classes.text.tertiary} line-through`}>
                         AFN {parseFloat(product.compare_at_price).toFixed(2)}
                       </span>
                     )}
@@ -694,9 +694,9 @@ export default function Products() {
                 
                 <button 
                   onClick={() => addToCart(product)}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-md transition duration-300 flex items-center justify-center"
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 md:py-2.5 rounded-md transition duration-300 flex items-center justify-center text-sm md:text-base"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   Add to Cart

@@ -522,39 +522,39 @@ function MembersPage() {
                       key={athlete.athlete_id}
                       className={`
               border rounded-lg p-4 shadow-sm
-              ${isExpired ? "bg-red-50 border-red-200" : ""}
+              ${isExpired ? "bg-red-900/30 border-red-600" : ""}
               ${
                 isExpiringSoon && !isExpired
-                  ? "bg-yellow-50 border-yellow-200"
+                  ? "bg-yellow-900/30 border-yellow-600"
                   : ""
               }
-              ${!isExpired && !isExpiringSoon ? "bg-white border-gray-200" : ""}
+              ${!isExpired && !isExpiringSoon ? "bg-gray-700 border-gray-600" : ""}
             `}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <h3
                             className={`font-bold text-lg ${
-                              isExpired ? "text-red-700" : "text-gray-800"
+                              isExpired ? "text-red-300" : "text-white"
                             }`}
                           >
                             {athlete.first_name} {athlete.last_name}
                           </h3>
-                          <p className="text-gray-600 text-sm">
+                          <p className="text-gray-300 text-sm">
                             ID: {athlete.athlete_id}
                           </p>
                         </div>
                         <div>
                           {isExpired ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-700">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-600 text-white">
                               Expired
                             </span>
                           ) : isExpiringSoon ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-700">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-600 text-white">
                               Expiring Soon
                             </span>
                           ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-700">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-600 text-white">
                               Active
                             </span>
                           )}
@@ -563,36 +563,36 @@ function MembersPage() {
 
                       <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
                         <div>
-                          <p className="text-gray-500">Membership:</p>
-                          <p className="capitalize">
+                          <p className="text-gray-400">Membership:</p>
+                          <p className="capitalize text-white">
                             {athlete.membership_type}
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Monthly Fee:</p>
-                          <p>
+                          <p className="text-gray-400">Monthly Fee:</p>
+                          <p className="text-white">
                             {parseFloat(athlete.monthly_fee).toFixed(2)} AFN
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Box:</p>
-                          <p>{athlete.box_number || "-"}</p>
+                          <p className="text-gray-400">Box:</p>
+                          <p className="text-white">{athlete.box_number || "-"}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Time Slot:</p>
-                          <p className="capitalize">
+                          <p className="text-gray-400">Time Slot:</p>
+                          <p className="capitalize text-white">
                             {formatTimeSlot(athlete.time_slot)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Registered:</p>
-                          <p>{formatDate(athlete.start_date)}</p>
+                          <p className="text-gray-400">Registered:</p>
+                          <p className="text-white">{formatDate(athlete.start_date)}</p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Expires:</p>
+                          <p className="text-gray-400">Expires:</p>
                           <p
                             className={
-                              isExpired ? "text-red-600 font-semibold" : ""
+                              isExpired ? "text-red-300 font-semibold" : "text-white"
                             }
                           >
                             {formatDate(athlete.expiry_date)}
@@ -601,31 +601,31 @@ function MembersPage() {
                       </div>
 
                       {isExpired ? (
-                        <p className="text-red-700 text-sm mb-3">
+                        <p className="text-red-300 text-sm mb-3">
                           Expired {Math.abs(daysRemaining)} days ago
                         </p>
                       ) : isExpiringSoon ? (
-                        <p className="text-yellow-700 text-sm mb-3">
+                        <p className="text-yellow-300 text-sm mb-3">
                           Expires in {daysRemaining} days
                         </p>
                       ) : (
-                        <p className="text-green-700 text-sm mb-3">
+                        <p className="text-green-300 text-sm mb-3">
                           Valid for {daysRemaining} days
                         </p>
                       )}
 
-                      <div className="flex justify-end space-x-3 pt-2 border-t">
+                      <div className="flex justify-end space-x-3 pt-2 border-t border-gray-600">
                         {isExpired && (
                           <button
                             onClick={() => handleRenew(athlete)}
-                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm"
+                            className="px-3 py-1 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700"
                           >
                             Renew
                           </button>
                         )}
                         <button
                           onClick={() => deleteAthlete(athlete.athlete_id)}
-                          className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-sm"
+                          className="px-3 py-1 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
                         >
                           Delete
                         </button>

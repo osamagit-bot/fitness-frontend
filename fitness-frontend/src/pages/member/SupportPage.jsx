@@ -223,7 +223,7 @@ function MemberSupportPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-yellow-500"></div>
       </motion.div>
     );
   }
@@ -231,14 +231,14 @@ function MemberSupportPage() {
   if (error) {
     return (
       <motion.div
-        className="text-center pl-10 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black flex flex-col justify-center items-center"
+        className="text-center p-4 sm:p-10 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black flex flex-col justify-center items-center"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="text-red-400 mb-4">{error}</div>
+        <div className="text-red-400 mb-4 text-sm sm:text-base">{error}</div>
         <button 
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded hover:from-yellow-600 hover:to-yellow-700"
+          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded hover:from-yellow-600 hover:to-yellow-700 text-sm sm:text-base"
         >
           Retry
         </button>
@@ -250,32 +250,32 @@ function MemberSupportPage() {
     <>
       <AppToastContainer />
       <motion.div
-        className="container mx-auto p-4 max-w-6xl min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
+        className="container mx-auto p-3 sm:p-4 max-w-6xl min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
       <motion.div
-        className="mb-8"
+        className="mb-6 sm:mb-8"
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <h1 className="text-3xl font-bold text-white mb-2">Support & Feedback</h1>
-        <p className="text-gray-300">Get help, find answers to common questions, or leave us feedback.</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Support & Feedback</h1>
+        <p className="text-sm sm:text-base text-gray-300">Get help, find answers to common questions, or leave us feedback.</p>
       </motion.div>
 
       {/* Tabs */}
       <motion.div
-        className="border-b border-gray-600 mb-6"
+        className="border-b border-gray-600 mb-4 sm:mb-6"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
       >
-        <nav className="flex space-x-8">
+        <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto">
           <button
             onClick={() => setActiveTab('support')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === 'support'
                 ? 'border-yellow-500 text-yellow-400'
                 : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
@@ -285,7 +285,7 @@ function MemberSupportPage() {
           </button>
           <button
             onClick={() => setActiveTab('faq')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === 'faq'
                 ? 'border-yellow-500 text-yellow-400'
                 : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
@@ -295,7 +295,7 @@ function MemberSupportPage() {
           </button>
           <button
             onClick={() => setActiveTab('feedback')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === 'feedback'
                 ? 'border-yellow-500 text-yellow-400'
                 : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
@@ -316,7 +316,7 @@ function MemberSupportPage() {
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.3 }}
           >
-            <h2 className="text-xl font-semibold mb-4 text-white">Your Support Tickets</h2>
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-white">Your Support Tickets</h2>
             {Array.isArray(tickets) && tickets.length > 0 ? (
               <div className="space-y-6">
                 <AnimatePresence>
@@ -329,16 +329,16 @@ function MemberSupportPage() {
                       exit={{ opacity: 0, y: -30 }}
                       transition={{ delay: 0.05 * idx }}
                     >
-                      <div className={`p-4 ${
+                      <div className={`p-3 sm:p-4 ${
                         ticket.status === 'open' ? 'bg-gray-600 border-l-4 border-yellow-500' : 
                         'bg-gray-600 border-l-4 border-green-500'
                       }`}>
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-0">
+                          <div className="flex-1 min-w-0">
                             {editingTickets[ticket.id] ? (
                               <div className="space-y-2">
                                 <select
-                                  className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded text-sm"
+                                  className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded text-xs sm:text-sm"
                                   value={editingTickets[ticket.id].type}
                                   onChange={(e) => handleEditTicketChange(ticket.id, 'type', e.target.value)}
                                 >
@@ -350,49 +350,48 @@ function MemberSupportPage() {
                                 </select>
                                 <input
                                   type="text"
-                                  className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded font-semibold text-lg"
+                                  className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded font-semibold text-base sm:text-lg"
                                   value={editingTickets[ticket.id].subject}
                                   onChange={(e) => handleEditTicketChange(ticket.id, 'subject', e.target.value)}
                                 />
                               </div>
                             ) : (
                               <>
-                                <h3 className="font-semibold text-lg text-white">{ticket.subject}</h3>
-                                <p className="text-sm text-gray-400">
+                                <h3 className="font-semibold text-base sm:text-lg text-white break-words">{ticket.subject}</h3>
+                                <p className="text-xs sm:text-sm text-gray-400">
                                   Type: {ticket.type} • Submitted on {formatDate(ticket.date)}
                                 </p>
                               </>
                             )}
                           </div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 flex-shrink-0">
                             <span className={`px-2 py-1 text-xs rounded-full ${
                               ticket.status === 'open' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                             }`}>
                               {ticket.status === 'open' ? 'Open' : 'Closed'}
                             </span>
                             {isTicketOwner(ticket) && ticket.status === 'open' && (
-                              <div className="space-x-2">
+                              <div className="flex space-x-2">
                                 {editingTickets[ticket.id] ? (
                                   <>
                                     <button
                                       onClick={() => handleEditTicketSave(ticket.id)}
-                                      className="text-sm text-green-400 hover:underline"
+                                      className="text-xs sm:text-sm text-green-400 hover:underline px-1"
                                     >
                                       Save
                                     </button>
                                     <button
                                       onClick={() => handleEditTicketCancel(ticket.id)}
-                                      className="text-sm text-gray-300 hover:underline"
+                                      className="text-xs sm:text-sm text-gray-300 hover:underline px-1"
                                     >
                                       Cancel
                                     </button>
                                   </>
                                 ) : (
                                   <>
-                                  
                                     <button
                                       onClick={() => handleDeleteTicket(ticket.id)}
-                                      className="text-sm text-red-400 hover:underline"
+                                      className="text-xs sm:text-sm text-red-400 hover:underline px-1"
                                     >
                                       Delete
                                     </button>
@@ -403,29 +402,29 @@ function MemberSupportPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="p-4 border-b border-gray-600">
+                      <div className="p-3 sm:p-4 border-b border-gray-600">
                         {editingTickets[ticket.id] ? (
                           <textarea
-                            className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded"
-                            rows={4}
+                            className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
+                            rows={3}
                             value={editingTickets[ticket.id].message}
                             onChange={(e) => handleEditTicketChange(ticket.id, 'message', e.target.value)}
                           />
                         ) : (
-                          <p className="text-gray-300 whitespace-pre-wrap">{ticket.message}</p>
+                          <p className="text-sm sm:text-base text-gray-300 whitespace-pre-wrap break-words">{ticket.message}</p>
                         )}
                       </div>
                       {ticket.responses && ticket.responses.length > 0 && (
-                        <div className="p-4 bg-gray-600">
-                          <h4 className="font-medium text-sm mb-3 text-white">Responses:</h4>
-                          <div className="space-y-3">
+                        <div className="p-3 sm:p-4 bg-gray-600">
+                          <h4 className="font-medium text-xs sm:text-sm mb-2 sm:mb-3 text-white">Responses:</h4>
+                          <div className="space-y-2 sm:space-y-3">
                             {ticket.responses.map((response, index) => (
-                              <div key={index} className="bg-gray-700 p-3 rounded border border-gray-500">
-                                <div className="flex justify-between mb-1">
-                                  <p className="font-medium text-sm text-white">{response.author}</p>
+                              <div key={index} className="bg-gray-700 p-2 sm:p-3 rounded border border-gray-500">
+                                <div className="flex flex-col sm:flex-row justify-between mb-1 gap-1 sm:gap-0">
+                                  <p className="font-medium text-xs sm:text-sm text-white">{response.author}</p>
                                   <p className="text-xs text-gray-400">{formatDateTime(response.date)}</p>
                                 </div>
-                                <p className="text-sm text-gray-300">{response.message}</p>
+                                <p className="text-xs sm:text-sm text-gray-300 break-words">{response.message}</p>
                               </div>
                             ))}
                           </div>
@@ -437,15 +436,15 @@ function MemberSupportPage() {
               </div>
             ) : (
               <motion.div
-                className="text-center p-10 bg-gray-700 rounded-lg shadow border border-gray-600"
+                className="text-center p-6 sm:p-10 bg-gray-700 rounded-lg shadow border border-gray-600"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -30 }}
               >
-                <p className="text-gray-400">You haven't submitted any support tickets yet.</p>
+                <p className="text-gray-400 text-sm sm:text-base">You haven't submitted any support tickets yet.</p>
                 <button
                   onClick={() => setActiveTab('feedback')}
-                  className="mt-4 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded hover:from-yellow-600 hover:to-yellow-700"
+                  className="mt-4 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded hover:from-yellow-600 hover:to-yellow-700 text-sm sm:text-base"
                 >
                   Submit a Ticket
                 </button>
@@ -462,18 +461,18 @@ function MemberSupportPage() {
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.3 }}
           >
-            <h2 className="text-xl font-semibold mb-4 text-white">Frequently Asked Questions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-white">Frequently Asked Questions</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
               {/* Categories sidebar */}
-              <div className="md:col-span-1">
-                <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                  <h3 className="font-medium text-white mb-3">Categories</h3>
-                  <ul className="space-y-2">
+              <div className="lg:col-span-1">
+                <div className="bg-gray-700 rounded-lg p-3 sm:p-4 border border-gray-600">
+                  <h3 className="font-medium text-white mb-2 sm:mb-3 text-sm sm:text-base">Categories</h3>
+                  <ul className="space-y-1 sm:space-y-2">
                     {safeFaqCategories.map(category => (
                       <li key={category.id}>
                         <button
                           onClick={() => setActiveCategory(category.id)}
-                          className={`w-full text-left px-3 py-2 rounded-md ${
+                          className={`w-full text-left px-2 sm:px-3 py-2 rounded-md text-sm sm:text-base ${
                             activeCategory === category.id
                               ? 'bg-yellow-500 text-black font-medium'
                               : 'hover:bg-gray-600 text-gray-300'
@@ -487,39 +486,39 @@ function MemberSupportPage() {
                 </div>
               </div>
               {/* FAQ content */}
-              <div className="md:col-span-3">
+              <div className="lg:col-span-3">
                 <motion.div
-                  className="bg-gray-700 rounded-lg shadow-md p-6 border border-gray-600"
+                  className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 border border-gray-600"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
                 >
                   {activeCategory ? (
                     <>
-                      <h3 className="font-semibold text-lg mb-4 text-white">
+                      <h3 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4 text-white">
                         {safeFaqCategories.find(c => c.id === activeCategory)?.name} FAQs
                       </h3>
                       {Array.isArray(currentFaqs) && currentFaqs.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                           {currentFaqs.map((faq, index) => (
                             <motion.div
                               key={index}
-                              className="border-b border-gray-600 pb-4 last:border-b-0 last:pb-0"
+                              className="border-b border-gray-600 pb-3 sm:pb-4 last:border-b-0 last:pb-0"
                               initial={{ opacity: 0, x: 20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.05 * index }}
                             >
-                              <h4 className="font-medium text-white mb-2">{faq.question}</h4>
-                              <p className="text-gray-300">{faq.answer}</p>
+                              <h4 className="font-medium text-white mb-2 text-sm sm:text-base break-words">{faq.question}</h4>
+                              <p className="text-gray-300 text-sm sm:text-base break-words">{faq.answer}</p>
                             </motion.div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-400">No FAQs available for this category.</p>
+                        <p className="text-gray-400 text-sm sm:text-base">No FAQs available for this category.</p>
                       )}
                     </>
                   ) : (
-                    <p className="text-gray-400">Please select a category to view FAQs.</p>
+                    <p className="text-gray-400 text-sm sm:text-base">Please select a category to view FAQs.</p>
                   )}
                 </motion.div>
               </div>
@@ -535,7 +534,7 @@ function MemberSupportPage() {
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.3 }}
           >
-            <h2 className="text-xl font-semibold mb-4 text-white">Submit Feedback or Support Request</h2>
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-white">Submit Feedback or Support Request</h2>
             
             {/* Daily submission warning */}
             {!canSubmitToday && (
@@ -559,16 +558,16 @@ function MemberSupportPage() {
             )}
             
             <motion.div
-              className="bg-gray-700 rounded-lg shadow-md p-6 border border-gray-600"
+              className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 border border-gray-600"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <form onSubmit={submitFeedback}>
-                <div className="mb-4">
-                  <label className="block text-white mb-2">Request Type</label>
+              <form onSubmit={submitFeedback} className="space-y-4">
+                <div>
+                  <label className="block text-white mb-2 text-sm sm:text-base">Request Type</label>
                   <select
-                    className="w-full px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
                     value={feedback.type}
                     onChange={(e) => setFeedback({ ...feedback, type: e.target.value })}
                   >
@@ -579,32 +578,32 @@ function MemberSupportPage() {
                     <option value="complaint">Complaint</option>
                   </select>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-white mb-2">Subject</label>
+                <div>
+                  <label className="block text-white mb-2 text-sm sm:text-base">Subject</label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
                     placeholder="Brief description of your issue"
                     value={feedback.subject}
                     onChange={(e) => setFeedback({ ...feedback, subject: e.target.value })}
                     required
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-white mb-2">Message</label>
+                <div>
+                  <label className="block text-white mb-2 text-sm sm:text-base">Message</label>
                   <textarea
-                    className="w-full px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                    rows="5"
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-600 bg-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm sm:text-base"
+                    rows="4"
                     placeholder="Please provide details about your request"
                     value={feedback.message}
                     onChange={(e) => setFeedback({ ...feedback, message: e.target.value })}
                     required
                   ></textarea>
                 </div>
-                <div className="text-right">
+                <div className="text-center sm:text-right">
                   <button
                     type="submit"
-                    className="px-6 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-colors"
+                    className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-colors text-sm sm:text-base font-medium"
                   >
                     Submit
                   </button>

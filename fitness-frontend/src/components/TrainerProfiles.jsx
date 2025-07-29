@@ -66,15 +66,15 @@ const TrainerProfiles = () => {
 
   return (
     <>
-      <section className={`min-h-screen ${classes.bg.primary} py-16 px-4`}>
+      <section className={`min-h-screen ${classes.bg.primary} py-8 md:py-16 px-4`}>
         <div className="max-w-7xl mx-auto">
           {/* Header Section */}
-          <div className="text-center mb-16">
-            <h1 className={`text-4xl md:text-6xl font-bold ${classes.text.primary} mb-6`}>
+          <div className="text-center mb-8 md:mb-16">
+            <h1 className={`text-2xl md:text-4xl lg:text-6xl font-bold ${classes.text.primary} mb-4 md:mb-6`}>
               Meet Our <span className="text-yellow-500">Expert</span> Trainers
             </h1>
-            <div className="w-32 h-1 bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto rounded-full mb-6"></div>
-            <p className={`text-lg md:text-xl ${classes.text.secondary} max-w-3xl mx-auto leading-relaxed`}>
+            <div className="w-24 md:w-32 h-1 bg-gradient-to-r from-yellow-400 to-yellow-600 mx-auto rounded-full mb-4 md:mb-6"></div>
+            <p className={`text-base md:text-lg lg:text-xl ${classes.text.secondary} max-w-3xl mx-auto leading-relaxed px-2`}>
               Our certified fitness professionals are here to guide you on your journey to achieving your health and fitness goals with personalized training programs.
             </p>
           </div>
@@ -127,14 +127,14 @@ const TrainerProfiles = () => {
 
           {/* Trainers Grid */}
           {!isLoading && trainers.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
               {trainers.map((trainer) => (
                 <div
                   key={trainer.id}
                   className={`group ${classes.card.primary} rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 ${classes.border.primary}`}
                 >
                   {/* Trainer Image */}
-                  <div className="relative h-80 overflow-hidden bg-gradient-to-br from-yellow-100 to-yellow-200">
+                  <div className="relative h-64 md:h-80 overflow-hidden bg-gradient-to-br from-yellow-100 to-yellow-200">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
                     
                     {imageErrors.has(trainer.id) ? (
@@ -175,12 +175,12 @@ const TrainerProfiles = () => {
                   </div>
                   
                   {/* Trainer Info */}
-                  <div className={`p-6 ${classes.bg.card}`}>
+                  <div className={`p-4 md:p-6 ${classes.bg.card}`}>
                     <div className="text-center mb-4">
-                      <h3 className={`text-2xl font-bold ${classes.text.primary} mb-2 group-hover:text-yellow-600 transition-colors`}>
+                      <h3 className={`text-lg md:text-2xl font-bold ${classes.text.primary} mb-2 group-hover:text-yellow-600 transition-colors`}>
                         {trainer.first_name} {trainer.last_name}
                       </h3>
-                      <p className="text-yellow-600 font-semibold text-lg mb-3">
+                      <p className="text-yellow-600 font-semibold text-base md:text-lg mb-3">
                         {trainer.specialization || "Fitness Trainer"}
                       </p>
                     </div>
@@ -224,11 +224,11 @@ const TrainerProfiles = () => {
 
         {/* Enhanced Modal */}
         {isModalOpen && selectedTrainer && (
-          <div className={`fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}>
-            <div className={`${classes.bg.card} rounded-3xl shadow-2xl max-w-xxl w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300 ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
+          <div className={`fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-2 md:p-4 z-50 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`} style={{paddingTop: '4rem'}}>
+            <div className={`${classes.bg.card} rounded-lg md:rounded-xl lg:rounded-2xl shadow-2xl w-full max-w-full sm:max-w-lg md:max-w-3xl lg:max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto transform transition-all duration-300 ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
               <div className="relative">
                 {/* Modal Header */}
-                <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 p-6 rounded-t-3xl">
+                <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 p-4 md:p-6 rounded-t-lg md:rounded-t-xl lg:rounded-t-2xl">
                   <button
                     onClick={() => {
                       setIsClosing(true);
@@ -237,7 +237,7 @@ const TrainerProfiles = () => {
                         setIsClosing(false);
                       }, 300);
                     }}
-                    className="absolute top-4 right-4 bg-black bg-opacity-20 hover:bg-opacity-40 text-white rounded-full p-2 transition-all duration-200 hover:scale-110"
+                    className="absolute top-3 right-3 md:top-4 md:right-4 bg-black bg-opacity-20 hover:bg-opacity-40 text-white rounded-full p-2 transition-all duration-200 hover:scale-110"
                   >
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -245,33 +245,33 @@ const TrainerProfiles = () => {
                   </button>
                   
                   <div className="text-center">
-                    <h2 className="text-3xl font-bold text-black mb-2">
+                    <h2 className="text-lg md:text-2xl lg:text-3xl font-bold text-black mb-1 md:mb-2">
                       {selectedTrainer.first_name} {selectedTrainer.last_name}
                     </h2>
-                    <p className="text-black text-lg font-semibold">
+                    <p className="text-black text-sm md:text-lg lg:text-xl font-semibold">
                       {selectedTrainer.specialization || "Fitness Trainer"}
                     </p>
                   </div>
                 </div>
 
                 {/* Modal Content */}
-                <div className="p-8">
-                  <div className="flex flex-col lg:flex-row gap-8">
+                <div className="p-4 md:p-6 lg:p-8">
+                  <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8">
                     {/* Trainer Image */}
                     <div className="lg:w-1/3">
                       <div className="relative">
                         {imageErrors.has(selectedTrainer.id) ? (
-                          <div className="w-full h-80 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center">
+                          <div className="w-full h-48 md:h-64 lg:h-80 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg md:rounded-xl lg:rounded-2xl flex items-center justify-center">
                             <div className="text-center">
-                              <span className="text-yellow-600 text-8xl mb-4 block">👤</span>
-                              <p className="text-yellow-700 font-semibold">Photo Coming Soon</p>
+                              <span className="text-yellow-600 text-5xl md:text-6xl lg:text-8xl mb-2 md:mb-4 block">👤</span>
+                              <p className="text-yellow-700 font-semibold text-sm md:text-base">Photo Coming Soon</p>
                             </div>
                           </div>
                         ) : (
                           <img
                             src={getImageUrl(selectedTrainer)}
                             alt={`${selectedTrainer.first_name} ${selectedTrainer.last_name}`}
-                            className="w-full h-80 rounded-2xl object-cover shadow-lg"
+                            className="w-full h-48 md:h-64 lg:h-80 rounded-lg md:rounded-xl lg:rounded-2xl object-cover shadow-lg"
                             onError={(e) => {
                               e.target.onerror = null;
                               handleImageError(selectedTrainer.id);
@@ -280,8 +280,8 @@ const TrainerProfiles = () => {
                         )}
                         
                         {/* Specialization Badge */}
-                        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-6 py-2 rounded-full font-bold shadow-lg">
+                        <div className="absolute -bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2">
+                          <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-3 md:px-4 lg:px-6 py-1 md:py-1.5 lg:py-2 rounded-full font-bold shadow-lg text-xs md:text-sm lg:text-base">
                             {selectedTrainer.specialization || "General Fitness"}
                           </span>
                         </div>
@@ -289,10 +289,10 @@ const TrainerProfiles = () => {
                     </div>
                     
                     {/* Trainer Details */}
-                    <div className="lg:w-2/3 mt-6 lg:mt-0">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="lg:w-2/3 mt-4 md:mt-6 lg:mt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
                         {/* Contact Information */}
-                        <div className={`${classes.bg.tertiary} rounded-2xl p-6 ${classes.border.primary} border`}>
+                        <div className={`${classes.bg.tertiary} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 ${classes.border.primary} border`}>
                           <h4 className={`font-bold ${classes.text.primary} mb-4 flex items-center text-lg`}>
                             <span className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></span>
                             Contact Information
@@ -314,7 +314,7 @@ const TrainerProfiles = () => {
                         </div>
 
                         {/* Professional Details */}
-                        <div className={`${classes.bg.secondary} rounded-2xl p-6 ${classes.border.primary} border`}>
+                        <div className={`${classes.bg.secondary} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 ${classes.border.primary} border`}>
                           <h4 className={`font-bold ${classes.text.primary} mb-4 flex items-center text-lg`}>
                             <span className={`w-3 h-3 ${classes.text.primary === 'text-white' ? 'bg-white' : 'bg-black'} rounded-full mr-3`}></span>
                             Professional Details
@@ -337,7 +337,7 @@ const TrainerProfiles = () => {
                       </div>
 
                       {/* Description */}
-                      <div className={`mt-6 ${classes.bg.card} rounded-2xl p-6 ${classes.border.primary} border-2`}>
+                      <div className={`mt-4 md:mt-6 ${classes.bg.card} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 ${classes.border.primary} border-2`}>
                         <h4 className={`font-bold ${classes.text.primary} mb-4 text-lg`}>About {selectedTrainer.first_name}</h4>
                         <p className={`${classes.text.secondary} leading-relaxed`}>
                           {selectedTrainer.first_name} is a certified fitness professional specializing in {selectedTrainer.specialization || "general fitness training"}. 
@@ -347,7 +347,7 @@ const TrainerProfiles = () => {
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                      <div className="mt-4 md:mt-6 lg:mt-8 flex flex-col md:flex-row gap-3 md:gap-4">
                         <button
                           onClick={() => {
                             setIsClosing(true);
@@ -356,11 +356,11 @@ const TrainerProfiles = () => {
                               setIsClosing(false);
                             }, 300);
                           }}
-                          className={`flex-1 ${classes.button.secondary} py-4 px-6 rounded-xl transition-all duration-200 font-semibold hover:scale-105`}
+                          className={`flex-1 ${classes.button.secondary} py-3 md:py-3.5 lg:py-4 px-4 md:px-5 lg:px-6 rounded-lg md:rounded-xl transition-all duration-200 font-semibold hover:scale-105 text-sm md:text-base`}
                         >
                           Close Profile
                         </button>
-                        <button className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black py-4 px-6 rounded-xl hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 font-semibold shadow-lg hover:scale-105">
+                        <button className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black py-3 md:py-3.5 lg:py-4 px-4 md:px-5 lg:px-6 rounded-lg md:rounded-xl hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 font-semibold shadow-lg hover:scale-105 text-sm md:text-base">
                           Book Training Session
                         </button>
                       </div>

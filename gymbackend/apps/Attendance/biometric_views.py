@@ -126,10 +126,7 @@ def webauthn_check_in(request):
         )
         if not created:
             return JsonResponse({'message': 'Already checked in today'}, status=200)
-        # ADD EMAIL NOTIFICATION HERE
-        if created:  # Only send email for new check-ins, not duplicates
-            from apps.Notifications.services import notification_service
-            notification_service.member_checked_in(member)
+        # Notification is handled by signals.py - no need to call here
         return JsonResponse({'message': 'Check-in successful'})
     except Exception as e:
         import traceback
@@ -300,10 +297,7 @@ def kiosk_checkin(request):
 
         print(f"Check-in {'created' if created else 'already existed'} for {member.first_name}")
 
-        # ADD EMAIL NOTIFICATION HERE
-        if created:  # Only send email for new check-ins, not duplicates
-            from apps.Notifications.services import notification_service
-            notification_service.member_checked_in(member)
+        # Notification is handled by signals.py - no need to call here
 
         return JsonResponse({
             'success': True,

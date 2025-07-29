@@ -85,17 +85,17 @@ function MemberHeader({ memberData, notifications, setNotifications, loading }) 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className="bg-gray-800 shadow-sm border-b border-gray-600 px-6 py-4 sticky top-0 z-20">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-yellow-500">
+    <div className="bg-gray-800 shadow-sm border-b border-gray-600 px-3 sm:px-6 py-3 sm:py-4 sticky top-0 z-20">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-yellow-500 truncate">
             Welcome back, {loading ? "..." : memberData?.first_name || "Member"}
             !
           </h1>
-          <p className="text-gray-300">Here's your fitness journey overview</p>
+          <p className="text-sm sm:text-base text-gray-300 hidden sm:block">Here's your fitness journey overview</p>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto justify-end">
           {/* Notifications */}
           <div className="relative" ref={dropdownRef}>
             <button
@@ -112,7 +112,7 @@ function MemberHeader({ memberData, notifications, setNotifications, loading }) 
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-lg border border-gray-600 z-50">
+              <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-gray-800 rounded-lg shadow-lg border border-gray-600 z-50">
                 <div className="p-4 border-b border-gray-600">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-white">
@@ -126,36 +126,36 @@ function MemberHeader({ memberData, notifications, setNotifications, loading }) 
                   </div>
                 </div>
 
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-80 sm:max-h-96 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
-                      <i className="bx bx-bell-off text-4xl mb-2"></i>
-                      <p>No notifications yet</p>
+                    <div className="p-4 sm:p-6 text-center text-gray-500">
+                      <i className="bx bx-bell-off text-3xl sm:text-4xl mb-2"></i>
+                      <p className="text-sm sm:text-base">No notifications yet</p>
                     </div>
                   ) : (
                     notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          !notification.is_read ? "bg-blue-50" : ""
+                        className={`p-3 sm:p-4 border-b border-gray-600 hover:bg-gray-700 transition-colors ${
+                          !notification.is_read ? "bg-gray-700/50" : ""
                         }`}
                       >
-                        <div className="flex items-start space-x-3">
+                        <div className="flex items-start space-x-2 sm:space-x-3">
                           <i
                             className={`bx ${getNotifIcon(
                               notification.message
-                            )} text-lg mt-1`}
+                            )} text-base sm:text-lg mt-1 text-yellow-400`}
                           ></i>
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-800">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm text-white break-words">
                               {notification.message}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-400 mt-1">
                               {formatDate(notification.created_at)}
                             </p>
                           </div>
                           {!notification.is_read && (
-                            <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
+                            <div className="w-2 h-2 bg-amber-600 rounded-full flex-shrink-0"></div>
                           )}
                         </div>
                       </div>
@@ -164,18 +164,18 @@ function MemberHeader({ memberData, notifications, setNotifications, loading }) 
                 </div>
 
                 {notifications.length > 0 && (
-                  <div className="p-3 bg-gray-50 border-t border-gray-200 flex justify-between">
+                  <div className="p-2 sm:p-3 bg-gray-700 border-t border-gray-600 flex flex-col sm:flex-row justify-between gap-2 sm:gap-0">
                     <button
                       onClick={handleMarkAllAsRead}
                       disabled={isMarkingRead || unreadCount === 0}
-                      className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                      className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed text-center sm:text-left"
                     >
                       {isMarkingRead ? "Marking..." : "Mark all as read"}
                     </button>
                     <button
                       onClick={handleDeleteAll}
                       disabled={isDeleting}
-                      className="text-sm text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                      className="text-xs sm:text-sm text-red-400 hover:text-red-300 disabled:text-gray-500 disabled:cursor-not-allowed text-center sm:text-right"
                     >
                       {isDeleting ? "Deleting..." : "Clear all"}
                     </button>
@@ -188,10 +188,10 @@ function MemberHeader({ memberData, notifications, setNotifications, loading }) 
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className="flex items-center px-4 py-2 text-red-400 bg-red-900/30 hover:bg-red-700/30 rounded-lg transition-all duration-200"
+            className="flex items-center px-2 sm:px-4 py-2 text-red-400 bg-red-900/30 hover:bg-red-700/30 rounded-lg transition-all duration-200"
           >
-            <i className="bx bx-log-out mr-2"></i>
-            <span>Logout</span>
+            <i className="bx bx-log-out sm:mr-2"></i>
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>

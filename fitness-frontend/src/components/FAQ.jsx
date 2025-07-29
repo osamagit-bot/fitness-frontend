@@ -61,23 +61,23 @@ const FAQ = () => {
   };
 
   return (
-    <section className={`py-16 ${classes.bg.primary}`}>
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className={`text-4xl font-bold ${classes.text.primary} mb-4`}>Frequently <span className='text-yellow-400'>Asked Questions</span></h2>
-          <div className="w-24 h-1 bg-yellow-500 mx-auto"></div>
-          <p className={`mt-4 ${classes.text.secondary} max-w-2xl mx-auto`}>
+    <section className={`py-8 sm:py-12 lg:py-16 ${classes.bg.primary}`}>
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="text-center mb-8 sm:mb-10 lg:mb-12">
+          <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-bold ${classes.text.primary} mb-3 sm:mb-4`}>Frequently <span className='text-yellow-400'>Asked Questions</span></h2>
+          <div className="w-16 sm:w-20 lg:w-24 h-1 bg-yellow-500 mx-auto"></div>
+          <p className={`mt-3 sm:mt-4 ${classes.text.secondary} max-w-2xl mx-auto text-sm sm:text-base px-4`}>
             Find answers to common questions about our fitness club
           </p>
         </div>
 
         {/* FAQ Categories */}
-        <div className="flex flex-wrap justify-center gap-4 mb-12">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 lg:gap-4 mb-8 sm:mb-10 lg:mb-12 px-2">
           {categories.map((category, index) => (
             <button
               key={index}
               onClick={() => setSelectedCategory(category.title)}
-              className={`px-6 py-3 rounded-full font-medium transition-colors duration-300 ${
+              className={`px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-full font-medium transition-colors duration-300 text-xs sm:text-sm lg:text-base ${
                 selectedCategory === category.title
                   ? "bg-yellow-500 text-black"
                   : `${classes.bg.tertiary} ${classes.text.primary} hover:bg-yellow-500`
@@ -91,19 +91,19 @@ const FAQ = () => {
         {/* FAQ Accordion */}
         <div className="max-w-3xl mx-auto divide-y divide-gray-200">
           {filteredFaqs.map((faq, index) => (
-            <div key={index} className="py-5">
+            <div key={index} className="py-3 sm:py-4 lg:py-5">
               <button
                 onClick={() => toggleFAQ(index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                className={`w-full px-6 py-4 text-left ${classes.bg.tertiary} ${classes.card.hover} transition-colors focus:outline-none focus:ring-2`}
+                className={`w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left ${classes.bg.tertiary} ${classes.card.hover} transition-colors focus:outline-none focus:ring-2 rounded-lg`}
                 aria-expanded={activeIndex === index}
                 aria-controls={`faq-content-${index}`}
               >
-                <div className="flex justify-between items-center">
-                  <h3 className={`text-lg font-semibold ${classes.text.primary}`}>
+                <div className="flex justify-between items-start sm:items-center gap-3">
+                  <h3 className={`text-sm sm:text-base lg:text-lg font-semibold ${classes.text.primary} pr-2 leading-tight`}>
                     {faq.question}
                   </h3>
-                  <i className={`bx ${activeIndex === index ? 'bx-minus' : 'bx-plus'} ${classes.text.primary} text-xl transition-transform`} />
+                  <i className={`bx ${activeIndex === index ? 'bx-minus' : 'bx-plus'} ${classes.text.primary} text-lg sm:text-xl transition-transform flex-shrink-0 mt-1 sm:mt-0`} />
                 </div>
               </button>
               <div
@@ -114,7 +114,7 @@ const FAQ = () => {
                 role="region"
                 aria-labelledby={`faq-button-${index}`}
               >
-                <div className={`px-6 py-4 bg-yellow-600 ${classes.text.primary === 'text-white' ? 'text-gray-100' : 'text-white'}`}>
+                <div className={`px-3 sm:px-4 lg:px-6 py-3 sm:py-4 bg-yellow-600 ${classes.text.primary === 'text-white' ? 'text-gray-100' : 'text-white'} text-sm sm:text-base rounded-b-lg`}>
                   {faq.answer}
                 </div>
               </div>
@@ -122,9 +122,9 @@ const FAQ = () => {
           ))}
         </div>
 
-        <div className="text-center mt-12">
-          <p className={`${classes.text.secondary} mb-4`}>Can't find the answer you're looking for?</p>
-          <button className="px-8 py-3 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-600 transition-colors duration-300 shadow-lg">
+        <div className="text-center mt-8 sm:mt-10 lg:mt-12 px-4">
+          <p className={`${classes.text.secondary} mb-3 sm:mb-4 text-sm sm:text-base`}>Can't find the answer you're looking for?</p>
+          <button className="px-6 sm:px-8 py-2 sm:py-3 bg-yellow-500 text-black font-bold rounded-full hover:bg-yellow-600 transition-colors duration-300 shadow-lg text-sm sm:text-base">
             Contact Us
           </button>
         </div>

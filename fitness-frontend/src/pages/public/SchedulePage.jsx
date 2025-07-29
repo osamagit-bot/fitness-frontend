@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const schedule = [
@@ -57,12 +59,22 @@ const schedule = [
 
 const SchedulePage = () => {
   const { classes } = useTheme();
+  const location = useLocation();
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(false);
+    const timer = setTimeout(() => setIsVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
   
   return (
     <div className={`min-h-screen ${classes.bg.primary} p-6`}>
       <div className="max-w-7xl mx-auto pt-24">
         {/* Header Section */}
-        <div className="text-center mb-16">
+        <div className={`text-center mb-16 transform transition-all duration-1000 ease-out ${
+          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+        }`}>
           <h1 className={`text-5xl md:text-6xl font-bold ${classes.text.primary} mb-4`}>
             Weekly <span className={classes.text.accent}>Training</span> Schedule
           </h1>
@@ -75,7 +87,9 @@ const SchedulePage = () => {
         {/* Schedule Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {schedule.map((item, idx) => (
-            <div key={idx} className={`group ${classes.card.primary} rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${classes.border.primary} border`}>
+            <div key={idx} className={`group ${classes.card.primary} rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${classes.border.primary} border ${
+              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
+            }`} style={{ transitionDelay: `${idx * 100 + 200}ms` }}>
               {/* Day Header */}
               <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 p-6 text-center">
                 <h2 className="text-2xl font-bold text-black mb-2">
@@ -128,7 +142,9 @@ const SchedulePage = () => {
         </div>
         
         {/* Bottom CTA */}
-        <div className="text-center mt-16">
+        <div className={`text-center mt-16 transform transition-all duration-1000 ease-out ${
+          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+        }`} style={{ transitionDelay: '1000ms' }}>
           <div className={`${classes.bg.secondary} rounded-2xl p-8 ${classes.border.primary} border`}>
             <h3 className={`text-2xl font-bold ${classes.text.primary} mb-4`}>Ready to Start Your Journey?</h3>
             <p className={`${classes.text.secondary} mb-6`}>Join our gym today and follow this proven training schedule for maximum results.</p>

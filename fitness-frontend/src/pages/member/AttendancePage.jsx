@@ -280,66 +280,68 @@ const registerFingerprint = async () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto ml-0 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto ml-0 min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">
           Attendance & Check-in
         </h1>
-        <p className="text-gray-300">
+        <p className="text-sm sm:text-base text-gray-300">
           Track your gym attendance with fingerprint authentication
         </p>
       </motion.div>
 
       {/* Main Content */}
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
         {/* Fingerprint Registration Section */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-gray-700 rounded-xl shadow-lg p-6 border border-gray-600"
+          className="bg-gray-700 rounded-xl shadow-lg p-4 sm:p-6 border border-gray-600"
         >
           <div className="text-center">
-            <div className="mb-6">
-              <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-                <i className="bx bx-fingerprint text-black text-4xl"></i>
+            <div className="mb-4 sm:mb-6">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
+                <i className="bx bx-fingerprint text-black text-2xl sm:text-4xl"></i>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2">
                 Fingerprint Registration
               </h2>
 
               {!isRegistered ? (
                 <div>
-                  <p className="text-gray-300 mb-4">
+                  <p className="text-sm sm:text-base text-gray-300 mb-4 px-2">
                     Register your fingerprint to enable quick check-in
                   </p>
                   <button
                     onClick={registerFingerprint}
                     disabled={loading}
-                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-8 py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 sm:px-8 py-2 sm:py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto text-sm sm:text-base"
                   >
                     {loading ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                        Registering...
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                        <span className="hidden sm:inline">Registering...</span>
+                        <span className="sm:hidden">Loading...</span>
                       </>
                     ) : (
                       <>
-                        <i className="bx bx-fingerprint text-xl"></i>
-                        Register Fingerprint
+                        <i className="bx bx-fingerprint text-lg sm:text-xl"></i>
+                        <span className="hidden sm:inline">Register Fingerprint</span>
+                        <span className="sm:hidden">Register</span>
                       </>
                     )}
                   </button>
                 </div>
               ) : (
                 <div className="text-center">
-                  <div className="bg-green-900/30 text-green-400 px-4 py-2 rounded-lg mb-4">
-                    <i className="bx bx-check-circle text-2xl mb-2"></i>
-                    <p className="font-semibold">
+                  <div className="bg-green-900/30 text-green-400 px-3 sm:px-4 py-2 rounded-lg mb-4">
+                    <i className="bx bx-check-circle text-xl sm:text-2xl mb-2"></i>
+                    <p className="font-semibold text-sm sm:text-base">
                       Fingerprint Registered Successfully
                     </p>
                   </div>
@@ -353,50 +355,51 @@ const registerFingerprint = async () => {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-gray-700 rounded-xl shadow-lg p-6 border border-gray-600"
+          className="bg-gray-700 rounded-xl shadow-lg p-4 sm:p-6 border border-gray-600"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
+            <h3 className="text-lg sm:text-xl font-bold text-white">
               Recent Attendance
             </h3>
-            <div className="text-sm text-gray-300">
+            <div className="text-xs sm:text-sm text-gray-300">
               Total visits: {attendanceHistory.length}
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-80 sm:max-h-96 overflow-y-auto">
             {attendanceHistory.length === 0 ? (
-              <div className="text-center py-8">
-                <i className="bx bx-calendar-x text-4xl text-gray-500 mb-2"></i>
-                <p className="text-gray-300">No attendance records yet</p>
-                <p className="text-sm text-gray-400">
+              <div className="text-center py-6 sm:py-8">
+                <i className="bx bx-calendar-x text-3xl sm:text-4xl text-gray-500 mb-2"></i>
+                <p className="text-sm sm:text-base text-gray-300">No attendance records yet</p>
+                <p className="text-xs sm:text-sm text-gray-400">
                   Start checking in to see your history
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {attendanceHistory.slice(0, 10).map((record, index) => (
                   <div
                     key={record.id}
-                    className="flex items-center justify-between p-3 bg-gray-600 rounded-lg border border-gray-500"
+                    className="flex items-center justify-between p-2 sm:p-3 bg-gray-600 rounded-lg border border-gray-500"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                        <i className="bx bx-check text-yellow-400"></i>
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i className="bx bx-check text-yellow-400 text-sm sm:text-base"></i>
                       </div>
-                      <div>
-                        <p className="font-medium text-white">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-white text-xs sm:text-sm truncate">
                           {formatDate(record.date)}
                         </p>
-                        <p className="text-sm text-gray-300">
+                        <p className="text-xs text-gray-300">
                           {formatTime(record.check_in_time)}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-400">
-                        <i className="bx bx-fingerprint mr-1"></i>
-                        {record.verification_method}
+                    <div className="text-right flex-shrink-0">
+                      <span className="inline-flex items-center px-1 sm:px-2 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-400">
+                        <i className="bx bx-fingerprint mr-1 text-xs"></i>
+                        <span className="hidden sm:inline">{record.verification_method}</span>
+                        <span className="sm:hidden">Auth</span>
                       </span>
                     </div>
                   </div>
@@ -420,13 +423,13 @@ const registerFingerprint = async () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6"
+        className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6"
       >
-        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-4 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-200 text-sm">This Month</p>
-              <p className="text-2xl font-bold">
+            <div className="min-w-0 flex-1">
+              <p className="text-yellow-200 text-xs sm:text-sm">This Month</p>
+              <p className="text-lg sm:text-2xl font-bold">
                 {
                   attendanceHistory.filter((record) => {
                     const recordDate = new Date(record.date);
@@ -438,17 +441,17 @@ const registerFingerprint = async () => {
                   }).length
                 }
               </p>
-              <p className="text-yellow-200 text-sm">My Check-ins</p>
+              <p className="text-yellow-200 text-xs sm:text-sm">My Check-ins</p>
             </div>
-            <i className="bx bx-calendar text-3xl text-yellow-300"></i>
+            <i className="bx bx-calendar text-2xl sm:text-3xl text-yellow-300 flex-shrink-0"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-4 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-200 text-sm">This Week</p>
-              <p className="text-2xl font-bold">
+            <div className="min-w-0 flex-1">
+              <p className="text-yellow-200 text-xs sm:text-sm">This Week</p>
+              <p className="text-lg sm:text-2xl font-bold">
                 {
                   (() => {
                     const today = new Date();
@@ -472,46 +475,46 @@ const registerFingerprint = async () => {
                   })()
                 }
               </p>
-              <p className="text-yellow-200 text-sm">My Check-ins</p>
+              <p className="text-yellow-200 text-xs sm:text-sm">My Check-ins</p>
             </div>
-            <i className="bx bx-trending-up text-3xl text-yellow-300"></i>
+            <i className="bx bx-trending-up text-2xl sm:text-3xl text-yellow-300 flex-shrink-0"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-4 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-200 text-sm">Current Streak</p>
-              <p className="text-2xl font-bold">{currentStreak}</p>
-              <p className="text-yellow-200 text-sm">Days</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-yellow-200 text-xs sm:text-sm">Current Streak</p>
+              <p className="text-lg sm:text-2xl font-bold">{currentStreak}</p>
+              <p className="text-yellow-200 text-xs sm:text-sm">Days</p>
             </div>
-            <i className="bx bx-trophy text-3xl text-yellow-300"></i>
+            <i className="bx bx-trophy text-2xl sm:text-3xl text-yellow-300 flex-shrink-0"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-4 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-200 text-sm">Absent Days</p>
-              <p className="text-2xl font-bold">
+            <div className="min-w-0 flex-1">
+              <p className="text-yellow-200 text-xs sm:text-sm">Absent Days</p>
+              <p className="text-lg sm:text-2xl font-bold">
                 {memberData ? calculateAbsentDays(attendanceHistory, memberData.start_date) : 0}
               </p>
-              <p className="text-yellow-200 text-sm">Days Missed</p>
+              <p className="text-yellow-200 text-xs sm:text-sm">Days Missed</p>
             </div>
-            <i className="bx bx-calendar-x text-3xl text-yellow-300"></i>
+            <i className="bx bx-calendar-x text-2xl sm:text-3xl text-yellow-300 flex-shrink-0"></i>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-6 shadow-xl">
+        <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border border-yellow-500/30 text-white rounded-xl p-4 sm:p-6 shadow-xl">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-yellow-200 text-sm">Attendance Rate</p>
-              <p className="text-2xl font-bold">
+            <div className="min-w-0 flex-1">
+              <p className="text-yellow-200 text-xs sm:text-sm">Attendance Rate</p>
+              <p className="text-lg sm:text-2xl font-bold">
                 {memberData ? calculateAttendanceRate(attendanceHistory, memberData.start_date) : 0}%
               </p>
-              <p className="text-yellow-200 text-sm">Success Rate</p>
+              <p className="text-yellow-200 text-xs sm:text-sm">Success Rate</p>
             </div>
-            <i className="bx bx-trending-up text-3xl text-yellow-300"></i>
+            <i className="bx bx-trending-up text-2xl sm:text-3xl text-yellow-300 flex-shrink-0"></i>
           </div>
         </div>
       </motion.div>

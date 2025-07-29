@@ -118,21 +118,21 @@ function AdminCommunityManagement() {
 
   return (
     <>
-      <div className="container mx-auto p-4 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Community Management</h1>
-        <p className="text-gray-300">Create and manage community content for members.</p>
-        {error && <p className="mt-2 text-red-500">{error}</p>}
+      <div className="container mx-auto p-2 sm:p-4 max-w-6xl">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Community Management</h1>
+        <p className="text-gray-300 text-sm sm:text-base">Create and manage community content for members.</p>
+        {error && <p className="mt-2 text-red-500 text-sm">{error}</p>}
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-8">
+      <div className="border-b border-gray-200 mb-4 sm:mb-6">
+        <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto">
           {['announcements', 'challenges', 'posts'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === tab
                   ? 'border-yellow-500 text-yellow-500'
                   : 'border-transparent text-gray-300 hover:text-white hover:border-gray-500'
@@ -147,23 +147,24 @@ function AdminCommunityManagement() {
       {/* Announcements Tab */}
       {activeTab === 'announcements' && (
         <div>
-          <div className="bg-gray-700 rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Create New Announcement</h2>
+          <div className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Create New Announcement</h2>
             <form onSubmit={handleCreateAnnouncement}>
               <input
                 type="text"
                 placeholder="Title"
-                className="w-full mb-4 p-2 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400"
+                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
                 value={newAnnouncement.title}
                 onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
               />
               <textarea
                 placeholder="Content"
-                className="w-full mb-4 p-2 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400"
+                rows="3"
+                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
                 value={newAnnouncement.content}
                 onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
               />
-              <button type="submit" className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300">
+              <button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium">
                 Post Announcement
               </button>
             </form>
@@ -174,15 +175,15 @@ function AdminCommunityManagement() {
               <p>Loading...</p>
             ) : announcements.length > 0 ? (
               announcements.map((announcement) => (
-                <div key={announcement.id} className="p-4 bg-gray-700 rounded shadow relative">
-                  <h3 className="text-xl font-bold text-white">{announcement.title}</h3>
-                  <p className="text-gray-300">{announcement.content}</p>
-                  <p className="text-sm text-gray-400">
+                <div key={announcement.id} className="p-3 sm:p-4 bg-gray-700 rounded shadow relative">
+                  <h3 className="text-lg sm:text-xl font-bold text-white pr-12">{announcement.title}</h3>
+                  <p className="text-gray-300 text-sm sm:text-base mt-2">{announcement.content}</p>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-2">
                     Posted on {formatDate(getDateFromObject(announcement))}
                   </p>
                   <button
                     onClick={() => handleDeleteAnnouncement(announcement.id)}
-                    className="absolute top-2 right-2 text-red-500 hover:underline text-sm"
+                    className="absolute top-2 right-2 text-red-500 hover:underline text-xs sm:text-sm"
                   >
                     Delete
                   </button>
@@ -198,59 +199,66 @@ function AdminCommunityManagement() {
       {/* Challenges Tab */}
       {activeTab === 'challenges' && (
         <div>
-          <div className="bg-gray-700 rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Create New Challenge</h2>
+          <div className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Create New Challenge</h2>
             <form onSubmit={handleCreateChallenge}>
               <input
                 type="text"
                 placeholder="Title"
-                className="w-full mb-4 p-2 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400"
+                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
                 value={newChallenge.title}
                 onChange={(e) => setNewChallenge({ ...newChallenge, title: e.target.value })}
               />
               <textarea
                 placeholder="Description"
-                className="w-full mb-4 p-2 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400"
+                rows="3"
+                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
                 value={newChallenge.description}
                 onChange={(e) => setNewChallenge({ ...newChallenge, description: e.target.value })}
               />
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <input
-                  type="date"
-                  className="p-2 border border-gray-600 rounded bg-gray-800 text-white"
-                  value={newChallenge.startDate}
-                  onChange={(e) => setNewChallenge({ ...newChallenge, startDate: e.target.value })}
-                />
-                <input
-                  type="date"
-                  className="p-2 border border-gray-600 rounded bg-gray-800 text-white"
-                  value={newChallenge.endDate}
-                  onChange={(e) => setNewChallenge({ ...newChallenge, endDate: e.target.value })}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 sm:hidden">Start Date</label>
+                  <input
+                    type="date"
+                    className="w-full p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white text-sm sm:text-base"
+                    value={newChallenge.startDate}
+                    onChange={(e) => setNewChallenge({ ...newChallenge, startDate: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1 sm:hidden">End Date</label>
+                  <input
+                    type="date"
+                    className="w-full p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white text-sm sm:text-base"
+                    value={newChallenge.endDate}
+                    onChange={(e) => setNewChallenge({ ...newChallenge, endDate: e.target.value })}
+                  />
+                </div>
               </div>
-              <button type="submit" className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300">
+              <button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium">
                 Create Challenge
               </button>
             </form>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {loading ? (
               <p>Loading...</p>
             ) : challenges.length > 0 ? (
               challenges.map((challenge) => {
                 console.log('Challenge data:', challenge); // Debug log
                 return (
-                <div key={challenge.id} className="bg-gray-700 rounded shadow p-4 relative">
-                  <h3 className="text-xl font-bold text-white">{challenge.title}</h3>
-                  <p className="mb-2 text-gray-300">{challenge.description}</p>
-                  <div className="text-sm text-gray-400 space-y-1">
+                <div key={challenge.id} className="bg-gray-700 rounded shadow p-3 sm:p-4 relative">
+                  <h3 className="text-lg sm:text-xl font-bold text-white pr-12">{challenge.title}</h3>
+                  <p className="mb-2 text-gray-300 text-sm sm:text-base">{challenge.description}</p>
+                  <div className="text-xs sm:text-sm text-gray-400 space-y-1">
                     <p>Participants: {challenge.participants || 0}</p>
                     <p>Ends: {challenge.end_date ? new Date(challenge.end_date).toLocaleDateString() : 'No end date'}</p>
                   </div>
                   <button
                     onClick={() => handleDeleteChallenge(challenge.id)}
-                    className="absolute top-2 right-2 text-red-500 hover:underline text-sm"
+                    className="absolute top-2 right-2 text-red-500 hover:underline text-xs sm:text-sm"
                   >
                     Delete
                   </button>
@@ -271,21 +279,21 @@ function AdminCommunityManagement() {
             <p>Loading...</p>
           ) : posts.length > 0 ? (
             posts.map((post) => (
-              <div key={post.id} className="p-4 bg-gray-700 rounded shadow border border-gray-600">
+              <div key={post.id} className="p-3 sm:p-4 bg-gray-700 rounded shadow border border-gray-600">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
-                    <h3 className="font-bold text-lg text-white">{post.title}</h3>
-                    <p className="text-gray-300 mt-2">{post.content}</p>
+                    <h3 className="font-bold text-base sm:text-lg text-white">{post.title}</h3>
+                    <p className="text-gray-300 mt-2 text-sm sm:text-base">{post.content}</p>
                   </div>
                 </div>
                 
                 <div className="border-t pt-3 mt-3">
-                  <div className="flex items-center justify-between text-sm text-gray-400">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 text-xs sm:text-sm text-gray-400">
                     <p>
                       Posted by <span className="font-medium">{post.author || 'Unknown'}</span> on{' '}
                       {formatDate(getDateFromObject(post))}
                     </p>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <span className="flex items-center gap-1">
                         👍 {post.likes || 0} likes
                       </span>
@@ -298,20 +306,20 @@ function AdminCommunityManagement() {
 
                 {/* Comments Section */}
                 {post.comments_list && post.comments_list.length > 0 && (
-                  <div className="mt-4 border-t pt-4">
-                    <h4 className="font-semibold text-white mb-3">Comments:</h4>
-                    <div className="space-y-3">
+                  <div className="mt-3 sm:mt-4 border-t pt-3 sm:pt-4">
+                    <h4 className="font-semibold text-white mb-2 sm:mb-3 text-sm sm:text-base">Comments:</h4>
+                    <div className="space-y-2 sm:space-y-3">
                       {post.comments_list.map((comment, index) => (
-                        <div key={index} className="bg-gray-600 p-3 rounded-lg border border-gray-500">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium text-sm text-white">
+                        <div key={index} className="bg-gray-600 p-2 sm:p-3 rounded-lg border border-gray-500">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-1 sm:mb-2 gap-1 sm:gap-0">
+                            <span className="font-medium text-xs sm:text-sm text-white">
                               {comment.author || 'Unknown'}
                             </span>
                             <span className="text-xs text-gray-400">
                               {formatDateTime(getDateFromObject(comment))}
                             </span>
                           </div>
-                          <p className="text-gray-300 text-sm">{comment.content}</p>
+                          <p className="text-gray-300 text-xs sm:text-sm">{comment.content}</p>
                         </div>
                       ))}
                     </div>

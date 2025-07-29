@@ -52,7 +52,7 @@ function Hero() {
 
       {/* Hero Content */}
       <div
-        className={`z-10 text-center px-4 sm:px-6 lg:px-8 mt-20 sm:mt-28 md:mt-32 lg:mt-40 transition-all duration-1000 ease-out transform ${
+        className={`z-10 text-center px-4 sm:px-6 lg:px-8 mt-32 sm:mt-24 md:mt-32 lg:mt-40 transition-all duration-1000 ease-out transform ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
         }`}
       >
