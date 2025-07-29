@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import AppToastContainer from '../../components/ui/ToastContainer';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 import api from '../../utils/api';
 import { formatDate, formatDateTime } from '../../utils/dateUtils';
 import { showToast } from '../../utils/toast';
@@ -15,6 +16,7 @@ function MemberSupportPage() {
   const [error, setError] = useState(null);
   const [editingTickets, setEditingTickets] = useState({}); // key: ticketId, value: { subject, message, type }
   const [canSubmitToday, setCanSubmitToday] = useState(true);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   const memberName = localStorage.getItem('member_name') || 'Member';
   const memberID = localStorage.getItem('member_id');
@@ -183,8 +185,17 @@ function MemberSupportPage() {
   };
 
   // Delete ticket function
-  const handleDeleteTicket = async (ticketId) => {
-    if (!window.confirm('Are you sure you want to delete this ticket?')) return;
+  const handleDeleteTicket = (ticketId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteTicket',
+      id: ticketId,
+      title: 'Delete Ticket',
+      message: 'Are you sure you want to delete this support ticket? This action cannot be undone.'
+    });
+  };
+
+  const executeDeleteTicket = async (ticketId) => {
 
     try {
       await api.delete(`support/tickets/delete/?ticketID=${ticketId}`, {
@@ -207,9 +218,19 @@ function MemberSupportPage() {
       }
     }
   };
-  
 
+  const handleConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+    
+    if (action === 'deleteTicket') {
+      await executeDeleteTicket(id);
+    }
+  };
 
+  const handleCancelAction = () => {
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+  };
 
   // Ensure faqCategories is always an array
   const safeFaqCategories = Array.isArray(faqCategories) ? faqCategories : [];
@@ -614,6 +635,14 @@ function MemberSupportPage() {
         )}
       </AnimatePresence>
       </motion.div>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCancelAction}
+        onConfirm={handleConfirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </>
   );
 }

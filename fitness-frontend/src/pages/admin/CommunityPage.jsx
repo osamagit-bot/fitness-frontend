@@ -3,6 +3,7 @@ import AppToastContainer from "../../components/ui/ToastContainer";
 import api from "../../utils/api";
 import { formatDate, formatDateTime, getDateFromObject } from "../../utils/dateUtils";
 import { showToast } from "../../utils/toast";
+import { getRelativeTime } from "../../utils/timeUtils";
 
 function AdminCommunityManagement() {
   const [posts, setPosts] = useState([]);
@@ -14,6 +15,9 @@ function AdminCommunityManagement() {
 
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '' });
   const [newChallenge, setNewChallenge] = useState({ title: '', description: '', startDate: '', endDate: '' });
+  const [showComments, setShowComments] = useState({});
+  const [showReplies, setShowReplies] = useState({});
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const fetchCommunityData = async () => {
     setLoading(true);
@@ -116,6 +120,14 @@ function AdminCommunityManagement() {
     }
   };
 
+  const toggleComments = (postId) => {
+    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const toggleReplies = (commentId) => {
+    setShowReplies(prev => ({ ...prev, [commentId]: !prev[commentId] }));
+  };
+
   return (
     <>
       <div className="container mx-auto p-2 sm:p-4 max-w-6xl">
@@ -179,7 +191,7 @@ function AdminCommunityManagement() {
                   <h3 className="text-lg sm:text-xl font-bold text-white pr-12">{announcement.title}</h3>
                   <p className="text-gray-300 text-sm sm:text-base mt-2">{announcement.content}</p>
                   <p className="text-xs sm:text-sm text-gray-400 mt-2">
-                    Posted on {formatDate(getDateFromObject(announcement))}
+                    {getRelativeTime(getDateFromObject(announcement))} • {formatDate(getDateFromObject(announcement))}
                   </p>
                   <button
                     onClick={() => handleDeleteAnnouncement(announcement.id)}
@@ -284,47 +296,99 @@ function AdminCommunityManagement() {
                   <div className="flex-1">
                     <h3 className="font-bold text-base sm:text-lg text-white">{post.title}</h3>
                     <p className="text-gray-300 mt-2 text-sm sm:text-base">{post.content}</p>
+                    {post.image && (
+                      <img 
+                        src={post.image} 
+                        alt="Post" 
+                        className="w-48 h-32 object-cover rounded-lg mt-3 cursor-pointer hover:opacity-80 transition-opacity" 
+                        onClick={() => setSelectedImage(post.image)}
+                      />
+                    )}
                   </div>
                 </div>
                 
-                <div className="border-t pt-3 mt-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 text-xs sm:text-sm text-gray-400">
-                    <p>
-                      Posted by <span className="font-medium">{post.author || 'Unknown'}</span> on{' '}
-                      {formatDate(getDateFromObject(post))}
-                    </p>
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <span className="flex items-center gap-1">
-                        👍 {post.likes || 0} likes
-                      </span>
-                      <span className="flex items-center gap-1">
-                        💬 {post.comments || 0} comments
-                      </span>
-                    </div>
+                <div className="text-xs sm:text-sm text-gray-400 mb-4">
+                  Posted by <span className="font-medium">{post.author || 'Unknown'}</span> • {getRelativeTime(getDateFromObject(post))} • {formatDate(getDateFromObject(post))}
+                </div>
+
+                {/* Facebook-style Action Bar */}
+                <div className="flex items-center space-x-6 mb-4 pb-3 border-b border-gray-600">
+                  <div className="flex items-center space-x-2 text-sm text-gray-400">
+                    <span>❤️</span>
+                    <span>Like {(post.likes || 0) > 0 ? `(${post.likes})` : ''}</span>
                   </div>
+
+                  <button
+                    onClick={() => toggleComments(post.id)}
+                    className="flex items-center space-x-2 text-sm text-gray-400 hover:text-yellow-300 transition-colors"
+                  >
+                    <span>💬</span>
+                    <span>Comment {(post.comments || 0) > 0 ? `(${post.comments})` : ''}</span>
+                  </button>
                 </div>
 
                 {/* Comments Section */}
-                {post.comments_list && post.comments_list.length > 0 && (
-                  <div className="mt-3 sm:mt-4 border-t pt-3 sm:pt-4">
-                    <h4 className="font-semibold text-white mb-2 sm:mb-3 text-sm sm:text-base">Comments:</h4>
-                    <div className="space-y-2 sm:space-y-3">
-                      {post.comments_list.map((comment, index) => (
-                        <div key={index} className="bg-gray-600 p-2 sm:p-3 rounded-lg border border-gray-500">
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-1 sm:mb-2 gap-1 sm:gap-0">
-                            <span className="font-medium text-xs sm:text-sm text-white">
-                              {comment.author || 'Unknown'}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {formatDateTime(getDateFromObject(comment))}
-                            </span>
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  showComments[post.id] ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+                }`}>
+                  <div className="space-y-4 pt-4">
+                    {/* Comments List */}
+                    <div className="space-y-3">
+                      {(post.comments_list || []).filter(comment => !comment.parent_comment).map((comment, index) => (
+                        <div key={index} className="space-y-2">
+                          {/* Main Comment */}
+                          <div className="flex space-x-3">
+                            <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-black font-bold text-sm">{comment.author?.charAt(0)?.toUpperCase() || 'U'}</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="bg-gray-600 rounded-lg p-3">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <span className="font-semibold text-white text-sm">{comment.author || 'Unknown'}</span>
+                                    <span className="text-gray-400 text-xs ml-2">{getRelativeTime(getDateFromObject(comment))}</span>
+                                  </div>
+                                </div>
+                                <p className="text-white text-sm whitespace-pre-wrap break-words">
+                                  {comment.content}
+                                </p>
+                              </div>
+                              
+                              {/* View Replies Button */}
+                              <div className="mt-1 ml-3">
+                                {(post.comments_list || []).filter(reply => reply.parent_comment === (comment.id || index)).length > 0 && (
+                                  <button
+                                    onClick={() => toggleReplies(comment.id || index)}
+                                    className="text-xs text-gray-500 hover:text-yellow-400"
+                                  >
+                                    {showReplies[comment.id || index] ? 'Hide' : 'View'} {(post.comments_list || []).filter(reply => reply.parent_comment === (comment.id || index)).length} replies
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-gray-300 text-xs sm:text-sm">{comment.content}</p>
+
+                          {/* Replies */}
+                          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                            showReplies[comment.id || index] ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+                          }`}>
+                            {(post.comments_list || []).filter(reply => reply.parent_comment === (comment.id || index)).map((reply, replyIndex) => (
+                              <div key={replyIndex} className="ml-16 mt-2 bg-gray-600 p-2 rounded">
+                                <div className="text-xs text-white">
+                                  <span className="font-semibold text-yellow-400">{reply.author || 'Unknown'}</span>
+                                  <span className="ml-2">{reply.content}</span>
+                                </div>
+                                <div className="flex items-center space-x-3 mt-1 text-xs text-gray-200">
+                                  <span>{getRelativeTime(getDateFromObject(reply))}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             ))
           ) : (
@@ -333,6 +397,32 @@ function AdminCommunityManagement() {
         </div>
       )}
       </div>
+      
+      {/* Image Popup Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div
+            className="relative max-w-6xl max-h-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={selectedImage}
+              alt="Full size"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl hover:bg-opacity-70 transition-all"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+      
       <AppToastContainer />
     </>
   );

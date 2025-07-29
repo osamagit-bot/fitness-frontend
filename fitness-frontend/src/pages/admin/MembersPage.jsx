@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import AppToastContainer from "../../components/ui/ToastContainer";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 
@@ -22,6 +23,7 @@ function MembersPage() {
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   const fetchAthletes = async () => {
     setIsLoading(true);
@@ -156,22 +158,43 @@ function MembersPage() {
     setStatusFilter(type);
   };
 
-  const deleteAthlete = async (athleteId) => {
-    if (window.confirm("Are you sure you want to delete this athlete?")) {
-      try {
-        const token = localStorage.getItem("admin_access_token");
-        await api.delete(`members/${athleteId}/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        fetchAthletes();
-        showToast.success("Athlete deleted successfully!");
-      } catch (error) {
-        console.error("Error deleting athlete:", error);
-        showToast.error("Failed to delete athlete. Please try again.");
-      }
+  const deleteAthlete = (athleteId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteAthlete',
+      id: athleteId,
+      title: 'Delete Member',
+      message: 'Are you sure you want to delete this member? This action cannot be undone.'
+    });
+  };
+
+  const executeDeleteAthlete = async (athleteId) => {
+    try {
+      const token = localStorage.getItem("admin_access_token");
+      await api.delete(`members/${athleteId}/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchAthletes();
+      showToast.success("Athlete deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting athlete:", error);
+      showToast.error("Failed to delete athlete. Please try again.");
     }
+  };
+
+  const handleConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+    
+    if (action === 'deleteAthlete') {
+      await executeDeleteAthlete(id);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
   };
 
   const handleRenew = (athlete) => {
@@ -638,6 +661,15 @@ function MembersPage() {
           </div>
         </motion.div>
       </motion.div>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCancelAction}
+        onConfirm={handleConfirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
+      
       <AppToastContainer />
     </>
   );

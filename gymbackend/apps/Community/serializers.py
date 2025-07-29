@@ -91,11 +91,18 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'post', 'author', 'content', 'date_created']
+        fields = ['id', 'post', 'author', 'content', 'parent_comment', 'date_created']
         read_only_fields = ['id', 'author','post', 'date_created']
 
     def get_author(self, obj):
-        return obj.author.username if obj.author else "Anonymous"
+        if not obj.author:
+            return "Anonymous"
+        try:
+            member = obj.author.member
+            return f"{member.first_name} {member.last_name}"
+        except:
+            full_name = obj.author.get_full_name()
+            return full_name if full_name else obj.author.username
 
 
 
@@ -109,15 +116,19 @@ class PostSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Post
-        fields = ['id', 'title', 'content', 'author', 'date', 'likes', 'comments', 'isCoach', 'comments_list']
+        fields = ['id', 'title', 'content', 'image', 'author', 'date', 'likes', 'comments', 'isCoach', 'comments_list']
         read_only_fields = ['author', 'date', 'likes', 'comments', 'isCoach']
     
     def get_author(self, obj):
         user = getattr(obj, 'created_by', None)
         if not user:
-            return None
-        full_name = user.get_full_name()
-        return full_name if full_name else user.username
+            return "Unknown"
+        try:
+            member = user.member
+            return f"{member.first_name} {member.last_name}"
+        except:
+            full_name = user.get_full_name()
+            return full_name if full_name else user.username
     
     def get_date(self, obj):
         if hasattr(obj, 'date_created') and obj.date_created:

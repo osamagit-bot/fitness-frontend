@@ -1,24 +1,49 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import AppToastContainer from "../../components/ui/ToastContainer";
+import ConfirmModal from "../../components/ui/ConfirmModal";
+import { useCommunityFeed } from "../../hooks/useCommunityFeed";
 import api from "../../utils/api";
 import { formatDate, getDateFromObject } from "../../utils/dateUtils";
+import { getRelativeTime } from "../../utils/timeUtils";
 import { showToast } from "../../utils/toast";
 
 function MemberCommunityPage() {
   const { communityId } = useParams();
-  const [posts, setPosts] = useState([]);
+  const { 
+    posts, 
+    setPosts,
+    loading: postsLoading, 
+    createPost, 
+    toggleLike, 
+    loadMore, 
+    hasMore,
+    updatePost,
+    deletePost,
+    addComment,
+    updateComment,
+    deleteComment
+  } = useCommunityFeed();
   const [announcements, setAnnouncements] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newPost, setNewPost] = useState({ title: "", content: "" });
+  const [newPost, setNewPost] = useState({ title: "", content: "", image: null });
+  const [imagePreview, setImagePreview] = useState(null);
   const [activeTab, setActiveTab] = useState("feed");
   const [error, setError] = useState(null);
   const [newComments, setNewComments] = useState({});
-  const [editingComments, setEditingComments] = useState({}); // key: commentId, value: edit text
-  const [editingPosts, setEditingPosts] = useState({}); // key: postId, value: { title, content }
+  const [editingComments, setEditingComments] = useState({});
+  const [editingPosts, setEditingPosts] = useState({});
+  const [actionLoading, setActionLoading] = useState({});
+  const [showComments, setShowComments] = useState({});
+  const [showReplies, setShowReplies] = useState({});
+  const [showReplyInput, setShowReplyInput] = useState({});
+  const [replyText, setReplyText] = useState({});
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   const memberName = localStorage.getItem("member_name") || "Member";
   const userName = localStorage.getItem("member_username") || "Member";
@@ -49,38 +74,23 @@ function MemberCommunityPage() {
       setLoading(false);
       return;
     }
-    const fetchCommunityData = async () => {
+    
+    const fetchAnnouncementsAndChallenges = async () => {
       setLoading(true);
       try {
-        const config = {
-          headers: { Authorization: `Bearer ${token}` },
-        };
+        const config = { headers: { Authorization: `Bearer ${token}` } };
 
-        const [announcementsResponse, challengesResponse, postsResponse] =
-          await Promise.all([
-            api.get("community/announcements/", config),
-            api.get("community/challenges/", config),
-            api.get("community/posts/", config),
-          ]);
+        const [announcementsResponse, challengesResponse] = await Promise.all([
+          api.get("community/announcements/", config),
+          api.get("community/challenges/", config),
+        ]);
 
         setAnnouncements(
-          Array.isArray(announcementsResponse.data)
-            ? announcementsResponse.data
-            : []
+          Array.isArray(announcementsResponse.data) ? announcementsResponse.data : []
         );
         setChallenges(
           Array.isArray(challengesResponse.data) ? challengesResponse.data : []
         );
-
-        const postsData = Array.isArray(postsResponse.data)
-          ? postsResponse.data.map((post) => ({
-              ...post,
-              comments_list: post.comments_list || [], // Ensure comments array
-            }))
-          : [];
-
-        console.log("Fetched posts:", postsData);
-        setPosts(postsData);
         setError(null);
       } catch (err) {
         console.error("Error fetching community data:", err);
@@ -89,8 +99,25 @@ function MemberCommunityPage() {
       setLoading(false);
     };
 
-    fetchCommunityData();
+    fetchAnnouncementsAndChallenges();
   }, [token]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast.error("Image size should be less than 5MB");
+        return;
+      }
+      setNewPost({ ...newPost, image: file });
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setNewPost({ ...newPost, image: null });
+    setImagePreview(null);
+  };
 
   const handlePostSubmit = async (e) => {
     e.preventDefault();
@@ -104,25 +131,40 @@ function MemberCommunityPage() {
       return;
     }
 
+    setActionLoading(prev => ({ ...prev, createPost: true }));
     try {
-      const response = await api.post(
-        "community/posts/",
-        {
-          title: newPost.title,
-          content: newPost.content,
-          memberID: memberID,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      if (newPost.image) {
+        // Handle image upload with FormData
+        const formData = new FormData();
+        formData.append('title', newPost.title);
+        formData.append('content', newPost.content);
+        formData.append('memberID', memberID);
+        formData.append('image', newPost.image);
 
-      setPosts([{ ...response.data, comments_list: [] }, ...posts]);
-      setNewPost({ title: "", content: "" });
-      showToast.success("Post created successfully!");
+        const response = await api.post('community/posts/', formData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        // Update posts state immediately with the new post
+        const newPostData = { ...response.data, comments_list: [] };
+        setPosts(prev => [newPostData, ...prev]);
+        showToast.success('Post created successfully!');
+      } else {
+        // Use hook for text-only posts
+        await createPost(newPost);
+      }
+      
+      setNewPost({ title: "", content: "", image: null });
+      setImagePreview(null);
+      setShowCreateForm(false);
     } catch (err) {
-      const errorMsg = err.response?.data?.error || "Failed to create post";
-      showToast.error(`Failed to create post: ${errorMsg}. Please try again.`);
+      console.error('Post creation error:', err);
+      showToast.error('Failed to create post');
+    } finally {
+      setActionLoading(prev => ({ ...prev, createPost: false }));
     }
   };
 
@@ -149,7 +191,6 @@ function MemberCommunityPage() {
     }));
   };
 
-  // Updated to use correct API endpoint
   const handleEditPostSave = async (postId) => {
     const editedPost = editingPosts[postId];
     if (!editedPost?.title?.trim() || !editedPost?.content?.trim()) {
@@ -157,84 +198,72 @@ function MemberCommunityPage() {
       return;
     }
 
+    setActionLoading(prev => ({ ...prev, [`editPost_${postId}`]: true }));
     try {
-      const response = await api.put(
+      await api.put(
         `community/posts/${postId}/`,
         {
           postId: postId,
           title: editedPost.title,
           content: editedPost.content,
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setPosts(
-        posts.map((post) =>
-          post.id === postId
-            ? { ...post, title: editedPost.title, content: editedPost.content }
-            : post
-        )
-      );
-
+      updatePost(postId, { title: editedPost.title, content: editedPost.content });
       handleEditPostCancel(postId);
       showToast.success("Post updated successfully.");
     } catch (err) {
-      console.error("Error updating post:", err);
       if (err.response?.status === 403) {
         showToast.error("You can only edit your own posts.");
       } else {
         showToast.error("Failed to update post. Please try again.");
       }
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`editPost_${postId}`]: false }));
     }
   };
 
-  // Updated to use correct API endpoint
-  const handleDeletePost = async (postId) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
+  const handleDeletePost = (postId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deletePost',
+      id: postId,
+      title: 'Delete Post',
+      message: 'Are you sure you want to delete this post? This action cannot be undone.'
+    });
+  };
 
+  const executeDeletePost = async (postId) => {
+
+    setActionLoading(prev => ({ ...prev, [`deletePost_${postId}`]: true }));
     try {
       await api.delete(
         `community/posts/${postId}/`,
         { postId: postId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setPosts(posts.filter((post) => post.id !== postId));
+      deletePost(postId);
       showToast.success("Post deleted successfully.");
     } catch (err) {
-      console.error("Error deleting post:", err);
       if (err.response?.status === 403) {
         showToast.error("You can only delete your own posts.");
       } else {
         showToast.error("Failed to delete post. Please try again.");
       }
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`deletePost_${postId}`]: false }));
     }
   };
-const handleLike = async (postId) => {
-  try {
-    const response = await api.post(`community/posts/${postId}/like/`, null, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("member_access_token")}`,
-      },
-    });
-
-    const { liked, likes_count } = response.data;
-
-    // Update the specific post with new like count and liked status
-    setPosts(
-      posts.map((post) =>
-        post.id === postId ? { ...post, likes: likes_count, liked } : post
-      )
-    );
-  } catch (err) {
-    showToast.error("Failed to toggle like. Please try again.");
-    console.error(err);
-  }
-};
+  const handleLike = useCallback(async (postId) => {
+    setActionLoading(prev => ({ ...prev, [`like_${postId}`]: true }));
+    try {
+      await toggleLike(postId);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`like_${postId}`]: false }));
+    }
+  }, [toggleLike]);
 
 
   const joinChallenge = async (challengeId) => {
@@ -275,91 +304,112 @@ const handleLike = async (postId) => {
     setNewComments((prev) => ({ ...prev, [postId]: text }));
   };
 
+  const toggleComments = (postId) => {
+    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const toggleReplies = (commentId) => {
+    setShowReplies(prev => ({ ...prev, [commentId]: !prev[commentId] }));
+  };
+
+  const toggleReplyInput = (commentId) => {
+    setShowReplyInput(prev => ({ ...prev, [commentId]: !prev[commentId] }));
+  };
+
+  const handleReplySubmit = async (e, postId, commentId) => {
+    e.preventDefault();
+    const reply = replyText[commentId]?.trim();
+    if (!reply) {
+      showToast.warn("Reply cannot be empty.");
+      return;
+    }
+
+    setActionLoading(prev => ({ ...prev, [`reply_${commentId}`]: true }));
+    try {
+      const response = await api.post(
+        `community/posts/${postId}/comments/`,
+        { content: reply, parent_comment: commentId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Ensure the reply has the parent_comment field set
+      const replyData = {
+        ...response.data,
+        parent_comment: commentId
+      };
+      
+      addComment(postId, replyData);
+      setReplyText(prev => ({ ...prev, [commentId]: "" }));
+      setShowReplyInput(prev => ({ ...prev, [commentId]: false }));
+      showToast.success("Reply added successfully!");
+    } catch (err) {
+      showToast.error("Failed to submit reply. Please try again.");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`reply_${commentId}`]: false }));
+    }
+  };
+
   // Updated to use correct API endpoint
   const handleCommentSubmit = async (e, postId) => {
     e.preventDefault();
     const commentText = newComments[postId]?.trim();
     if (!commentText) {
-      alert("Comment cannot be empty.");
+      showToast.warn("Comment cannot be empty.");
       return;
     }
     if (!memberID) {
-      alert("Member ID not found. Please login again.");
+      showToast.error("Member ID not found. Please login again.");
       return;
     }
 
+    setActionLoading(prev => ({ ...prev, [`comment_${postId}`]: true }));
     try {
       const response = await api.post(
         `community/posts/${postId}/comments/`,
-        {
-          
-          content: commentText,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { content: commentText },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setPosts(
-        posts.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                comments_list: [...(post.comments_list || []), response.data],
-                comments: (post.comments || 0) + 1,
-              }
-            : post
-        )
-      );
+      addComment(postId, response.data);
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
+      showToast.success("Comment added successfully!");
     } catch (err) {
-      console.error(
-        "Error submitting comment:",
-        err.response?.data || err.message
-      );
-
-      alert("Failed to submit comment. Please try again.");
+      console.error('Comment submission error:', err.response?.data || err.message);
+      showToast.error("Failed to submit comment. Please try again.");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`comment_${postId}`]: false }));
     }
   };
 
-  // Updated to use correct API endpoint (assuming similar pattern)
-  const handleDeleteComment = async (postId, commentId) => {
-    if (!window.confirm("Are you sure you want to delete this comment?"))
-      return;
+  const handleDeleteComment = (postId, commentId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteComment',
+      id: { postId, commentId },
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment? This action cannot be undone.'
+    });
+  };
 
+  const executeDeleteComment = async (postId, commentId) => {
+
+    setActionLoading(prev => ({ ...prev, [`deleteComment_${commentId}`]: true }));
     try {
       await api.delete(
         `community/posts/${postId}/comments/${commentId}/`,
-        {
-          commentId: commentId,
-          postId: postId,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setPosts(
-        posts.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                comments_list: (post.comments_list || []).filter(
-                  (c) => c.id !== commentId
-                ),
-                comments: (post.comments || 1) - 1,
-              }
-            : post
-        )
-      );
+      deleteComment(postId, commentId);
       showToast.success("Comment deleted successfully.");
     } catch (err) {
-      console.error("Error deleting comment:", err);
       if (err.response?.status === 403) {
         showToast.error("You can only delete your own comments.");
       } else {
         showToast.error("Failed to delete comment. Please try again.");
       }
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`deleteComment_${commentId}`]: false }));
     }
   };
 
@@ -382,47 +432,32 @@ const handleLike = async (postId) => {
     setEditingComments((prev) => ({ ...prev, [commentId]: text }));
   };
 
-  // Updated to use correct API endpoint (assuming similar pattern)
   const handleEditCommentSave = async (postId, commentId) => {
     const editedContent = editingComments[commentId]?.trim();
     if (!editedContent) {
-      alert("Comment cannot be empty.");
+      showToast.warn("Comment cannot be empty.");
       return;
     }
 
+    setActionLoading(prev => ({ ...prev, [`editComment_${commentId}`]: true }));
     try {
-      const response = await api.put(
+      await api.put(
         `community/posts/${postId}/comments/${commentId}/`,
-        {
-          content: editedContent,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { content: editedContent },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setPosts(
-        posts.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                comments_list: post.comments_list.map((c) =>
-                  c.id === commentId ? { ...c, content: editedContent } : c
-                ),
-              }
-            : post
-        )
-      );
-
+      updateComment(postId, commentId, { content: editedContent });
       handleEditCommentCancel(commentId);
-      alert("Comment updated successfully.");
+      showToast.success("Comment updated successfully.");
     } catch (err) {
-      console.error("Error updating comment:", err);
       if (err.response?.status === 403) {
-        alert("You can only edit your own comments.");
+        showToast.error("You can only edit your own comments.");
       } else {
-        alert("Failed to update comment. Please try again.");
+        showToast.error("Failed to update comment. Please try again.");
       }
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`editComment_${commentId}`]: false }));
     }
   };
 
@@ -451,7 +486,22 @@ const handleLike = async (postId) => {
     }
   };
 
-  if (loading) {
+  const handleConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+    
+    if (action === 'deletePost') {
+      await executeDeletePost(id);
+    } else if (action === 'deleteComment') {
+      await executeDeleteComment(id.postId, id.commentId);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+  };
+
+  if (loading && postsLoading) {
     return (
       <motion.div
         className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 via-gray-800 to-black"
@@ -556,55 +606,95 @@ const handleLike = async (postId) => {
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-600"
+              className="mb-4 sm:mb-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-white">
-                Create New Post
-              </h2>
-              <form onSubmit={handlePostSubmit} className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Title"
-                  className="w-full p-2 sm:p-3 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
-                  value={newPost.title}
-                  onChange={(e) =>
-                    setNewPost({ ...newPost, title: e.target.value })
-                  }
-                  required
-                />
-                <textarea
-                  placeholder="Content"
-                  className="w-full p-2 sm:p-3 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
-                  rows={3}
-                  value={newPost.content}
-                  onChange={(e) =>
-                    setNewPost({ ...newPost, content: e.target.value })
-                  }
-                  required
-                />
-                <button
-                  type="submit"
-                  className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 text-sm sm:text-base font-medium"
-                >
-                  Post
-                </button>
-              </form>
+              <button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 text-sm sm:text-base font-medium transition-all duration-300"
+              >
+                {showCreateForm ? 'Cancel' : 'Create New Post'}
+              </button>
+              
+              <motion.div
+                className="overflow-hidden"
+                initial={false}
+                animate={{ height: showCreateForm ? 'auto' : 0, opacity: showCreateForm ? 1 : 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <div className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mt-4 border border-gray-600">
+                  <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-white">
+                    Create New Post
+                  </h2>
+                  <form onSubmit={handlePostSubmit} className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Title"
+                      className="w-full p-2 sm:p-3 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
+                      value={newPost.title}
+                      onChange={(e) =>
+                        setNewPost({ ...newPost, title: e.target.value })
+                      }
+                      required
+                    />
+                    <textarea
+                      placeholder="Content"
+                      className="w-full p-2 sm:p-3 border border-gray-600 bg-gray-600 text-white rounded text-sm sm:text-base"
+                      rows={3}
+                      value={newPost.content}
+                      onChange={(e) =>
+                        setNewPost({ ...newPost, content: e.target.value })
+                      }
+                      required
+                    />
+                    
+                    <div className="space-y-3">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="w-full p-2 border border-gray-600 bg-gray-600 text-white rounded text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-yellow-500 file:text-black hover:file:bg-yellow-600"
+                      />
+                      
+                      {imagePreview && (
+                        <div className="relative">
+                          <img src={imagePreview} alt="Preview" className="w-full max-w-md h-48 object-cover rounded" />
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={actionLoading.createPost}
+                      className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoading.createPost ? 'Posting...' : 'Post'}
+                    </button>
+                  </form>
+                </div>
+              </motion.div>
             </motion.div>
 
-            {posts.length === 0 ? (
+            {posts.length === 0 && !postsLoading ? (
               <p className="text-gray-400 text-sm sm:text-base">No posts yet.</p>
             ) : (
-              posts.map((post) => (
-                <motion.div
-                  key={post.id}
-                  className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-600"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
-                >
+              <>
+                {posts.map((post) => (
+                  <motion.div
+                    key={post.id}
+                    className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-600"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                  >
                   <div className="flex flex-col sm:flex-row justify-between items-start mb-3 sm:mb-4 gap-3 sm:gap-0">
                     <div className="flex-1 min-w-0">
                       {editingPosts[post.id] ? (
@@ -642,10 +732,18 @@ const handleLike = async (postId) => {
                           <p className="text-sm sm:text-base text-gray-300 mb-2 whitespace-pre-wrap break-words">
                             {post.content}
                           </p>
+                          {post.image && (
+                            <img 
+                              src={post.image} 
+                              alt="Post" 
+                              className="w-48 h-32 object-cover rounded-lg mb-2 cursor-pointer hover:opacity-80 transition-opacity" 
+                              onClick={() => setSelectedImage(post.image)}
+                            />
+                          )}
                         </>
                       )}
                       <div className="text-xs sm:text-sm text-gray-400 mb-2">
-                        By {post.author || "Unknown"} on {formatDate(getDateFromObject(post))}
+                        By {post.author || "Unknown"} • {getRelativeTime(getDateFromObject(post))} • {formatDate(getDateFromObject(post))}
                       </div>
                     </div>
 
@@ -694,128 +792,286 @@ const handleLike = async (postId) => {
 
                   {!editingPosts[post.id] && (
                     <>
-                      <button
-                        onClick={() => handleLike(post.id)}
-                        className="text-yellow-400 hover:underline mb-3 sm:mb-4 text-sm sm:text-base"
-                        aria-label={`Like post titled ${post.title}`}
-                      >
-                        Like ({post.likes || 0})
-                      </button>
+                      <div className="flex items-center space-x-6 mb-4 pb-3 border-b border-gray-600">
+                        <button
+                          onClick={() => handleLike(post.id)}
+                          disabled={actionLoading[`like_${post.id}`]}
+                          className={`flex items-center space-x-2 text-sm transition-colors ${
+                            post.liked ? 'text-yellow-300' : 'text-gray-400 hover:text-yellow-300'
+                          } disabled:opacity-50`}
+                          aria-label={`Like post titled ${post.title}`}
+                        >
+                          <span>{post.liked ? '❤️' : '🤍'}</span>
+                          <span>{actionLoading[`like_${post.id}`] ? 'Loading...' : `Like ${post.likes || 0 > 0 ? `(${post.likes})` : ''}`}</span>
+                        </button>
 
-                      <div className="border-t border-gray-600 pt-3 sm:pt-4">
-                        <h4 className="font-semibold mb-2 text-white text-sm sm:text-base">
-                          Comments ({post.comments || 0})
-                        </h4>
-
-                        {(post.comments_list || []).map((comment) => (
-                          <div
-                            key={comment.id}
-                            className="border border-gray-600 rounded p-2 sm:p-3 mb-2 bg-gray-600"
-                          >
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2 sm:gap-0">
-                              <div className="min-w-0 flex-1">
-                                <span className="font-semibold text-sm sm:text-base text-white">
-                                  {comment.author}
-                                </span>{" "}
-                                <span className="text-gray-400 text-xs">
-                                  • {formatDate(getDateFromObject(comment))}
-                                </span>
-                              </div>
-                              {isOwner(post, comment) && (
-                                <div className="flex space-x-2 flex-shrink-0">
-                                  {!editingComments[comment.id] ? (
-                                    <>
-                                      <button
-                                        onClick={() =>
-                                          handleEditCommentStart(
-                                            comment.id,
-                                            comment.content
-                                          )
-                                        }
-                                        className="text-xs sm:text-sm text-green-400 hover:underline"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleDeleteComment(
-                                            post.id,
-                                            comment.id
-                                          )
-                                        }
-                                        className="text-xs sm:text-sm text-red-400 hover:underline"
-                                      >
-                                        Delete
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <button
-                                        onClick={() =>
-                                          handleEditCommentSave(
-                                            post.id,
-                                            comment.id
-                                          )
-                                        }
-                                        className="text-xs sm:text-sm text-blue-400 hover:underline"
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleEditCommentCancel(comment.id)
-                                        }
-                                        className="text-xs sm:text-sm text-gray-400 hover:underline"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            {editingComments[comment.id] ? (
-                              <textarea
-                                className="w-full p-2 border border-gray-500 bg-gray-500 text-white rounded text-sm sm:text-base"
-                                rows={2}
-                                value={editingComments[comment.id]}
-                                onChange={(e) =>
-                                  handleEditCommentChange(
-                                    comment.id,
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            ) : (
-                              <p className="whitespace-pre-wrap text-sm sm:text-base text-white break-words">
-                                {comment.content}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-
-                        <form onSubmit={(e) => handleCommentSubmit(e, post.id)} className="space-y-2">
-                          <textarea
-                            placeholder="Add a comment..."
-                            className="w-full p-2 border border-gray-500 bg-gray-500 text-white rounded text-sm sm:text-base"
-                            rows={2}
-                            value={newComments[post.id] || ""}
-                            onChange={(e) =>
-                              handleCommentChange(post.id, e.target.value)
-                            }
-                          />
-                          <button
-                            type="submit"
-                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm sm:text-base"
-                          >
-                            Submit
-                          </button>
-                        </form>
+                        <button
+                          onClick={() => toggleComments(post.id)}
+                          className="flex items-center space-x-2 text-sm text-gray-400 hover:text-yellow-300 transition-colors"
+                        >
+                          <span>💬</span>
+                          <span>Comment {(post.comments || 0) > 0 ? `(${post.comments})` : ''}</span>
+                        </button>
                       </div>
+
+                      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        showComments[post.id] ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+                      }`}>
+                        <div className="space-y-4 pt-4">
+
+                          {/* Comment Input */}
+                          <form onSubmit={(e) => handleCommentSubmit(e, post.id)} className="mb-4">
+                            <div className="flex space-x-3">
+                              <div className="flex-1">
+                                <textarea
+                                  placeholder="Write a comment..."
+                                  className="w-full p-3 border border-gray-600 bg-gray-600 text-white rounded-lg text-sm resize-none focus:outline-none focus:border-yellow-500"
+                                  rows={2}
+                                  value={newComments[post.id] || ""}
+                                  onChange={(e) => handleCommentChange(post.id, e.target.value)}
+                                />
+                              </div>
+                              <button
+                                type="submit"
+                                disabled={actionLoading[`comment_${post.id}`] || !newComments[post.id]?.trim()}
+                                className="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed self-end"
+                              >
+                                {actionLoading[`comment_${post.id}`] ? 'Posting...' : 'Post'}
+                              </button>
+                            </div>
+                          </form>
+
+                          {/* Comments List */}
+                          <div className="space-y-3">
+                            {(post.comments_list || []).filter(comment => !comment.parent_comment && comment.parent_comment !== 0).map((comment) => (
+                              <div key={comment.id} className="space-y-2">
+                                {/* Main Comment */}
+                                <div className="flex space-x-3">
+                                  <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <span className="text-black font-bold text-sm">{comment.author?.charAt(0)?.toUpperCase()}</span>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="bg-gray-600 rounded-lg p-3">
+                                      <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                          <span className="font-semibold text-white text-sm">{comment.author}</span>
+                                          <span className="text-gray-400 text-xs ml-2">{getRelativeTime(getDateFromObject(comment))}</span>
+                                        </div>
+                                        {isOwner(post, comment) && (
+                                          <div className="flex space-x-2">
+                                            {!editingComments[comment.id] ? (
+                                              <>
+                                                <button
+                                                  onClick={() => handleEditCommentStart(comment.id, comment.content)}
+                                                  className="text-xs text-gray-400 hover:text-yellow-400"
+                                                >
+                                                  Edit
+                                                </button>
+                                                <button
+                                                  onClick={() => handleDeleteComment(post.id, comment.id)}
+                                                  className="text-xs text-gray-400 hover:text-red-400"
+                                                  disabled={actionLoading[`deleteComment_${comment.id}`]}
+                                                >
+                                                  {actionLoading[`deleteComment_${comment.id}`] ? 'Deleting...' : 'Delete'}
+                                                </button>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <button
+                                                  onClick={() => handleEditCommentSave(post.id, comment.id)}
+                                                  className="text-xs text-blue-400 hover:underline"
+                                                  disabled={actionLoading[`editComment_${comment.id}`]}
+                                                >
+                                                  {actionLoading[`editComment_${comment.id}`] ? 'Saving...' : 'Save'}
+                                                </button>
+                                                <button
+                                                  onClick={() => handleEditCommentCancel(comment.id)}
+                                                  className="text-xs text-gray-400 hover:underline"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {editingComments[comment.id] ? (
+                                        <textarea
+                                          className="w-full p-2 border border-gray-500 bg-gray-500 text-white rounded text-sm resize-none"
+                                          rows={2}
+                                          value={editingComments[comment.id]}
+                                          onChange={(e) => handleEditCommentChange(comment.id, e.target.value)}
+                                        />
+                                      ) : (
+                                        <p className="text-white text-sm whitespace-pre-wrap break-words">
+                                          {comment.content}
+                                        </p>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center space-x-4 mt-1 ml-3">
+                                      {comment.author !== memberName && comment.author !== userName && (
+                                        <button
+                                          onClick={() => toggleReplyInput(comment.id)}
+                                          className="text-xs text-gray-400 hover:text-red-400 font-medium"
+                                        >
+                                          Reply
+                                        </button>
+                                      )}
+                                      {(post.comments_list || []).filter(reply => reply.parent_comment === comment.id).length > 0 && (
+                                        <button
+                                          onClick={() => toggleReplies(comment.id)}
+                                          className="text-xs text-gray-500 hover:text-yellow-400"
+                                        >
+                                          {showReplies[comment.id] ? 'Hide' : 'View'} {(post.comments_list || []).filter(reply => reply.parent_comment === comment.id).length} replies
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Reply Input */}
+                                {showReplyInput[comment.id] && (
+                                  <div className="ml-11 mt-2">
+                                    <form onSubmit={(e) => handleReplySubmit(e, post.id, comment.id)} className="flex space-x-2">
+                                      <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span className="text-black font-bold text-xs">{memberName?.charAt(0)?.toUpperCase()}</span>
+                                      </div>
+                                      <div className="flex-1 flex space-x-2">
+                                        <input
+                                          type="text"
+                                          placeholder={`Reply to ${comment.author}...`}
+                                          className="flex-1 p-2 border border-gray-600 bg-gray-600 text-white rounded-full text-sm focus:outline-none focus:border-yellow-500"
+                                          value={replyText[comment.id] || ""}
+                                          onChange={(e) => setReplyText(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                                        />
+                                        <button
+                                          type="submit"
+                                          disabled={actionLoading[`reply_${comment.id}`] || !replyText[comment.id]?.trim()}
+                                          className="bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-full text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {actionLoading[`reply_${comment.id}`] ? '...' : '→'}
+                                        </button>
+                                      </div>
+                                    </form>
+                                  </div>
+                                )}
+
+                                {/* Replies */}
+                                <div className={`ml-11 space-y-2 overflow-hidden transition-all duration-300 ease-in-out ${
+                                  showReplies[comment.id] ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+                                }`}>
+                                  {(post.comments_list || []).filter(reply => reply.parent_comment === comment.id || reply.parent_comment == comment.id).map((reply) => (
+                                    <div key={reply.id} className="flex space-x-2">
+                                      <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span className="text-black font-bold text-xs">{reply.author?.charAt(0)?.toUpperCase()}</span>
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="bg-gray-600 rounded-2xl px-3 py-2">
+                                          <div className="flex items-center space-x-2 mb-1">
+                                            <span className="font-semibold text-white text-xs">{reply.author}</span>
+                                            <span className="text-gray-400 text-xs">{getRelativeTime(getDateFromObject(reply))}</span>
+                                          </div>
+                                          {editingComments[reply.id] ? (
+                                            <div className="space-y-2">
+                                              <textarea
+                                                className="w-full p-2 border border-gray-500 bg-gray-500 text-white rounded text-xs resize-none"
+                                                rows={2}
+                                                value={editingComments[reply.id]}
+                                                onChange={(e) => handleEditCommentChange(reply.id, e.target.value)}
+                                              />
+                                              <div className="flex space-x-2">
+                                                <button
+                                                  onClick={() => handleEditCommentSave(post.id, reply.id)}
+                                                  className="text-xs text-blue-400 hover:underline"
+                                                  disabled={actionLoading[`editComment_${reply.id}`]}
+                                                >
+                                                  {actionLoading[`editComment_${reply.id}`] ? 'Saving...' : 'Save'}
+                                                </button>
+                                                <button
+                                                  onClick={() => handleEditCommentCancel(reply.id)}
+                                                  className="text-xs text-gray-400 hover:underline"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <p className="text-white text-xs whitespace-pre-wrap break-words">
+                                              {reply.content}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center space-x-4 mt-1 ml-3">
+                                          {reply.author !== memberName && reply.author !== userName && (
+                                            <button 
+                                              onClick={() => toggleReplies(reply.id)}
+                                              className="text-xs text-gray-400 hover:text-red-400 font-medium"
+                                            >
+                                              Reply
+                                            </button>
+                                          )}
+                                          {isOwner(post, reply) && (
+                                            <>
+                                              <button 
+                                                onClick={() => handleEditCommentStart(reply.id, reply.content)}
+                                                className="text-xs text-gray-400 hover:text-yellow-400"
+                                              >
+                                                Edit
+                                              </button>
+                                              <button 
+                                                onClick={() => handleDeleteComment(post.id, reply.id)}
+                                                disabled={actionLoading[`deleteComment_${reply.id}`]}
+                                                className="text-xs text-gray-400 hover:text-red-400"
+                                              >
+                                                {actionLoading[`deleteComment_${reply.id}`] ? 'Deleting...' : 'Delete'}
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
                     </>
                   )}
-                </motion.div>
-              ))
+                  </motion.div>
+                ))}
+                
+                {/* Load More Button */}
+                {hasMore && (
+                  <motion.div 
+                    className="text-center py-6"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <button
+                      onClick={loadMore}
+                      disabled={postsLoading}
+                      className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-6 py-3 rounded-lg hover:from-yellow-600 hover:to-yellow-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {postsLoading ? 'Loading...' : 'Load More Posts'}
+                    </button>
+                  </motion.div>
+                )}
+                
+                {postsLoading && posts.length > 0 && (
+                  <motion.div 
+                    className="text-center py-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-yellow-500 mx-auto"></div>
+                  </motion.div>
+                )}
+              </>
             )}
           </motion.div>
         )}
@@ -889,6 +1145,45 @@ const handleLike = async (postId) => {
         )}
       </AnimatePresence>
       </motion.div>
+      
+      {/* Image Popup Modal */}
+      {selectedImage && (
+        <motion.div
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setSelectedImage(null)}
+        >
+          <motion.div
+            className="relative max-w-6xl max-h-full"
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.8 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={selectedImage}
+              alt="Full size"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl hover:bg-opacity-70 transition-all"
+            >
+              ×
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCancelAction}
+        onConfirm={handleConfirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </>
   );
 }

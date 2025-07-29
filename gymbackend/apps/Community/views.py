@@ -363,7 +363,7 @@ class AdminCommunityViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"])
     def community_posts(self, request):
         posts = Post.objects.all().order_by("-date_created")
-        serializer = PostSerializer(posts, many=True)
+        serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="toggle_hide_post")

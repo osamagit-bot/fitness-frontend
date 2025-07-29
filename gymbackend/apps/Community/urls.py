@@ -22,4 +22,5 @@ posts_router.register(r'comments', CommentViewSet, basename='post-comments')
 
 urlpatterns = [
      path('', include(router.urls)),
+     path('', include(posts_router.urls)),
 ]

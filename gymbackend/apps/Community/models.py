@@ -12,6 +12,7 @@ from django.contrib.auth.models import BaseUserManager, AbstractUser, Group, Per
 class Post(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
+    image = models.ImageField(upload_to='post_images/', blank=True, null=True)
     
     date_created = models.DateTimeField(auto_now_add=True)  
     hidden = models.BooleanField(default=False)
@@ -79,6 +80,7 @@ class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments')
     content = models.TextField()
+    parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     date_created = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

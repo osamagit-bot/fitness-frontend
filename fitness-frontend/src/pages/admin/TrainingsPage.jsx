@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppToastContainer from "../../components/ui/ToastContainer";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 function TrainingsPage() {
@@ -19,6 +20,7 @@ function TrainingsPage() {
     image: null
   });
   const [imageErrors, setImageErrors] = useState(new Set());
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   const handleImageError = (trainingId) => {
     setImageErrors(prev => new Set([...prev, trainingId]));
@@ -167,24 +169,45 @@ function TrainingsPage() {
     }
   };
 
-  const deleteTraining = async (trainingId) => {
-    if (window.confirm('Are you sure you want to cancel this training session?')) {
-      try {
-        const token = localStorage.getItem('access_token');
-        
-        await api.delete(`trainings/${trainingId}/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        setTrainingSessions(trainingSessions.filter(session => session.id !== trainingId));
-        showToast.success('Training session cancelled successfully!');
-      } catch (error) {
-        console.error('Error cancelling training:', error);
-        showToast.error('Failed to cancel training session');
-      }
+  const deleteTraining = (trainingId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteTraining',
+      id: trainingId,
+      title: 'Cancel Training Session',
+      message: 'Are you sure you want to cancel this training session? This action cannot be undone.'
+    });
+  };
+
+  const executeDeleteTraining = async (trainingId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      
+      await api.delete(`trainings/${trainingId}/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      setTrainingSessions(trainingSessions.filter(session => session.id !== trainingId));
+      showToast.success('Training session cancelled successfully!');
+    } catch (error) {
+      console.error('Error cancelling training:', error);
+      showToast.error('Failed to cancel training session');
     }
+  };
+
+  const handleConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+    
+    if (action === 'deleteTraining') {
+      await executeDeleteTraining(id);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
   };
 
   // Format date and time for display
@@ -563,6 +586,14 @@ function TrainingsPage() {
           </div>
         </div>
       </div>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCancelAction}
+        onConfirm={handleConfirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </>
   );
 }

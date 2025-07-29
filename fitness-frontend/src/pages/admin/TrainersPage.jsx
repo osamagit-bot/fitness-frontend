@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppToastContainer from "../../components/ui/ToastContainer";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 function TrainersPage() {
@@ -19,6 +20,7 @@ function TrainersPage() {
     image: null // Add image field
   });
   const [imageErrors, setImageErrors] = useState(new Set());
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   const handleImageError = (trainerId) => {
     setImageErrors(prev => new Set([...prev, trainerId]));
@@ -183,24 +185,45 @@ function TrainersPage() {
     }
   };
 
-  const deleteTrainer = async (trainerId) => {
-    if (window.confirm('Are you sure you want to delete this trainer?')) {
-      try {
-        const token = localStorage.getItem('admin_access_token');
-        
-        await api.delete(`trainers/${trainerId}/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        setTrainers(trainers.filter(trainer => trainer.id !== trainerId));
-        showToast.success('Trainer deleted successfully!');
-      } catch (error) {
-        console.error('Error deleting trainer:', error);
-        showToast.error('Failed to delete trainer. They might be associated with training sessions.');
-      }
+  const deleteTrainer = (trainerId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteTrainer',
+      id: trainerId,
+      title: 'Delete Trainer',
+      message: 'Are you sure you want to delete this trainer? This action cannot be undone.'
+    });
+  };
+
+  const executeDeleteTrainer = async (trainerId) => {
+    try {
+      const token = localStorage.getItem('admin_access_token');
+      
+      await api.delete(`trainers/${trainerId}/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      setTrainers(trainers.filter(trainer => trainer.id !== trainerId));
+      showToast.success('Trainer deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting trainer:', error);
+      showToast.error('Failed to delete trainer. They might be associated with training sessions.');
     }
+  };
+
+  const handleConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+    
+    if (action === 'deleteTrainer') {
+      await executeDeleteTrainer(id);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
   };
 
   // Match the model's specialization choices
@@ -565,6 +588,15 @@ function TrainersPage() {
         </div>
       </div>
     </div>
+    
+    <ConfirmModal
+      isOpen={confirmModal.isOpen}
+      onClose={handleCancelAction}
+      onConfirm={handleConfirmAction}
+      title={confirmModal.title}
+      message={confirmModal.message}
+    />
+    
     <AppToastContainer />
     </>
   );
