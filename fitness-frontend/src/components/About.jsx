@@ -51,7 +51,7 @@ function About() {
         </p>
         
         <div className="mt-10">
-          <button className="relative overflow-hidden group bg-yellow-400 hover:bg-transparent p-3 w-full sm:w-56 rounded-md transition-all duration-300">
+          <button className="relative overflow-hidden group bg-yellow-400 hover:bg-gray-700 p-3 w-full sm:w-56 rounded-md transition-all duration-300">
             <span className="relative z-10 font-medium text-gray-700 group-hover:text-yellow-400 transition-colors duration-300">
               Start Now
             </span>

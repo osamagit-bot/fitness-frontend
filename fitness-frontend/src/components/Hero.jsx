@@ -103,9 +103,9 @@ function Hero() {
             <span className="absolute left-0 top-0 h-full w-0 bg-yellow-400 transition-all duration-500 ease-in-out group-hover:w-full z-0 rounded-md"></span>
           </button>
 
-          <button className="relative overflow-hidden group bg-yellow-500 hover:bg-yellow-600 text-black border border-yellow-500 px-8 py-3.5 w-full sm:w-44 md:w-52 text-base rounded-md font-medium transition-all duration-300">
+          <button className="relative overflow-hidden group bg-yellow-500 hover:bg-transparent hover:text-yellow-500 border border-yellow-500 px-8 py-3.5 w-full sm:w-44 md:w-52 text-base rounded-md font-medium transition-all duration-300">
             <span className="relative z-10">Join Now</span>
-            <span className="absolute left-0 top-0 h-0 w-full bg-black transition-all duration-500 ease-in-out group-hover:h-full z-0 rounded-md"></span>
+            <span className="absolute left-0 top-0 h-0 w-full transition-all duration-500 ease-in-out group-hover:h-full z-0 rounded-md"></span>
           </button>
         </div>
       </div>
