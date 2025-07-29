@@ -87,15 +87,15 @@ const Footer = () => {
             <h3 className={`text-lg font-semibold ${classes.text.accent} mb-3`}>Contact</h3>
             <ul className="text-sm space-y-2">
               <li>
-                <i className="bx bx-map text-yellow-400 mr-2"></i>
+                <i className={`bx bx-map ${classes.text.accent} mr-2`}></i>
                .................
               </li>
               <li>
-                <i className="bx bx-phone-call text-yellow-400 mr-2"></i>
+                <i className={`bx bx-phone-call ${classes.text.accent} mr-2`}></i>
                 +1 (800) 000-0000
               </li>
               <li>
-                <i className="bx bx-envelope text-yellow-400 mr-2"></i>
+                <i className={`bx bx-envelope ${classes.text.accent} mr-2`}></i>
                 atalan@gmail.com
               </li>
             </ul>
@@ -103,12 +103,12 @@ const Footer = () => {
 
           {/* Social Icons */}
           <div>
-            <h3 className="text-lg font-semibold text-yellow-400 mb-3">Follow Us</h3>
+            <h3 className={`text-lg font-semibold ${classes.text.accent} mb-3`}>Follow Us</h3>
             <div className="flex space-x-4 text-2xl">
-              <a href="#" className="text-yellow-400 hover:text-white transition"><i className="bx bxl-facebook-circle"></i></a>
-              <a href="#" className="text-yellow-400 hover:text-white transition"><i className="bx bxl-instagram-alt"></i></a>
-              <a href="#" className="text-yellow-400 hover:text-white transition"><i className="bx bxl-twitter"></i></a>
-              <a href="#" className="text-yellow-400 hover:text-white transition"><i className="bx bxl-youtube"></i></a>
+              <a href="#" className={`${classes.text.accent} hover:${classes.text.primary} transition`}><i className="bx bxl-facebook-circle"></i></a>
+              <a href="#" className={`${classes.text.accent} hover:${classes.text.primary} transition`}><i className="bx bxl-instagram-alt"></i></a>
+              <a href="#" className={`${classes.text.accent} hover:${classes.text.primary} transition`}><i className="bx bxl-twitter"></i></a>
+              <a href="#" className={`${classes.text.accent} hover:${classes.text.primary} transition`}><i className="bx bxl-youtube"></i></a>
             </div>
           </div>
         </div>

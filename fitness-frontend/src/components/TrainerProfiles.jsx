@@ -91,22 +91,7 @@ const TrainerProfiles = () => {
             </div>
           )}
 
-          {/* Error State - Show notice but still display trainers */}
-          {error && trainers.length > 0 && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r-xl shadow-lg mb-8">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-6 w-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-semibold text-yellow-800">Notice</h3>
-                  <p className="text-yellow-700">Showing sample trainer profiles due to: {error}</p>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* Error State - Only show if no trainers available */}
           {error && trainers.length === 0 && (

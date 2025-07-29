@@ -15,17 +15,17 @@ const ContactSection = () => {
             <input
               type="text"
               placeholder="Enter your Name"
-              className={`w-full border-b-2 ${classes.border.primary} focus:${classes.border.accent} bg-transparent outline-none py-2 ${classes.text.primary} ${classes.text.tertiary}`}
+              className={`w-full border-b-2 ${classes.border.primary} focus:border-yellow-500 bg-transparent outline-none py-2 ${classes.text.primary} placeholder-gray-400`}
             />
             <input
               type="email"
               placeholder="Enter a valid email address"
-              className={`w-full border-b-2 ${classes.border.primary} focus:${classes.border.accent} bg-transparent outline-none py-2 ${classes.text.primary} ${classes.text.tertiary}`}
+              className={`w-full border-b-2 ${classes.border.primary} focus:border-yellow-500 bg-transparent outline-none py-2 ${classes.text.primary} placeholder-gray-400`}
             />
             <textarea
               rows="3"
               placeholder="Enter your message"
-              className={`w-full border-b-2 ${classes.border.primary} focus:${classes.border.accent} bg-transparent outline-none py-2 ${classes.text.primary} ${classes.text.tertiary} resize-none`}
+              className={`w-full border-b-2 ${classes.border.primary} focus:border-yellow-500 bg-transparent outline-none py-2 ${classes.text.primary} placeholder-gray-400 resize-none`}
             ></textarea>
             <button
               type="submit"

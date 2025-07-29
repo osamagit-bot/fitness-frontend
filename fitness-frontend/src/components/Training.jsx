@@ -174,12 +174,7 @@ const Training = () => {
           ))}
         </div>
 
-        {error && (
-          <div className="mt-8 p-4 bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800 rounded-r-lg text-center">
-            <p className="font-semibold">Notice</p>
-            <p className="text-sm">Using sample training data due to: {error}</p>
-          </div>
-        )}
+
       </div>
 
       {/* Enhanced Modal */}

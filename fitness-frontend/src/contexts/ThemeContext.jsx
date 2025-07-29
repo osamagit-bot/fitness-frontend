@@ -46,7 +46,7 @@ export const ThemeProvider = ({ children }) => {
         primary: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
         secondary: isDarkMode ? 'bg-gray-800' : 'bg-gray-100',
         tertiary: isDarkMode ? 'bg-gray-700' : 'bg-gray-200',
-        card: isDarkMode ? 'bg-gray-800' : 'bg-gray-50',
+        card: isDarkMode ? 'bg-gray-800' : 'bg-gray-100',
         navbar: isDarkMode ? 'bg-gray-900/95' : 'bg-gray-200/95',
         hero: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
       },
@@ -86,7 +86,7 @@ export const ThemeProvider = ({ children }) => {
       card: {
         primary: isDarkMode 
           ? 'bg-gray-800 border-gray-700 shadow-lg' 
-          : 'bg-gray-50 border-gray-200 shadow-md',
+          : 'bg-gray-100 border-gray-200 shadow-lg',
         hover: isDarkMode 
           ? 'hover:bg-gray-700 hover:border-gray-600' 
           : 'hover:bg-gray-100 hover:border-gray-300',
@@ -95,7 +95,7 @@ export const ThemeProvider = ({ children }) => {
       dropdown: {
         primary: isDarkMode 
           ? 'bg-gray-800 border-gray-700 shadow-xl' 
-          : 'bg-gray-50 border-gray-200 shadow-lg',
+          : 'bg-gray-100 border-gray-200 shadow-lg',
         item: isDarkMode 
           ? 'text-gray-300 hover:bg-gray-700 hover:text-yellow-400' 
           : 'text-gray-700 hover:bg-gray-100 hover:text-yellow-600',

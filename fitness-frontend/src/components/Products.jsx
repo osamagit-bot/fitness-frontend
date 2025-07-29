@@ -455,20 +455,7 @@ export default function Products() {
     );
   }
 
-  // Show error notice but continue with products if available
-  const ErrorNotice = () => error && products.length > 0 && (
-    <div className={`mb-8 ${classes.bg.tertiary} border-l-4 border-yellow-400 p-4 rounded shadow-md`}>
-      <div className="flex items-center">
-        <svg className="h-6 w-6 text-yellow-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
-        </svg>
-        <div>
-          <p className={`${classes.text.primary} font-semibold`}>Notice</p>
-          <p className={classes.text.secondary}>Showing sample products due to: {error}</p>
-        </div>
-      </div>
-    </div>
-  );
+
 
   // Only show error page if no products available at all
   if (error && products.length === 0) {
@@ -507,7 +494,7 @@ export default function Products() {
   return (
     <section id="products" className={`py-8 sm:py-12 ${classes.bg.primary}`}>
       <div className="container mx-auto py-4 sm:py-8 px-2 sm:px-4">
-        <ErrorNotice />
+
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8">
           <h2 className={`text-2xl md:text-3xl lg:text-4xl font-bold ${classes.text.primary}`}>
