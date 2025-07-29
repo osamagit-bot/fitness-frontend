@@ -127,7 +127,7 @@ const TrainerProfiles = () => {
 
           {/* Trainers Grid */}
           {!isLoading && trainers.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
               {trainers.map((trainer) => (
                 <div
                   key={trainer.id}
@@ -225,7 +225,7 @@ const TrainerProfiles = () => {
         {/* Enhanced Modal */}
         {isModalOpen && selectedTrainer && (
           <div className={`fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-2 md:p-4 z-50 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`} style={{paddingTop: '4rem'}}>
-            <div className={`${classes.bg.card} rounded-lg md:rounded-xl lg:rounded-2xl shadow-2xl w-full max-w-full sm:max-w-lg md:max-w-3xl lg:max-w-4xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto transform transition-all duration-300 ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
+            <div className={`${classes.bg.card} rounded-lg md:rounded-xl lg:rounded-2xl shadow-2xl w-full max-w-full sm:max-w-lg md:max-w-3xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl max-h-[95vh] md:max-h-[90vh] overflow-y-auto transform transition-all duration-300 ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
               <div className="relative">
                 {/* Modal Header */}
                 <div className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 p-4 md:p-6 rounded-t-lg md:rounded-t-xl lg:rounded-t-2xl">
@@ -255,115 +255,113 @@ const TrainerProfiles = () => {
                 </div>
 
                 {/* Modal Content */}
-                <div className="p-4 md:p-6 lg:p-8">
-                  <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8">
-                    {/* Trainer Image */}
-                    <div className="lg:w-1/3">
-                      <div className="relative">
-                        {imageErrors.has(selectedTrainer.id) ? (
-                          <div className="w-full h-48 md:h-64 lg:h-80 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg md:rounded-xl lg:rounded-2xl flex items-center justify-center">
-                            <div className="text-center">
-                              <span className="text-yellow-600 text-5xl md:text-6xl lg:text-8xl mb-2 md:mb-4 block">👤</span>
-                              <p className="text-yellow-700 font-semibold text-sm md:text-base">Photo Coming Soon</p>
-                            </div>
+                <div className="p-4 md:p-6 lg:p-8 xl:p-10">
+                  {/* Trainer Image - Full Width at Top */}
+                  <div className="w-full mb-6 md:mb-8">
+                    <div className="relative max-w-2xl mx-auto">
+                      {imageErrors.has(selectedTrainer.id) ? (
+                        <div className="w-full h-48 md:h-64 lg:h-80 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg md:rounded-xl lg:rounded-2xl flex items-center justify-center">
+                          <div className="text-center">
+                            <span className="text-yellow-600 text-5xl md:text-6xl lg:text-8xl mb-2 md:mb-4 block">👤</span>
+                            <p className="text-yellow-700 font-semibold text-sm md:text-base">Photo Coming Soon</p>
                           </div>
-                        ) : (
-                          <img
-                            src={getImageUrl(selectedTrainer)}
-                            alt={`${selectedTrainer.first_name} ${selectedTrainer.last_name}`}
-                            className="w-full h-48 md:h-64 lg:h-80 rounded-lg md:rounded-xl lg:rounded-2xl object-cover shadow-lg"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              handleImageError(selectedTrainer.id);
-                            }}
-                          />
-                        )}
-                        
-                        {/* Specialization Badge */}
-                        <div className="absolute -bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-3 md:px-4 lg:px-6 py-1 md:py-1.5 lg:py-2 rounded-full font-bold shadow-lg text-xs md:text-sm lg:text-base">
-                            {selectedTrainer.specialization || "General Fitness"}
-                          </span>
                         </div>
+                      ) : (
+                        <img
+                          src={getImageUrl(selectedTrainer)}
+                          alt={`${selectedTrainer.first_name} ${selectedTrainer.last_name}`}
+                          className="w-full h-48 md:h-64 lg:h-80 rounded-lg md:rounded-xl lg:rounded-2xl object-cover shadow-lg"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            handleImageError(selectedTrainer.id);
+                          }}
+                        />
+                      )}
+                      
+                      {/* Specialization Badge */}
+                      <div className="absolute -bottom-3 md:-bottom-4 left-1/2 transform -translate-x-1/2">
+                        <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-3 md:px-4 lg:px-6 py-1 md:py-1.5 lg:py-2 rounded-full font-bold shadow-lg text-xs md:text-sm lg:text-base">
+                          {selectedTrainer.specialization || "General Fitness"}
+                        </span>
                       </div>
                     </div>
-                    
-                    {/* Trainer Details */}
-                    <div className="lg:w-2/3 mt-4 md:mt-6 lg:mt-0">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
+                  </div>
+                  
+                  {/* All Cards Below Image */}
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         {/* Contact Information */}
-                        <div className={`${classes.bg.tertiary} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 ${classes.border.primary} border`}>
-                          <h4 className={`font-bold ${classes.text.primary} mb-4 flex items-center text-lg`}>
-                            <span className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></span>
+                        <div className={`${classes.bg.tertiary} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 xl:p-8 ${classes.border.primary} border`}>
+                          <h4 className={`font-bold ${classes.text.primary} mb-4 flex items-center text-base lg:text-lg`}>
+                            <span className="w-3 h-3 bg-yellow-500 rounded-full mr-3 flex-shrink-0"></span>
                             Contact Information
                           </h4>
                           <div className="space-y-3">
-                            <div className="flex items-center">
-                              <svg className="h-5 w-5 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="flex items-start">
+                              <svg className="h-5 w-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                               </svg>
-                              <span className={`${classes.text.secondary} font-medium`}>{selectedTrainer.email}</span>
+                              <span className={`${classes.text.secondary} font-medium text-sm lg:text-base break-all`}>{selectedTrainer.email}</span>
                             </div>
-                            <div className="flex items-center">
-                              <svg className="h-5 w-5 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="flex items-start">
+                              <svg className="h-5 w-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                               </svg>
-                              <span className={`${classes.text.secondary} font-medium`}>{selectedTrainer.phone}</span>
+                              <span className={`${classes.text.secondary} font-medium text-sm lg:text-base`}>{selectedTrainer.phone}</span>
                             </div>
                           </div>
                         </div>
 
                         {/* Professional Details */}
-                        <div className={`${classes.bg.secondary} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 ${classes.border.primary} border`}>
-                          <h4 className={`font-bold ${classes.text.primary} mb-4 flex items-center text-lg`}>
-                            <span className={`w-3 h-3 ${classes.text.primary === 'text-white' ? 'bg-white' : 'bg-black'} rounded-full mr-3`}></span>
+                        <div className={`${classes.bg.secondary} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 xl:p-8 ${classes.border.primary} border`}>
+                          <h4 className={`font-bold ${classes.text.primary} mb-4 flex items-center text-base lg:text-lg`}>
+                            <span className={`w-3 h-3 ${classes.text.primary === 'text-white' ? 'bg-white' : 'bg-black'} rounded-full mr-3 flex-shrink-0`}></span>
                             Professional Details
                           </h4>
                           <div className="space-y-3">
-                            <div className="flex items-center">
-                              <svg className="h-5 w-5 text-gray-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="flex items-start">
+                              <svg className="h-5 w-5 text-gray-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 6v6m-4-6h8m-8 0V9a2 2 0 012-2h4a2 2 0 012 2v4" />
                               </svg>
-                              <span className={`${classes.text.secondary} font-medium`}>Started: {new Date(selectedTrainer.start_date).toLocaleDateString()}</span>
+                              <span className={`${classes.text.secondary} font-medium text-sm lg:text-base`}>Started: {new Date(selectedTrainer.start_date).toLocaleDateString()}</span>
                             </div>
-                            <div className="flex items-center">
-                              <svg className="h-5 w-5 text-gray-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="flex items-start">
+                              <svg className="h-5 w-5 text-gray-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                               </svg>
-                              <span className={`${classes.text.secondary} font-medium`}>Certified Professional</span>
+                              <span className={`${classes.text.secondary} font-medium text-sm lg:text-base`}>Certified Professional</span>
                             </div>
                           </div>
                         </div>
-                      </div>
+                    </div>
 
-                      {/* Description */}
-                      <div className={`mt-4 md:mt-6 ${classes.bg.card} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 ${classes.border.primary} border-2`}>
-                        <h4 className={`font-bold ${classes.text.primary} mb-4 text-lg`}>About {selectedTrainer.first_name}</h4>
-                        <p className={`${classes.text.secondary} leading-relaxed`}>
-                          {selectedTrainer.first_name} is a certified fitness professional specializing in {selectedTrainer.specialization || "general fitness training"}. 
-                          With years of experience and dedication to helping clients achieve their fitness goals, {selectedTrainer.first_name} provides 
-                          personalized training programs tailored to individual needs and fitness levels.
-                        </p>
-                      </div>
+                    {/* Description */}
+                    <div className={`${classes.bg.card} rounded-lg md:rounded-xl lg:rounded-2xl p-4 md:p-5 lg:p-6 xl:p-8 ${classes.border.primary} border-2`}>
+                      <h4 className={`font-bold ${classes.text.primary} mb-4 text-lg`}>About {selectedTrainer.first_name}</h4>
+                      <p className={`${classes.text.secondary} leading-relaxed`}>
+                        {selectedTrainer.first_name} is a certified fitness professional specializing in {selectedTrainer.specialization || "general fitness training"}. 
+                        With years of experience and dedication to helping clients achieve their fitness goals, {selectedTrainer.first_name} provides 
+                        personalized training programs tailored to individual needs and fitness levels.
+                      </p>
+                    </div>
 
-                      {/* Action Buttons */}
-                      <div className="mt-4 md:mt-6 lg:mt-8 flex flex-col md:flex-row gap-3 md:gap-4">
-                        <button
-                          onClick={() => {
-                            setIsClosing(true);
-                            setTimeout(() => {
-                              setIsModalOpen(false);
-                              setIsClosing(false);
-                            }, 300);
-                          }}
-                          className={`flex-1 ${classes.button.secondary} py-3 md:py-3.5 lg:py-4 px-4 md:px-5 lg:px-6 rounded-lg md:rounded-xl transition-all duration-200 font-semibold hover:scale-105 text-sm md:text-base`}
-                        >
-                          Close Profile
-                        </button>
-                        <button className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black py-3 md:py-3.5 lg:py-4 px-4 md:px-5 lg:px-6 rounded-lg md:rounded-xl hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 font-semibold shadow-lg hover:scale-105 text-sm md:text-base">
-                          Book Training Session
-                        </button>
-                      </div>
+                    {/* Action Buttons */}
+                    <div className="flex flex-col md:flex-row gap-3 md:gap-4 xl:gap-6">
+                      <button
+                        onClick={() => {
+                          setIsClosing(true);
+                          setTimeout(() => {
+                            setIsModalOpen(false);
+                            setIsClosing(false);
+                          }, 300);
+                        }}
+                        className={`flex-1 ${classes.button.secondary} py-3 md:py-3.5 lg:py-4 px-4 md:px-5 lg:px-6 rounded-lg md:rounded-xl transition-all duration-200 font-semibold hover:scale-105 text-sm md:text-base`}
+                      >
+                        Close Profile
+                      </button>
+                      <button className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black py-3 md:py-3.5 lg:py-4 px-4 md:px-5 lg:px-6 rounded-lg md:rounded-xl hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 font-semibold shadow-lg hover:scale-105 text-sm md:text-base">
+                        Book Training Session
+                      </button>
                     </div>
                   </div>
                 </div>
