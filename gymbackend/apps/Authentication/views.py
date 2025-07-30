@@ -124,7 +124,8 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             except:
                 monthly_membership_revenue = Member.objects.aggregate(total=Sum("monthly_fee"))["total"] or 0
 
-            total_monthly_revenue = float(monthly_revenue_shop) + float(monthly_renewal_revenue) + float(monthly_membership_revenue)
+            # Total monthly revenue should be shop revenue + membership revenue (not double-counted)
+            total_monthly_revenue = float(monthly_revenue_shop) + float(monthly_membership_revenue)
 
             days_in_month = (
                 timezone.datetime(now.year + (now.month == 12), ((now.month % 12) + 1), 1) -

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from rest_framework.decorators import action
 from django.db.models import Q
+from django.db import models
 from django.utils import timezone
 from apps.Notifications.services import notification_service
 from django.http import JsonResponse
@@ -428,6 +429,92 @@ class MemberViewSet(viewsets.ModelViewSet):
         member.is_active = True
         member.save()
         return Response({"detail": "Member activated successfully."}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def refresh_revenue(self, request):
+        """Get current membership revenue status (revenue persists when members leave)"""
+        try:
+            from .models import MembershipRevenue
+            
+            # Get current stats
+            member_count = Member.objects.count()
+            current_total = Member.objects.aggregate(
+                total=models.Sum('monthly_fee')
+            )['total'] or 0
+            
+            # Get current month revenue (doesn't change it, just retrieves)
+            current_revenue = MembershipRevenue.update_current_month_revenue()
+            
+            return Response({
+                "detail": "Revenue status retrieved successfully",
+                "member_count": member_count,
+                "current_active_members_total": float(current_total),
+                "actual_monthly_revenue": float(current_revenue),
+                "note": "Revenue includes payments from members who may have left this month"
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                "detail": f"Error getting revenue status: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def membership_payments(self, request):
+        """Get membership payments filtered by date range"""
+        try:
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            
+            # Build query
+            payments_query = MembershipPayment.objects.all()
+            
+            if start_date:
+                try:
+                    start_date_obj = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+                    payments_query = payments_query.filter(paid_on__gte=start_date_obj)
+                except ValueError:
+                    return Response({
+                        "detail": "Invalid start_date format. Use YYYY-MM-DD"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if end_date:
+                try:
+                    end_date_obj = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+                    payments_query = payments_query.filter(paid_on__lte=end_date_obj)
+                except ValueError:
+                    return Response({
+                        "detail": "Invalid end_date format. Use YYYY-MM-DD"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get payments and calculate total
+            payments = payments_query.order_by('-paid_on')
+            total_revenue = payments.aggregate(total=models.Sum('amount'))['total'] or 0
+            
+            # Serialize payment data
+            payment_data = []
+            for payment in payments:
+                payment_data.append({
+                    'id': payment.id,
+                    'member_name': payment.member_name or (payment.member.first_name + ' ' + payment.member.last_name if payment.member else 'Unknown'),
+                    'amount': float(payment.amount),
+                    'paid_on': payment.paid_on.strftime('%Y-%m-%d'),
+                    'description': payment.description
+                })
+            
+            return Response({
+                "payments": payment_data,
+                "total_revenue": float(total_revenue),
+                "count": payments.count(),
+                "date_range": {
+                    "start_date": start_date,
+                    "end_date": end_date
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                "detail": f"Error getting membership payments: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class TrainerViewSet(viewsets.ModelViewSet):

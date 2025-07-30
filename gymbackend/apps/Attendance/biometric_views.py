@@ -61,6 +61,8 @@ def webauthn_register_options(request):
 @csrf_exempt
 def webauthn_register_complete(request):
     try:
+        from .biometric_utils import BiometricSecurity
+        
         data = json.loads(request.body)
         athlete_id = data.get('athlete_id')
         biometric_hash = data.get('biometric_hash')
@@ -72,26 +74,43 @@ def webauthn_register_complete(request):
         # Check if the member exists
         member = get_object_or_404(Member, athlete_id=athlete_id)
 
-        # Check if this exact biometric hash is already registered to another member
-        existing_member = Member.objects.filter(
-            biometric_hash=biometric_hash, 
-            biometric_registered=True
-        ).exclude(athlete_id=athlete_id).first()
+        # ENHANCED DUPLICATE DETECTION
+        is_duplicate, existing_member = BiometricSecurity.check_duplicate_fingerprint(
+            biometric_hash, exclude_member_id=athlete_id
+        )
         
-        if existing_member:
-            print(f"SECURITY ALERT: Attempt to register duplicate fingerprint!")
+        if is_duplicate and existing_member:
+            print(f"🚨 SECURITY ALERT: Duplicate fingerprint detected!")
+            print(f"   Attempted by: {member.first_name} {member.last_name} (ID: {athlete_id})")
+            print(f"   Already registered to: {existing_member.first_name} {existing_member.last_name} (ID: {existing_member.athlete_id})")
+            
             return JsonResponse({
                 'status': 'error', 
-                'message': f'This fingerprint is already registered to another member.'
+                'message': f'This fingerprint is already registered to {existing_member.first_name} {existing_member.last_name}. Each person must use their own unique fingerprint.',
+                'error_code': 'DUPLICATE_BIOMETRIC',
+                'existing_member_id': existing_member.athlete_id
             }, status=400)
 
-        # If no existing member found, register the new biometric hash
-        member.biometric_hash = biometric_hash
+        # If no duplicate found, register the new biometric hash
+        # For WebAuthn compatibility, store the credential response data
+        if credential_response and credential_response.get('rawId'):
+            # Store the rawId from WebAuthn credential for kiosk matching
+            member.biometric_hash = credential_response.get('rawId')
+            print(f"Storing WebAuthn rawId: {credential_response.get('rawId')}")
+        else:
+            # Fallback to the provided biometric_hash
+            member.biometric_hash = biometric_hash
+            print(f"Storing biometric hash: {biometric_hash[:20]}...")
+        
         member.biometric_registered = True
         member.save()
         
-        print(f"✅ Fingerprint successfully registered for {member.user.first_name} {member.user.last_name}")
-        return JsonResponse({'status': 'ok'})
+        print(f"✅ Fingerprint successfully registered for {member.first_name} {member.last_name}")
+        return JsonResponse({
+            'status': 'ok',
+            'message': 'Fingerprint registered successfully',
+            'member_name': f"{member.first_name} {member.last_name}"
+        })
         
     except Exception as e:
         import traceback
@@ -265,24 +284,59 @@ def kiosk_checkin(request):
         if not credential_id:
             return JsonResponse({'error': 'Missing credential ID'}, status=400)
         
-        # Find member by biometric hash (credential ID)
-        # List all members with biometric data for debugging
-        all_biometric_members = Member.objects.filter(biometric_registered=True)
-        print(f"Members with biometrics: {[(m.athlete_id, m.first_name, m.biometric_hash) for m in all_biometric_members]}")
+        # ENHANCED MEMBER DETECTION using biometric matching
+        from .biometric_utils import BiometricSecurity
         
+        print(f"Searching for member with credential ID: {credential_id}")
+        
+        # For WebAuthn kiosk mode, we need to identify the member from the credential
+        # The credential_id should match the stored biometric_hash
+        member = None
+        
+        # Get all registered members for debugging
+        all_biometric_members = Member.objects.filter(biometric_registered=True).exclude(biometric_hash__isnull=True)
+        print(f"Available biometric members: {[(m.athlete_id, m.first_name, m.biometric_hash[:20] + '...' if m.biometric_hash else 'None') for m in all_biometric_members]}")
+        
+        # Try exact match first
         try:
             member = Member.objects.get(biometric_hash=credential_id, biometric_registered=True)
-            print(f"Found member: {member.first_name} {member.last_name} (ID: {member.athlete_id})")
+            print(f"✅ Exact match found: {member.first_name} {member.last_name} (ID: {member.athlete_id})")
         except Member.DoesNotExist:
-            print(f"No member found with credential ID: {credential_id}")
-            # Try partial matching or different credential formats
-            for m in all_biometric_members:
-                if m.biometric_hash and (credential_id in m.biometric_hash or m.biometric_hash in credential_id):
-                    print(f"Found partial match: {m.first_name} {m.last_name}")
-                    member = m
-                    break
-            else:
-                return JsonResponse({'error': 'Fingerprint not recognized'}, status=404)
+            # For kiosk mode, the credential ID from WebAuthn should be the rawId
+            # Let's also try matching with the rawId field from the assertion
+            raw_id = assertion.get('rawId')
+            if raw_id and raw_id != credential_id:
+                try:
+                    member = Member.objects.get(biometric_hash=raw_id, biometric_registered=True)
+                    print(f"✅ RawId match found: {member.first_name} {member.last_name}")
+                except Member.DoesNotExist:
+                    pass
+            
+            # If still no match, try the credential id from the assertion
+            if not member:
+                cred_id = assertion.get('id')
+                if cred_id and cred_id != credential_id:
+                    try:
+                        member = Member.objects.get(biometric_hash=cred_id, biometric_registered=True)
+                        print(f"✅ Credential ID match found: {member.first_name} {member.last_name}")
+                    except Member.DoesNotExist:
+                        pass
+            
+            # If still no exact match, try enhanced biometric matching
+            if not member:
+                member = BiometricSecurity.find_member_by_biometric(credential_id)
+                
+            if not member:
+                return JsonResponse({
+                    'error': 'Fingerprint not recognized. Please ensure your fingerprint is properly registered.',
+                    'error_code': 'BIOMETRIC_NOT_FOUND',
+                    'debug_info': {
+                        'credential_id': credential_id,
+                        'raw_id': assertion.get('rawId'),
+                        'assertion_id': assertion.get('id'),
+                        'available_members': len(all_biometric_members)
+                    }
+                }, status=404)
         
         # Check if already checked in today
         today = date.today()

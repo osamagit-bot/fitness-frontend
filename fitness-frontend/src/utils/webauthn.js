@@ -178,6 +178,7 @@ export async function authenticateCredential(options) {
 
 /**
  * Simplified authentication for kiosk mode - prompts for any registered fingerprint
+ * Enhanced for external sensor support
  */
 export async function kioskAuthenticate(abortSignal = null) {
   if (!isWebAuthnSupported()) {
@@ -185,12 +186,17 @@ export async function kioskAuthenticate(abortSignal = null) {
   }
 
   try {
-    // Create a simple authentication request that allows any credential
+    // Enhanced options for external sensor compatibility
     const options = {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       allowCredentials: [], // Empty array allows any registered credential
       userVerification: 'required',
-      timeout: 30000
+      timeout: 45000, // Longer timeout for external sensors
+      // Allow both platform and cross-platform authenticators
+      authenticatorSelection: {
+        userVerification: 'required',
+        requireResidentKey: false
+      }
     };
 
     // Get the credential with optional abort signal

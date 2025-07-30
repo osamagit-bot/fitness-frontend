@@ -1,33 +1,33 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import {
-  FiAward,
-  FiCalendar,
-  FiCheckCircle,
-  FiDollarSign,
-  FiEye,
-  FiPlus,
-  FiRefreshCw,
-  FiSettings,
-  FiShoppingCart,
-  FiTarget,
-  FiUserCheck,
-  FiUsers
+    FiAward,
+    FiCalendar,
+    FiCheckCircle,
+    FiDollarSign,
+    FiEye,
+    FiPlus,
+    FiRefreshCw,
+    FiSettings,
+    FiShoppingCart,
+    FiTarget,
+    FiUserCheck,
+    FiUsers
 } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  Cell,
-  Line,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    Cell,
+    Line,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
 } from "recharts";
 import api from "../../utils/api";
 import { formatDate, formatDateTime } from "../../utils/dateUtils";
@@ -140,13 +140,15 @@ const DashboardPage = () => {
             return parseFloat(value) || 0;
           };
           
+          const backendShopRevenue = parseRevenue(backendStats.monthly_revenue_shop);
+          
           newStats = {
             ...newStats,
             activeMembers: backendStats.total_members || 0,
             activeTrainers: backendStats.total_trainers || 0,
             monthlyRevenue: parseRevenue(backendStats.monthly_revenue),
-            totalRevenue: parseRevenue(backendStats.total_revenue),
-            shopRevenue: parseRevenue(backendStats.monthly_revenue_shop),
+            totalRevenue: parseRevenue(backendStats.total_monthly_revenue), // Use monthly total instead of all-time total
+            shopRevenue: backendShopRevenue,
             outstandingPayments: parseRevenue(backendStats.monthly_renewal_revenue),
           };
         }
@@ -176,12 +178,8 @@ const DashboardPage = () => {
         // Fetch top active members
         await fetchTopActiveMembers();
         
-        setRevenueData([{
-          month: new Date().toLocaleDateString('en-US', { month: 'short' }),
-          revenue: newStats.monthlyRevenue || 0,
-          target: 50000,
-          growth: 0
-        }]);
+        // Generate revenue chart data after stats are set
+        setTimeout(() => generateRevenueData(), 100);
         
         setAttendanceTrend(Array(7).fill(0).map((_, i) => {
           const date = new Date();
@@ -313,50 +311,29 @@ const DashboardPage = () => {
     
     setRevenueLoading(true);
     try {
-      // Fetch actual revenue data from members' monthly fees
-      const membersResponse = await api.get("members/");
-      const membersList = Array.isArray(membersResponse.data) 
-        ? membersResponse.data 
-        : membersResponse.data.results || [];
+      // Use the same date range logic as RevenuePage for current month
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endDate = new Date(today);
       
-      // Get last 6 months of data
-      const months = [];
-      const revenueData = [];
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
       
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        
-        // Calculate revenue for this month from member fees
-        let monthlyRevenue = 0;
-        membersList.forEach(member => {
-          if (member.start_date) {
-            const startDate = new Date(member.start_date);
-            const memberStartMonth = startDate.getMonth() + 1;
-            const memberStartYear = startDate.getFullYear();
-            
-            // If member was active in this month, add their fee
-            if ((memberStartYear < year) || (memberStartYear === year && memberStartMonth <= month)) {
-              monthlyRevenue += parseFloat(member.monthly_fee || 0);
-            }
-          }
-        });
-        
-        revenueData.push({
-          month: monthName,
-          revenue: monthlyRevenue,
-          target: 50000, // Set target to match monthly target
-          growth: i === 0 ? 0 : Math.random() * 10 + 2
-        });
-      }
+      // Fetch current month's membership revenue using the same API as RevenuePage
+      const response = await api.get(`members/membership_payments/?start_date=${startDateStr}&end_date=${endDateStr}`);
+      const currentMonthRevenue = response.data.total_revenue || 0;
       
-      setRevenueData(revenueData);
+      const currentMonth = today.toLocaleDateString('en-US', { month: 'short' });
+      
+      setRevenueData([{
+        month: currentMonth,
+        revenue: currentMonthRevenue,
+        target: 50000,
+        growth: 0
+      }]);
     } catch (error) {
       console.error("Error fetching revenue trend:", error);
-      // Fallback to current month data
+      // Fallback to backend stats
       const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short' });
       setRevenueData([{
         month: currentMonth,
@@ -520,35 +497,8 @@ const DashboardPage = () => {
       console.log("🔍 Total purchases found:", purchases.length);
       console.log("🔍 Sample purchase:", purchases[0]);
 
-      // Get persistent revenue first - this is our baseline
-      const persistentRevenue = parseFloat(localStorage.getItem('persistent_shop_revenue') || '0');
-      
-      // Calculate shop revenue manually for current month
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-
-      let manualShopRevenue = 0;
-      console.log('🔍 All purchases for manual calculation:', purchases.length);
-      const currentMonthPurchases = purchases.filter((purchase) => {
-        const purchaseDate = new Date(purchase.date);
-        const isCurrentMonth =
-          purchaseDate.getMonth() + 1 === currentMonth &&
-          purchaseDate.getFullYear() === currentYear;
-        if (isCurrentMonth) {
-          console.log("🔍 Current month purchase:", purchase.product_name, purchase.total_price, purchase.date);
-          const price = parseFloat(purchase.total_price || 0);
-          manualShopRevenue += price;
-          console.log('🔍 Running manual shop revenue:', manualShopRevenue);
-        }
-        return isCurrentMonth;
-      });
-      
-      console.log('🔍 Final manual shop revenue:', manualShopRevenue);
-      console.log('🔍 Persistent revenue from localStorage:', persistentRevenue);
-
-      console.log("🔍 Current month purchases:", currentMonthPurchases.length);
-      console.log("🔍 Manual shop revenue calculation:", manualShopRevenue);
+      // Trust the backend calculation - it's already correct
+      console.log("🔍 Using backend shop revenue calculation (Purchase records persist when products are deleted)");
 
       // Fetch today's attendance count
       const todayAttendanceResponse = await api.get(
@@ -568,12 +518,8 @@ const DashboardPage = () => {
         backendStats.monthly_revenue_shop
       );
 
-      // Always use the maximum of all revenue sources to prevent resets
-      const finalShopRevenue = Math.max(backendShopRevenue, manualShopRevenue, persistentRevenue);
-      console.log('🔍 DashboardPage revenue - Backend:', backendShopRevenue, 'Manual:', manualShopRevenue, 'Persistent:', persistentRevenue, 'Final:', finalShopRevenue);
-      
-      // Always update persistent revenue to the highest value
-      localStorage.setItem('persistent_shop_revenue', finalShopRevenue.toString());
+      // Use backend shop revenue directly - it's calculated correctly from Purchase records
+      console.log('🔍 DashboardPage shop revenue from backend:', backendShopRevenue, 'AFN');
 
       setStats((prevStats) => ({
         ...prevStats,
@@ -815,6 +761,18 @@ const DashboardPage = () => {
     }
   };
 
+  const refreshMembershipRevenue = async () => {
+    try {
+      console.log('🔄 Refreshing membership revenue...');
+      const response = await api.post('members/refresh_revenue/');
+      console.log('✅ Membership revenue refreshed:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error refreshing membership revenue:', error);
+      throw error;
+    }
+  };
+
   // Helper function to process member insights
   const processMemberInsights = (membersList) => {
     // Membership type distribution
@@ -892,6 +850,8 @@ const DashboardPage = () => {
                   try {
                     // Call the refresh endpoint first
                     await api.get("admin-dashboard/refresh/");
+                    // Refresh membership revenue to ensure it's up to date
+                    await refreshMembershipRevenue();
                     await fetchDashboardData();
                     await fetchRecentMembers();
                     await fetchTopActiveMembers();
@@ -977,11 +937,12 @@ const DashboardPage = () => {
           />
 
           <StatCard
-            title="Total Revenue"
+            title="Total Monthly Revenue"
             value={formatCurrency(stats.totalRevenue)}
             icon={FiDollarSign}
             trend="up"
             trendValue={`${(stats.revenueGrowth || 0).toFixed(1)}%`}
+            subtitle="This month's total"
             className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
           />
 

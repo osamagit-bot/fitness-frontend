@@ -41,8 +41,14 @@ class Member(models.Model):
         help_text=_('Unique identifier for the athlete')
     )
 
-    biometric_hash = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    # Legacy field - keep for backward compatibility
+    biometric_hash = models.CharField(max_length=255, null=True, blank=True)
     biometric_registered = models.BooleanField(default=False)
+    
+    # New biometric fields for proper duplicate detection
+    biometric_templates = models.JSONField(default=list, blank=True, help_text="Stores multiple biometric templates for comparison")
+    biometric_quality_threshold = models.FloatField(default=0.8, help_text="Minimum quality score for biometric matching")
+    last_biometric_update = models.DateTimeField(null=True, blank=True)
 
     
     first_name = models.CharField(
@@ -201,30 +207,51 @@ class MembershipRevenue(models.Model):
         unique_together = ['month']
     
     @classmethod
-    def update_current_month_revenue(cls):
-        """Update revenue for current month based on active members"""
+    def add_member_revenue(cls, member_fee):
+        """Add revenue when a new member joins (pays for current month)"""
         from datetime import datetime
         
         current_month = datetime.now().replace(day=1).date()
-        
-        # Calculate current revenue from active members
-        current_revenue = Member.objects.aggregate(
-            total=models.Sum('monthly_fee')
-        )['total'] or Decimal('0')
-        
-        current_count = Member.objects.count()
         
         # Get or create revenue record for current month
         revenue_record, created = cls.objects.get_or_create(
             month=current_month,
             defaults={
-                'total_revenue': current_revenue,
-                'member_count': current_count
+                'total_revenue': Decimal('0'),
+                'member_count': 0
             }
         )
         
-        # Only update if current revenue is higher (prevents resets)
-        if current_revenue > revenue_record.total_revenue:
+        # Add the new member's fee to total revenue
+        revenue_record.total_revenue += Decimal(str(member_fee))
+        revenue_record.member_count += 1
+        revenue_record.save()
+        
+        return revenue_record.total_revenue
+    
+    @classmethod
+    def update_current_month_revenue(cls):
+        """Get current month revenue (for compatibility with existing code)"""
+        from datetime import datetime
+        
+        current_month = datetime.now().replace(day=1).date()
+        
+        # Get or create revenue record for current month
+        revenue_record, created = cls.objects.get_or_create(
+            month=current_month,
+            defaults={
+                'total_revenue': Decimal('0'),
+                'member_count': 0
+            }
+        )
+        
+        # If this is a new record, initialize with current active members
+        if created:
+            current_revenue = Member.objects.aggregate(
+                total=models.Sum('monthly_fee')
+            )['total'] or Decimal('0')
+            current_count = Member.objects.count()
+            
             revenue_record.total_revenue = current_revenue
             revenue_record.member_count = current_count
             revenue_record.save()

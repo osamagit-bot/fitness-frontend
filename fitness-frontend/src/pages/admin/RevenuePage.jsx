@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import "react-datepicker/dist/react-datepicker.css";
 import { FiCalendar, FiDownload, FiPrinter } from "react-icons/fi";
 import {
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from "recharts";
 import api from "../../utils/api";
 
@@ -41,7 +41,7 @@ function RevenuePage() {
   // Revenue states
   const [rangeMembershipRevenue, setRangeMembershipRevenue] = useState(0);
   const [rangeProductRevenue, setRangeProductRevenue] = useState(0);
-  const [stats, setStats] = useState({ monthlyRevenue: 0, shopRevenue: 0 });
+  const [stats, setStats] = useState({ monthlyRevenue: 0, shopRevenue: 0, totalMonthlyRevenue: 0 });
 
   // For charts
   const [dailyRevenueChart, setDailyRevenueChart] = useState([]);
@@ -87,6 +87,7 @@ function RevenuePage() {
       setStats({
         monthlyRevenue: parseRevenue(statsRes.data.monthly_revenue),
         shopRevenue: parseRevenue(statsRes.data.monthly_revenue_shop),
+        totalMonthlyRevenue: parseRevenue(statsRes.data.total_monthly_revenue),
       });
       // Ensure we always have arrays
       const membersData = Array.isArray(membersRes.data) 
@@ -303,7 +304,11 @@ function RevenuePage() {
             <div class="summary-card">
               <h3>Total Revenue</h3>
               <div class="amount">${formatAfn(
-                rangeMembershipRevenue + rangeProductRevenue
+                dateRangeType === "monthly" && 
+                new Date(dateRange.startDate).getMonth() === new Date().getMonth() && 
+                new Date(dateRange.startDate).getFullYear() === new Date().getFullYear()
+                  ? stats.totalMonthlyRevenue
+                  : rangeMembershipRevenue + rangeProductRevenue
               )}</div>
             </div>
           </div>
@@ -592,36 +597,11 @@ function RevenuePage() {
     // Use only calculated revenue from actual purchases
     setRangeProductRevenue(_rangeProductRevenue);
     
-    // Range membership revenue - use current monthly revenue from backend
-    // This represents ongoing membership fees, not just new registrations
-    setRangeMembershipRevenue(stats.monthlyRevenue || 0);
+    // Fetch membership revenue for the selected date range
+    fetchMembershipRevenueForRange();
 
-    // Chart: Daily revenue in range (only for shop revenue)
-    const days = [];
-    let current = new Date(dateRange.startDate);
-    const end = new Date(dateRange.endDate);
-    while (current <= end) {
-      days.push(formatDate(current));
-      current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
-    }
-    const chartData = days.map((day) => {
-      const dayProducts = purchases
-        .filter((p) => formatDate(p.date) === day)
-        .reduce((sum, p) => sum + parseFloat(p.total_price || 0), 0);
-      
-      // For daily membership revenue, use proportional amount
-      // Since membership revenue is monthly, divide by days in month
-      const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-      const dayMembers = (stats.monthlyRevenue || 0) / daysInMonth;
-      
-      return {
-        date: day,
-        Membership: dayMembers,
-        Shop: dayProducts,
-        Total: dayMembers + dayProducts,
-      };
-    });
-    setDailyRevenueChart(chartData);
+    // Chart: Daily revenue in range
+    generateDailyRevenueChart();
 
     // Pie: Product sales distribution
     const productMap = {};
@@ -642,8 +622,120 @@ function RevenuePage() {
     );
   }
 
+  // --- Fetch Membership Revenue for Date Range ---
+  const fetchMembershipRevenueForRange = async () => {
+    try {
+      const startDate = dateRange.startDate.toISOString().split('T')[0];
+      const endDate = dateRange.endDate.toISOString().split('T')[0];
+      
+      const response = await api.get(`members/membership_payments/?start_date=${startDate}&end_date=${endDate}`);
+      const membershipRevenue = response.data.total_revenue || 0;
+      
+      console.log(`🔍 Membership revenue for ${startDate} to ${endDate}:`, membershipRevenue, 'AFN');
+      setRangeMembershipRevenue(membershipRevenue);
+      
+      return membershipRevenue;
+    } catch (error) {
+      console.error('❌ Error fetching membership revenue for date range:', error);
+      // Fallback to current monthly revenue if API fails
+      setRangeMembershipRevenue(stats.monthlyRevenue || 0);
+      return stats.monthlyRevenue || 0;
+    }
+  };
+
+  // --- Generate Daily Revenue Chart ---
+  const generateDailyRevenueChart = async () => {
+    try {
+      const startDate = dateRange.startDate.toISOString().split('T')[0];
+      const endDate = dateRange.endDate.toISOString().split('T')[0];
+      
+      // Fetch membership payments for the date range
+      const membershipResponse = await api.get(`members/membership_payments/?start_date=${startDate}&end_date=${endDate}`);
+      const membershipPayments = membershipResponse.data.payments || [];
+      
+      // Generate all days in range
+      const days = [];
+      let current = new Date(dateRange.startDate);
+      const end = new Date(dateRange.endDate);
+      while (current <= end) {
+        days.push(formatDate(current));
+        current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
+      }
+      
+      // Calculate daily revenue
+      const chartData = days.map((day) => {
+        // Shop revenue for this day
+        const dayProducts = purchases
+          .filter((p) => formatDate(p.date) === day)
+          .reduce((sum, p) => sum + parseFloat(p.total_price || 0), 0);
+        
+        // Membership revenue for this day
+        const dayMembership = membershipPayments
+          .filter((p) => p.paid_on === day)
+          .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        
+        return {
+          date: day,
+          Membership: dayMembership,
+          Shop: dayProducts,
+          Total: dayMembership + dayProducts,
+        };
+      });
+      
+      setDailyRevenueChart(chartData);
+    } catch (error) {
+      console.error('❌ Error generating daily revenue chart:', error);
+      // Fallback to simple calculation
+      const days = [];
+      let current = new Date(dateRange.startDate);
+      const end = new Date(dateRange.endDate);
+      while (current <= end) {
+        days.push(formatDate(current));
+        current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
+      }
+      
+      const chartData = days.map((day) => {
+        const dayProducts = purchases
+          .filter((p) => formatDate(p.date) === day)
+          .reduce((sum, p) => sum + parseFloat(p.total_price || 0), 0);
+        
+        return {
+          date: day,
+          Membership: 0, // No membership data available
+          Shop: dayProducts,
+          Total: dayProducts,
+        };
+      });
+      
+      setDailyRevenueChart(chartData);
+    }
+  };
+
   // --- UI Handlers ---
-  const handleRefresh = () => fetchAllData();
+  const refreshMembershipRevenue = async () => {
+    try {
+      console.log('🔄 Refreshing membership revenue...');
+      const response = await api.post('members/refresh_revenue/');
+      console.log('✅ Membership revenue refreshed:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error refreshing membership revenue:', error);
+      throw error;
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      // Refresh membership revenue first
+      await refreshMembershipRevenue();
+      // Then fetch all data
+      await fetchAllData();
+    } catch (error) {
+      console.error('Error during refresh:', error);
+      // Still try to fetch data even if revenue refresh fails
+      fetchAllData();
+    }
+  };
 
   const handleDateRangeChange = (type) => {
     setDateRangeType(type);
@@ -669,7 +761,8 @@ function RevenuePage() {
       setDateRange({ startDate: start, endDate: end });
     } else if (type === "quarterly") {
       const start = new Date(today);
-      start.setMonth(today.getMonth() - 2);
+      start.setMonth(today.getMonth() - 3); // Go back 3 months for quarterly
+      start.setDate(1); // Start from first day of that month
       start.setHours(0, 0, 0, 0);
       const end = new Date(today);
       end.setHours(23, 59, 59, 999);
@@ -858,7 +951,11 @@ function RevenuePage() {
             Total Revenue
           </h4>
           <p className="text-2xl font-bold text-yellow-400">
-            {formatAfn(rangeMembershipRevenue + rangeProductRevenue)}
+            {dateRangeType === "monthly" && 
+             new Date(dateRange.startDate).getMonth() === new Date().getMonth() && 
+             new Date(dateRange.startDate).getFullYear() === new Date().getFullYear()
+              ? formatAfn(stats.totalMonthlyRevenue)
+              : formatAfn(rangeMembershipRevenue + rangeProductRevenue)}
           </p>
         </div>
       </div>
