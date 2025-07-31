@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useTheme } from '../contexts/ThemeContext';
 import api from "../utils/api";
 import { staticTrainings } from "../utils/staticData";
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 const Training = () => {
   const { classes } = useTheme();
@@ -72,6 +74,7 @@ const Training = () => {
   };
 
   useEffect(() => {
+    AOS.init();
     fetchTrainings();
   }, []);
 
@@ -114,9 +117,12 @@ const Training = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-          {trainings.map((training) => (
+          {trainings.map((training, i) => (
             <div
               key={training.id}
+              data-aos="fade-up"
+              data-aos-delay={i * 200}
+              data-aos-duration="800"
               className={`group ${classes.card.primary} rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${classes.border.primary}`}
             >
               <div className="relative h-48 md:h-64 overflow-hidden">

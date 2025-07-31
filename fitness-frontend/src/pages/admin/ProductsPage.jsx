@@ -1,6 +1,7 @@
 // SubPages/ProductsPage.jsx
 import { useEffect, useState } from "react";
 import AppToastContainer from "../../components/ui/ToastContainer";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 
@@ -113,6 +114,7 @@ function ProductsPage() {
     image: null,
   });
   const [imagePreview, setImagePreview] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   useEffect(() => {
     fetchProducts();
@@ -216,29 +218,50 @@ function ProductsPage() {
     }
   };
 
-  const deleteProduct = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      try {
-        const token = localStorage.getItem("admin_access_token");
-        await api.delete(`products/${productId}/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setProducts(
-          products.filter((product) => product.product_id !== productId)
-        );
-        showToast.success("Product deleted successfully!");
-      } catch (error) {
-        console.error("Error deleting product:", error);
-        showToast.error(
-          error.response
-            ? `Failed to delete product: ${
-                error.response.data.detail ||
-                JSON.stringify(error.response.data)
-              }`
-            : "Failed to delete product: Network error"
-        );
-      }
+  const deleteProduct = (productId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteProduct',
+      id: productId,
+      title: 'Delete Product',
+      message: 'Are you sure you want to delete this product? This action cannot be undone.'
+    });
+  };
+
+  const executeDeleteProduct = async (productId) => {
+    try {
+      const token = localStorage.getItem("admin_access_token");
+      await api.delete(`products/${productId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProducts(
+        products.filter((product) => product.product_id !== productId)
+      );
+      showToast.success("Product deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      showToast.error(
+        error.response
+          ? `Failed to delete product: ${
+              error.response.data.detail ||
+              JSON.stringify(error.response.data)
+            }`
+          : "Failed to delete product: Network error"
+      );
     }
+  };
+
+  const handleConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+    
+    if (action === 'deleteProduct') {
+      await executeDeleteProduct(id);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
   };
 
   return (
@@ -683,6 +706,15 @@ function ProductsPage() {
           )}
         </div>
       </div>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCancelAction}
+        onConfirm={handleConfirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
+      
       <AppToastContainer />
     </>
   );

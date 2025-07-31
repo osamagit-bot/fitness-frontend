@@ -629,7 +629,7 @@ const fetchGlobalNotificationSettings = async () => {
           </div>
 
           {/* Desktop Table */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto max-h-96 overflow-y-auto">
             <table className="min-w-full divide-y divide-gray-600">
               <thead className="bg-gray-600">
                 <tr>
@@ -775,7 +775,7 @@ const fetchGlobalNotificationSettings = async () => {
           </div>
           
           {/* Mobile Cards */}
-          <div className="md:hidden">
+          <div className="md:hidden max-h-96 overflow-y-auto">
             {membersLoading ? (
               <div className="p-8 text-center">
                 <div className="flex justify-center">

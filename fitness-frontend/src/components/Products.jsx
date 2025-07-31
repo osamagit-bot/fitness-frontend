@@ -4,6 +4,8 @@ import api from '../utils/api';
 import { staticProducts } from '../utils/staticData';
 import HisabPayCheckout from './payment/HisabPayCheckout';
 import PaymentSuccess from './payment/PaymentSuccess';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -53,6 +55,7 @@ export default function Products() {
   
 
   useEffect(() => {
+    AOS.init();
     fetchProducts();
     checkIfMobile();
     window.addEventListener('resize', checkIfMobile);
@@ -604,9 +607,12 @@ export default function Products() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            {filteredProducts.map((product) => (
+            {filteredProducts.map((product, i) => (
               <div 
-                key={product.product_id} 
+                key={product.product_id}
+                data-aos="fade-up"
+                data-aos-delay={i * 200}
+                data-aos-duration="800"
                 className={`${classes.card.primary} p-3 md:p-4 rounded-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2`}
               >
                 <div className={`mb-3 md:mb-4 h-40 md:h-48 ${classes.bg.secondary} flex items-center justify-center overflow-hidden rounded-lg relative group`}>

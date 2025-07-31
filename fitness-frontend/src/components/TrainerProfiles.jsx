@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useTheme } from '../contexts/ThemeContext';
 import { publicApi } from "../utils/api";
 import { staticTrainers } from "../utils/staticData";
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 const TrainerProfiles = () => {
   const { classes } = useTheme();
@@ -39,6 +41,7 @@ const TrainerProfiles = () => {
   };
 
   useEffect(() => {
+    AOS.init();
     fetchTrainers();
   }, []);
 
@@ -113,9 +116,12 @@ const TrainerProfiles = () => {
           {/* Trainers Grid */}
           {!isLoading && trainers.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 lg:gap-8">
-              {trainers.map((trainer) => (
+              {trainers.map((trainer, i) => (
                 <div
                   key={trainer.id}
+                  data-aos="fade-up"
+                  data-aos-delay={i * 200}
+                  data-aos-duration="800"
                   className={`group ${classes.card.primary} rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 ${classes.border.primary}`}
                 >
                   {/* Trainer Image */}

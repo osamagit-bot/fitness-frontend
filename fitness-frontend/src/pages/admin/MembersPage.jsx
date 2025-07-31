@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import AppToastContainer from "../../components/ui/ToastContainer";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import AppToastContainer from "../../components/ui/ToastContainer";
 import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 
@@ -267,7 +267,7 @@ function MembersPage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1, duration: 0.5 }}
-          className="text-xl md:text-2xl lg:ml-6 font-bold mb-4 md:mb-6 text-yellow-400"
+          className="text-xl md:text-2xl lg:ml-6 lg:mt-5 font-bold mb-4 md:mb-6 text-yellow-400"
         >
           Athletes/Members Management
         </motion.h1>
@@ -438,7 +438,7 @@ function MembersPage() {
                 ${isExpired ? "bg-red-900/30 hover:bg-red-900/40 text-sm" : ""}
                 ${
                   isExpiringSoon && !isExpired
-                    ? "bg-yellow-900/30 text-sm hover:bg-yellow-900/40"
+                    ? "bg-yellow-700/40 text-sm hover:bg-yellow-900/40"
                     : ""
                 }
                 ${
@@ -448,66 +448,181 @@ function MembersPage() {
                 }
               `}
                       >
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        <td className="px-3 md:px-6 py-2 md:py-3 text-xs">
                           {athlete.athlete_id}
                         </td>
                         <td
-                          className={`px-3 md:px-6 py-2 md:py-4 whitespace-nowrap ${
+                          className={`px-3 md:px-6 py-2 md:py-3 text-xs truncate ${
                             isExpired ? "text-red-300 font-semibold" : ""
                           }`}
                         >
                           {athlete.first_name} {athlete.last_name}
                         </td>
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap capitalize">
+                        <td className="px-3 md:px-6 py-2 md:py-3 text-xs capitalize truncate">
                           {athlete.membership_type}
                         </td>
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        <td className="px-3 md:px-6 py-2 md:py-3 text-xs">
                           {athlete.box_number || "-"}
                         </td>
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap capitalize">
+                        <td className="px-3 md:px-6 py-2 md:py-3 text-xs capitalize truncate">
                           {formatTimeSlot(athlete.time_slot)}
                         </td>
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap">
-                          {parseFloat(athlete.monthly_fee).toFixed(2)} AFN
+                        <td className="px-3 md:px-6 py-2 md:py-3 text-xs">
+                          {parseFloat(athlete.monthly_fee).toFixed(0)}
                         </td>
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        <td className="px-3 md:px-6 py-2 md:py-3 text-xs">
                           {formatDate(athlete.start_date)}
                         </td>
                         <td
-                          className={`px-3 md:px-6 py-2 md:py-4 whitespace-nowrap ${
+                          className={`px-3 md:px-6 py-2 md:py-3 text-xs ${
                             isExpired ? "text-red-300 font-semibold" : ""
                           }`}
                         >
                           {formatDate(athlete.expiry_date)}
                         </td>
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap">
+                        <td className="px-3 md:px-6 py-2 md:py-3 text-xs">
                           {isExpired ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-600 text-white">
+                            <span className="px-1 py-1 inline-flex text-xs leading-4 font-semibold rounded bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-200">
                               Expired {Math.abs(daysRemaining)} days ago
                             </span>
                           ) : isExpiringSoon ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-600 text-white">
-                              Expires in {daysRemaining} days
+                            <span className="px-1 py-1 inline-flex text-xs leading-4 font-semibold rounded bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 text-yellow-200">
+                              {daysRemaining} days left
                             </span>
                           ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-600 text-white">
+                            <span className="px-1 py-1 inline-flex text-xs leading-4 font-semibold rounded bg-green-500/20 backdrop-blur-sm border border-green-400/30 text-green-200">
                               Active
                             </span>
                           )}
                         </td>
-                        <td className="px-3 md:px-6 py-2 md:py-4 whitespace-nowrap">
-                          <div className="flex space-x-2">
+                        <td className="px-3 md:px-6 py-2 md:py-3">
+                          <div className="flex space-x-1">
                             {isExpired && (
                               <button
                                 onClick={() => handleRenew(athlete)}
-                                className="text-white p-2 rounded-md bg-amber-600 hover:text-blue-300 mr-2"
+                                className="text-amber-200 px-2 py-1 text-xs rounded bg-amber-500/20 backdrop-blur-sm border border-amber-400/30 hover:bg-amber-500/30 transition-all"
                               >
                                 Renew
                               </button>
                             )}
                             <button
                               onClick={() => deleteAthlete(athlete.athlete_id)}
-                              className="text-black p-2 rounded-md bg-red-400 hover:text-red-900"
+                              className="text-red-200 px-2 py-1 text-xs rounded bg-red-500/20 backdrop-blur-sm border border-red-400/30 hover:bg-red-500/30 transition-all"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Medium Screen Table */}
+          <div className="hidden md:block lg:hidden overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-600">
+              <thead className="bg-gray-900">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-gray-700 divide-y text-white divide-gray-400">
+                {filteredAthletes.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan="5"
+                      className="px-3 py-4 text-center text-gray-500"
+                    >
+                      {searchTerm.trim()
+                        ? `No members found matching "${searchTerm}"`
+                        : statusFilter !== "all"
+                        ? `No ${statusFilter} members found`
+                        : "No athletes found"}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAthletes.map((athlete) => {
+                    const isExpired = isMembershipExpired(athlete.expiry_date);
+                    const isExpiringSoon = isMembershipExpiringSoon(
+                      athlete.expiry_date
+                    );
+                    const daysRemaining = getDaysRemaining(athlete.expiry_date);
+
+                    return (
+                      <tr
+                        key={athlete.athlete_id}
+                        className={`
+                ${isExpired ? "bg-red-900/30 hover:bg-red-900/40 text-sm" : ""}
+                ${
+                  isExpiringSoon && !isExpired
+                    ? "bg-yellow-500/70 text-sm hover:bg-yellow-900/40"
+                    : ""
+                }
+                ${
+                  !isExpired && !isExpiringSoon
+                    ? "hover:bg-gray-500 text-sm"
+                    : ""
+                }
+              `}
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap text-sm">
+                          {athlete.athlete_id}
+                        </td>
+                        <td
+                          className={`px-3 py-2 whitespace-nowrap text-sm ${
+                            isExpired ? "text-red-300 font-semibold" : ""
+                          }`}
+                        >
+                          {athlete.first_name} {athlete.last_name}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap capitalize text-sm">
+                          {athlete.membership_type}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm">
+                          {isExpired ? (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-200">
+                              Expired
+                            </span>
+                          ) : isExpiringSoon ? (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 text-yellow-200">
+                              Soon
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-500/20 backdrop-blur-sm border border-green-400/30 text-green-200">
+                              Active
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm">
+                          <div className="flex space-x-2">
+                            {isExpired && (
+                              <button
+                                onClick={() => handleRenew(athlete)}
+                                className="text-amber-200 px-2 py-1 rounded bg-amber-500/20 backdrop-blur-sm border border-amber-400/30 hover:bg-amber-500/30 transition-all"
+                              >
+                                Renew
+                              </button>
+                            )}
+                            <button
+                              onClick={() => deleteAthlete(athlete.athlete_id)}
+                              className="text-red-200 px-2 py-1 rounded bg-red-500/20 backdrop-blur-sm border border-red-400/30 hover:bg-red-500/30 transition-all"
                             >
                               Delete
                             </button>
@@ -569,15 +684,15 @@ function MembersPage() {
                         </div>
                         <div>
                           {isExpired ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-600 text-white">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-200">
                               Expired
                             </span>
                           ) : isExpiringSoon ? (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-600 text-white">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 text-yellow-200">
                               Expiring Soon
                             </span>
                           ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-600 text-white">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-500/20 backdrop-blur-sm border border-green-400/30 text-green-200">
                               Active
                             </span>
                           )}
@@ -641,14 +756,14 @@ function MembersPage() {
                         {isExpired && (
                           <button
                             onClick={() => handleRenew(athlete)}
-                            className="px-3 py-1 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700"
+                            className="px-3 py-1 bg-amber-500/20 backdrop-blur-sm border border-amber-400/30 text-amber-200 rounded-md text-sm hover:bg-amber-500/30 transition-all"
                           >
                             Renew
                           </button>
                         )}
                         <button
                           onClick={() => deleteAthlete(athlete.athlete_id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+                          className="px-3 py-1 bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-200 rounded-md text-sm hover:bg-red-500/30 transition-all"
                         >
                           Delete
                         </button>

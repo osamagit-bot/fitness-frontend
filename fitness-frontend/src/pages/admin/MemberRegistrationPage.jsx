@@ -1133,6 +1133,7 @@ const RegisterPage = () => {
                       ? "border-green-500"
                       : "border-gray-600"
                   } ${isRenewal ? "bg-gray-700 cursor-not-allowed" : ""}`}
+                  style={{ colorScheme: 'dark' }}
                   min={new Date().toISOString().split("T")[0]}
                   disabled={isRenewal}
                 />
@@ -1158,6 +1159,7 @@ const RegisterPage = () => {
                       ? "border-green-500"
                       : "border-gray-600"
                   }`}
+                  style={{ colorScheme: 'dark' }}
                   min={memberData.start_date}
                 />
               </FormField>

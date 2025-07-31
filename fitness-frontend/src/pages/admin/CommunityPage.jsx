@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppToastContainer from "../../components/ui/ToastContainer";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
 import { formatDate, formatDateTime, getDateFromObject } from "../../utils/dateUtils";
 import { showToast } from "../../utils/toast";
@@ -18,6 +19,7 @@ function AdminCommunityManagement() {
   const [showComments, setShowComments] = useState({});
   const [showReplies, setShowReplies] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   const fetchCommunityData = async () => {
     setLoading(true);
@@ -73,11 +75,21 @@ function AdminCommunityManagement() {
     }
   };
 
-  const handleDeleteAnnouncement = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+  const handleDeleteAnnouncement = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteAnnouncement',
+      id: id,
+      title: 'Delete Announcement',
+      message: 'Are you sure you want to delete this announcement? This action cannot be undone.'
+    });
+  };
+
+  const executeDeleteAnnouncement = async (id) => {
     try {
       await api.delete(`admin-community/${id}/delete_announcement/`);
       setAnnouncements(announcements.filter(a => a.id !== id));
+      showToast.success('Announcement deleted successfully!');
     } catch (err) {
       showToast.error('Failed to delete announcement.');
     }
@@ -110,14 +122,39 @@ function AdminCommunityManagement() {
     }
   };
 
-  const handleDeleteChallenge = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this challenge?')) return;
+  const handleDeleteChallenge = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteChallenge',
+      id: id,
+      title: 'Delete Challenge',
+      message: 'Are you sure you want to delete this challenge? This action cannot be undone.'
+    });
+  };
+
+  const executeDeleteChallenge = async (id) => {
     try {
       await api.delete(`admin-community/${id}/delete_challenge/`);
       setChallenges(challenges.filter(c => c.id !== id));
+      showToast.success('Challenge deleted successfully!');
     } catch (err) {
       showToast.error('Failed to delete challenge.');
     }
+  };
+
+  const handleConfirmAction = async () => {
+    const { action, id } = confirmModal;
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+    
+    if (action === 'deleteAnnouncement') {
+      await executeDeleteAnnouncement(id);
+    } else if (action === 'deleteChallenge') {
+      await executeDeleteChallenge(id);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
   };
 
   const toggleComments = (postId) => {
@@ -422,6 +459,14 @@ function AdminCommunityManagement() {
           </div>
         </div>
       )}
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCancelAction}
+        onConfirm={handleConfirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
       
       <AppToastContainer />
     </>

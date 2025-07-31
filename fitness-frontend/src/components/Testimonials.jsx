@@ -1,7 +1,14 @@
+import { useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 const Testimonials = () => {
   const { classes } = useTheme();
+
+  useEffect(() => {
+    AOS.init();
+  }, []);
   const testimonials = [
     {
       id: 1,
@@ -38,9 +45,12 @@ const Testimonials = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-          {testimonials.map((testimonial) => (
+          {testimonials.map((testimonial, i) => (
             <div 
-              key={testimonial.id} 
+              key={testimonial.id}
+              data-aos="fade-up"
+              data-aos-delay={i * 200}
+              data-aos-duration="800"
               className={`${classes.card.primary} rounded-lg overflow-hidden shadow-lg transition-transform duration-300 hover:transform hover:scale-105`}
             >
               <div className="h-48 md:h-64 bg-yellow-100 relative overflow-hidden">
