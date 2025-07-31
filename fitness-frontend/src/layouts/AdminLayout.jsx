@@ -29,6 +29,7 @@ function AdminLayout() {
     Members: false,
     "Products & Sales": false,
     Training: false,
+    "Manual Shop": false,
   });
 
   // Set user data from localStorage
@@ -220,6 +221,15 @@ function AdminLayout() {
       items: [
         { title: "Trainings", icon: "bx-dumbbell", path: "trainings" },
         { title: "Trainers", icon: "bx-user-voice", path: "trainers" },
+      ],
+    },
+    {
+      title: "Manual Shop",
+      icon: "bx-store-alt",
+      type: "group",
+      items: [
+        { title: "Stock", icon: "bx-plus-circle", path: "stock" },
+        { title: "Sale", icon: "bx-minus-circle", path: "sale" },
       ],
     },
     {

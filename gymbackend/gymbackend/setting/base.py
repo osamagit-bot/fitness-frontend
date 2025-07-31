@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.Attendance',
     'apps.Notifications',
     'apps.Management',
+    'apps.Stock',
 ]
 
 MIDDLEWARE = [

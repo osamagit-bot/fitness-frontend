@@ -49,6 +49,8 @@ const RegisterPage = lazy(() =>
 const RevenuePage = lazy(() => import("./pages/admin/RevenuePage.jsx"));
 const TrainersPage = lazy(() => import("./pages/admin/TrainersPage.jsx"));
 const TrainingsPage = lazy(() => import("./pages/admin/TrainingsPage.jsx"));
+const StockPage = lazy(() => import("./pages/admin/Stock.jsx"));
+const SalePage = lazy(() => import("./pages/admin/Sale.jsx"));
 
 // Member Pages
 import {
@@ -212,6 +214,22 @@ function App() {
             element={
               <Suspense fallback={<LoadingSpinner />}>
                 <AdminSupportManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="stock"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <StockPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="sale"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <SalePage />
               </Suspense>
             }
           />
