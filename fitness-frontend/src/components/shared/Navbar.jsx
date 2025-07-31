@@ -1,6 +1,6 @@
 import 'boxicons/css/boxicons.min.css';
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 
 function Navbar() {
@@ -16,7 +16,20 @@ function Navbar() {
   const timeoutRef = useRef(null);
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDarkMode, toggleTheme, classes } = useTheme();
+
+  // Helper function to check if a nav item is active
+  const isActive = (path) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
+
+  const getActiveClass = (path) => {
+    return isActive(path) 
+      ? 'text-yellow-500 border-b-2 border-yellow-500 pb-1' 
+      : `${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'}`;
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -161,7 +174,7 @@ function Navbar() {
           <nav className="hidden lg:flex items-center space-x-8">
             <ul className={`flex space-x-8 items-center text-base font-medium ${classes.text.accent}`}>
               <li>
-                <button onClick={goToHome} className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}>
+                <button onClick={goToHome} className={`${getActiveClass('/')} transition duration-150 ease-in-out focus:outline-none`}>
                   HOME
                 </button>
               </li>
@@ -172,7 +185,7 @@ function Navbar() {
                 onMouseLeave={() => !isMobile && handleDropdownMouseLeave('categories')}
               >
                 <button
-                  className={`flex items-center ${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}
+                  className={`flex items-center ${getActiveClass('/category')} transition duration-150 ease-in-out focus:outline-none`}
                   onClick={toggleCategoriesDropdown}
                   onMouseEnter={() => !isMobile && handleCategoriesMouseEnter()}
                 >
@@ -219,7 +232,7 @@ function Navbar() {
               </li>
 
               <li>
-                <button onClick={goToSchedule} className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}>
+                <button onClick={goToSchedule} className={`${getActiveClass('/schedule')} transition duration-150 ease-in-out focus:outline-none`}>
                   SCHEDULE
                 </button>
               </li>
@@ -231,7 +244,7 @@ function Navbar() {
 </li>
 
               <li>
-                <button onClick={goToHelpandSupport} className={`${isDarkMode ? 'hover:text-yellow-300' : 'hover:text-gray-600'} transition duration-150 ease-in-out focus:outline-none`}>
+                <button onClick={goToHelpandSupport} className={`${getActiveClass('/helpandsupportpage')} transition duration-150 ease-in-out focus:outline-none`}>
                   HELP & SUPPORT
                 </button>
               </li>
@@ -283,7 +296,11 @@ function Navbar() {
           <nav className="px-2 pt-2 pb-4">
             <button
               onClick={goToHome}
-              className={`block w-full text-left px-3 py-2 rounded-md ${classes.text.accent} font-medium hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
+              className={`block w-full text-left px-3 py-2 rounded-md font-medium transition-colors duration-150 ${
+                isActive('/') 
+                  ? 'bg-yellow-500 text-black' 
+                  : `${classes.text.accent} hover:bg-yellow-500 hover:text-black`
+              }`}
             >
               HOME
             </button>
@@ -291,7 +308,11 @@ function Navbar() {
             <div className="mt-1">
               <button
                 onClick={toggleCategoriesDropdown}
-                className={`flex items-center justify-between w-full px-3 py-2 ${classes.text.accent} font-medium rounded-md hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
+                className={`flex items-center justify-between w-full px-3 py-2 font-medium rounded-md transition-colors duration-150 ${
+                  isActive('/category') 
+                    ? 'bg-yellow-500 text-black' 
+                    : `${classes.text.accent} hover:bg-yellow-500 hover:text-black`
+                }`}
               >
                 <span>SHOP BY CATEGORIES</span>
                 <i className={`bx bx-chevron-down transition-transform ${showCategoriesDropdown ? 'rotate-180' : ''}`}></i>
@@ -336,7 +357,11 @@ function Navbar() {
 
             <button 
               onClick={goToSchedule}
-              className={`mt-1 block w-full text-left px-3 py-2 rounded-md ${classes.text.accent} font-medium hover:bg-yellow-500 hover:text-black transition-colors duration-150`}
+              className={`mt-1 block w-full text-left px-3 py-2 rounded-md font-medium transition-colors duration-150 ${
+                isActive('/schedule') 
+                  ? 'bg-yellow-500 text-black' 
+                  : `${classes.text.accent} hover:bg-yellow-500 hover:text-black`
+              }`}
             >
               SCHEDULE
             </button>
@@ -345,7 +370,11 @@ function Navbar() {
               ABOUT US
             </a>
             
-            <button onClick={goToHelpandSupport} className={`mt-1 block w-full text-left px-3 py-2 rounded-md ${classes.text.accent} font-medium hover:bg-yellow-500 hover:text-black transition-colors duration-150`}>
+            <button onClick={goToHelpandSupport} className={`mt-1 block w-full text-left px-3 py-2 rounded-md font-medium transition-colors duration-150 ${
+                isActive('/helpandsupportpage') 
+                  ? 'bg-yellow-500 text-black' 
+                  : `${classes.text.accent} hover:bg-yellow-500 hover:text-black`
+              }`}>
               HELP & SUPPORT
             </button>
             

@@ -1,16 +1,99 @@
-import AOS from 'aos';
-import 'aos/dist/aos.css';
-import { useEffect, useRef, useState } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import AOS from "aos";
+import "aos/dist/aos.css";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTheme } from "../contexts/ThemeContext";
 
 function Hero() {
   const [isVisible, setIsVisible] = useState(false);
   const [visibleWords, setVisibleWords] = useState(0);
+  const [currentText, setCurrentText] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showCursor, setShowCursor] = useState(true);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const heroRef = useRef(null);
   const { isDarkMode, classes } = useTheme();
 
-  const words = ['REACH', 'YOUR', 'LIMITS', 'AND', 'GET', 'TO', 'THE', 'NEXT', 'LEVEL'];
-  const highlightWords = ['LIMITS', 'NEXT', 'LEVEL'];
+  const words = [
+    "REACH",
+    "YOUR",
+    "LIMITS",
+    "AND",
+    "GET",
+    "TO",
+    "THE",
+    "NEXT",
+    "LEVEL",
+  ];
+  const highlightWords = [
+    "LIMITS",
+    "NEXT",
+    "LEVEL",
+    "BODY",
+    "MIND",
+    "POTENTIAL",
+  ]; // Added words to highlight
+
+  // Typewriter text array
+  const texts = [
+    "REACH YOUR LIMITS AND GET TO THE NEXT LEVEL",
+    "TRANSFORM YOUR BODY AND MIND",
+    "UNLOCK YOUR POTENTIAL TODAY",
+    "EMBRACE THE CHALLENGE AHEAD",
+  ];
+
+  // Mouse tracking for interactive effects
+  const handleMouseMove = useCallback((e) => {
+    setMousePosition({
+      x: (e.clientX / window.innerWidth) * 100,
+      y: (e.clientY / window.innerHeight) * 100,
+    });
+  }, []);
+
+  // Typewriter effect
+  useEffect(() => {
+    const typeSpeed = 100;
+    const deleteSpeed = 50;
+    const pauseTime = 2000;
+
+    const typeWriter = () => {
+      const currentTextFull = texts[currentIndex];
+
+      if (!isDeleting) {
+        // Typing
+        if (currentText.length < currentTextFull.length) {
+          setCurrentText(currentTextFull.substring(0, currentText.length + 1));
+        } else {
+          // Pause before deleting
+          setTimeout(() => setIsDeleting(true), pauseTime);
+        }
+      } else {
+        // Deleting
+        if (currentText.length > 0) {
+          setCurrentText(currentTextFull.substring(0, currentText.length - 1));
+        } else {
+          setIsDeleting(false);
+          setCurrentIndex((prev) => (prev + 1) % texts.length);
+        }
+      }
+    };
+
+    const timer = setTimeout(typeWriter, isDeleting ? deleteSpeed : typeSpeed);
+    return () => clearTimeout(timer);
+  }, [currentText, currentIndex, isDeleting, texts]);
+
+  // Cursor blinking effect - only show cursor when typing is paused
+  useEffect(() => {
+    let cursorTimer;
+    if (!isDeleting && currentText.length === texts[currentIndex].length) {
+      cursorTimer = setInterval(() => {
+        setShowCursor((prev) => !prev);
+      }, 530);
+    } else {
+      setShowCursor(true); // Keep cursor visible while typing/deleting
+    }
+    return () => clearInterval(cursorTimer);
+  }, [isDeleting, currentText, currentIndex, texts]);
 
   useEffect(() => {
     setIsVisible(true);
@@ -20,7 +103,9 @@ function Hero() {
       if (heroRef.current) {
         const scrollPosition = window.scrollY;
         const parallaxFactor = 0.4;
-        heroRef.current.style.backgroundPosition = `center ${scrollPosition * parallaxFactor}px`;
+        heroRef.current.style.backgroundPosition = `center ${
+          scrollPosition * parallaxFactor
+        }px`;
       }
     };
 
@@ -34,9 +119,12 @@ function Hero() {
       });
     }, 500);
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("mousemove", handleMouseMove);
+
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("mousemove", handleMouseMove);
       clearInterval(interval);
     };
   }, [words.length]);
@@ -47,9 +135,27 @@ function Hero() {
       <div
         ref={heroRef}
         className="relative w-full flex flex-col justify-center items-center bg-cover bg-center bg-fixed bg-[url('/images/login2.jpeg')] h-screen overflow-hidden"
+        style={{
+          backgroundPosition: `${50 + mousePosition.x * 0.02}% ${
+            50 + mousePosition.y * 0.02
+          }%`,
+        }}
       >
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-0" />
+        <div
+          className="absolute inset-0 z-0 transition-all duration-1000"
+          style={{
+            background: `
+              radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, 
+                rgba(251, 191, 36, 0.15) 0%, 
+                transparent 50%),
+              linear-gradient(135deg, 
+                rgba(0, 0, 0, 0.8) 0%, 
+                rgba(0, 0, 0, 0.6) 50%, 
+                rgba(0, 0, 0, 0.9) 100%)
+            `,
+          }}
+        />
 
         {/* Floating Particles */}
         <div className="absolute inset-0 z-0 opacity-30">
@@ -72,27 +178,47 @@ function Hero() {
         {/* Hero Content */}
         <div
           className={`z-10 text-center px-4 sm:px-6 lg:px-8 transition-all duration-1000 ease-out transform ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          {/* Heading with Word Animation */}
+          {/* Typewriter Heading */}
           <div className="overflow-hidden">
             <h1 className="hero-text text-white text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold tracking-wide leading-tight mb-3 sm:mb-5">
-              {words.map((word, index) => (
-                <span
-                  key={index}
-                  className={`inline-block mr-4 transition-all duration-500 ease-out ${
-                    index < visibleWords
-                      ? 'opacity-100 transform translate-y-0'
-                      : 'opacity-0 transform translate-y-4'
-                  } ${
-                    highlightWords.includes(word) ? 'text-yellow-500' : 'text-white'
-                  }`}
-                >
-                  {word}
-                </span>
-              ))}
-              <span className="text-yellow-600 animate-pulse text-4xl sm:text-5xl md:text-6xl lg:text-7xl">|</span>
+              {texts[currentIndex].split("").map((char, index) => {
+                const isVisible = index < currentText.length;
+                const word = texts[currentIndex].split(" ").find(w => 
+                  texts[currentIndex].indexOf(w) <= index && 
+                  texts[currentIndex].indexOf(w) + w.length > index
+                );
+                const isHighlighted = word && highlightWords.includes(word.toUpperCase());
+                
+                return (
+                  <span key={`${currentIndex}-${index}`} className="relative">
+                    <span
+                      className={`inline-block transition-all duration-200 ease-out ${
+                        isVisible ? "opacity-100 transform translate-y-0" : "opacity-0 transform translate-y-2"
+                      } ${
+                        isHighlighted ? "text-yellow-500" : "text-white"
+                      }`}
+                      style={{
+                        transitionDelay: isVisible ? `${index * 20}ms` : '0ms'
+                      }}
+                    >
+                      {char === " " ? "\u00A0" : char}
+                    </span>
+                    {index === currentText.length - 1 && (
+                      <span
+                        className={`absolute text-gray-800 text-4xl sm:text-5xl md:text-6xl lg:text-7xl ${
+                          showCursor ? "opacity-100" : "opacity-0"
+                        } transition-opacity duration-10`}
+                        style={{ left: '100%' }}
+                      >
+                        |
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
             </h1>
           </div>
 
@@ -100,20 +226,22 @@ function Hero() {
           <p
             className="w-full sm:w-[90%] md:w-[80%] lg:w-[70%] mt-6 sm:mt-8 md:mt-10 text-white/80 mx-auto text-sm sm:text-base"
             style={{
-              animation: 'fadeIn 1s ease-out forwards',
-              animationDelay: '0.8s',
+              animation: "fadeIn 1s ease-out forwards",
+              animationDelay: "0.8s",
               opacity: 0,
             }}
           >
-            Transform your physique, unlock your potential, and embrace a healthier lifestyle with our expert trainers and state-of-the-art facilities.
+            Transform your physique, unlock your potential, and embrace a
+            healthier lifestyle with our expert trainers and state-of-the-art
+            facilities.
           </p>
 
           {/* Buttons */}
           <div
             className="p-4 sm:p-6 md:p-10 flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center"
             style={{
-              animation: 'fadeIn 1s ease-out forwards',
-              animationDelay: '1s',
+              animation: "fadeIn 1s ease-out forwards",
+              animationDelay: "1s",
               opacity: 0,
             }}
           >
@@ -133,10 +261,26 @@ function Hero() {
       {/* Feature Cards - Below Viewport */}
       <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full z-10">
         {[
-          { icon: 'bx-brain', title: 'BODY & MIND', desc: 'Balance your mental and physical health through mindful training and technique.' },
-          { icon: 'bx-heart', title: 'HEALTHY LIFE', desc: 'Develop sustainable habits that promote longevity and overall wellbeing.' },
-          { icon: 'bx-target-lock', title: 'STRATEGIES', desc: 'Personalized fitness plans designed to target your specific goals and needs.' },
-          { icon: 'bx-dumbbell', title: 'WORKOUT', desc: 'Expert-designed routines that maximize results and minimize injury risk.' },
+          {
+            icon: "bx-brain",
+            title: "BODY & MIND",
+            desc: "Balance your mental and physical health through mindful training and technique.",
+          },
+          {
+            icon: "bx-heart",
+            title: "HEALTHY LIFE",
+            desc: "Develop sustainable habits that promote longevity and overall wellbeing.",
+          },
+          {
+            icon: "bx-target-lock",
+            title: "STRATEGIES",
+            desc: "Personalized fitness plans designed to target your specific goals and needs.",
+          },
+          {
+            icon: "bx-dumbbell",
+            title: "WORKOUT",
+            desc: "Expert-designed routines that maximize results and minimize injury risk.",
+          },
         ].map((card, i) => (
           <div
             key={i}
@@ -144,7 +288,11 @@ function Hero() {
             data-aos-delay={i * 200}
             data-aos-duration="800"
             className={`group relative overflow-hidden w-full h-64 md:h-80 ${
-              i % 2 === 0 ? (isDarkMode ? 'bg-gray-900 text-yellow-400' : 'bg-white text-gray-900') : 'bg-yellow-400 text-black'
+              i % 2 === 0
+                ? isDarkMode
+                  ? "bg-gray-900 text-yellow-400"
+                  : "bg-white text-gray-900"
+                : "bg-yellow-400 text-black"
             } py-8 px-6 flex flex-col items-center justify-center transition-all duration-500 hover:scale-[1.02] hover:shadow-xl`}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -214,7 +362,8 @@ function Hero() {
         }
 
         @keyframes pulse {
-          0%, 100% {
+          0%,
+          100% {
             opacity: 1;
           }
           50% {
