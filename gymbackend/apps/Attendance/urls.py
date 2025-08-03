@@ -19,6 +19,7 @@ urlpatterns = [
     path('webauthn/checkin/', biometric_views.webauthn_check_in, name='webauthn-checkin'),
     path('webauthn/kiosk/options/', biometric_views.kiosk_authentication_options, name='kiosk-auth-options'),
     path('webauthn/kiosk/checkin/', biometric_views.kiosk_checkin, name='kiosk-checkin'),
+    path('webauthn/kiosk/external-sensor/', biometric_views.external_sensor_checkin, name='external-sensor-checkin'),
     
     # PIN endpoints
     path('pin/checkin/', biometric_views.pin_checkin, name='pin-checkin'),

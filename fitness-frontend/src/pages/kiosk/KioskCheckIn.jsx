@@ -4,6 +4,7 @@ import "../../styles/kiosk.css";
 // --- CHANGE: Import both api and publicApi ---
 import { publicApi } from "../../utils/api";
 import { isWebAuthnSupported, kioskAuthenticate } from "../../utils/webauthn";
+import { smartBiometricAuth } from "../../utils/smartBiometricAuth";
 import PinCheckIn from "../../components/PinCheckIn";
 
 const KioskCheckIn = () => {
@@ -19,6 +20,8 @@ const KioskCheckIn = () => {
     return saved === "true";
   });
   const [showPinMode, setShowPinMode] = useState(false);
+  const [authMethod, setAuthMethod] = useState(null);
+  const [sensorStatus, setSensorStatus] = useState('initializing');
   const intervalRef = useRef(null);
   const checkInTimeoutRef = useRef(null);
   const authTimeoutRef = useRef(null);
@@ -35,6 +38,9 @@ const KioskCheckIn = () => {
 
     // Initialize kiosk (fetch data only)
     initializeKiosk();
+    
+    // Initialize smart biometric authentication
+    initializeSmartAuth();
 
     return () => {
       clearInterval(timeInterval);
@@ -46,6 +52,9 @@ const KioskCheckIn = () => {
         abortControllerRef.current = null;
       }
       isAuthenticatingRef.current = false;
+      
+      // Stop smart authentication
+      smartBiometricAuth.stopAuthentication();
     };
   }, []);
 
@@ -70,6 +79,29 @@ const KioskCheckIn = () => {
       await fetchTodayStats();
     } catch (error) {
       console.error("Failed to initialize kiosk:", error);
+    }
+  };
+
+  const initializeSmartAuth = async () => {
+    try {
+      setSensorStatus('detecting');
+      console.log("🚀 Initializing smart biometric authentication...");
+      
+      // Listen for authentication method changes
+      smartBiometricAuth.onAuthMethodChange((method) => {
+        console.log("🔄 Authentication method detected:", method);
+        setAuthMethod(method);
+        setSensorStatus('ready');
+      });
+      
+      // Initialize the authentication system
+      const method = await smartBiometricAuth.initialize();
+      console.log("✅ Smart authentication initialized:", method);
+      
+    } catch (error) {
+      console.error("❌ Failed to initialize smart authentication:", error);
+      setSensorStatus('error');
+      setErrorMessage("Authentication system initialization failed");
     }
   };
 
@@ -275,17 +307,51 @@ const KioskCheckIn = () => {
       return;
     }
 
-    console.log("Calling startAutomaticAuthentication...");
-    await startAutomaticAuthentication(effectiveAutoMode); // Pass effectiveAutoMode to ensure consistency
+    console.log("Starting smart biometric authentication...");
+    await startSmartAuthentication(effectiveAutoMode);
+  };
 
-    // If auto mode is still enabled, retry after a short delay
-    if (effectiveAutoMode) {
-      // Check effectiveAutoMode directly
-      console.log("Scheduling next authentication in 3 seconds...");
-      authTimeoutRef.current = setTimeout(
-        () => startContinuousAuthentication(false, effectiveAutoMode),
-        3000
+  const startSmartAuthentication = async (effectiveAutoMode) => {
+    try {
+      isAuthenticatingRef.current = true;
+      setIsProcessing(true);
+      setErrorMessage(null);
+
+      // Use smart biometric authentication
+      const result = await smartBiometricAuth.startKioskAuthentication(
+        handleSuccessfulCheckIn,
+        (error) => {
+          console.error("Smart authentication error:", error);
+          if (error.name === "NotAllowedError") {
+            console.log("User cancelled authentication");
+            lastCancelTimeRef.current = Date.now();
+            cancelCountRef.current++;
+            showTemporaryError("Authentication cancelled - Auto mode still active");
+          } else if (error.name === "AbortError") {
+            console.log("Authentication was aborted");
+          } else {
+            console.error("Authentication error:", error);
+            showTemporaryError("Authentication failed. Please try again.");
+          }
+          
+          // Retry if still in auto mode
+          if (effectiveAutoMode) {
+            authTimeoutRef.current = setTimeout(
+              () => startContinuousAuthentication(false, effectiveAutoMode),
+              3000
+            );
+          }
+        }
       );
+
+      console.log("Smart authentication result:", result);
+
+    } catch (error) {
+      console.error("Failed to start smart authentication:", error);
+      setErrorMessage("Authentication system error");
+    } finally {
+      setIsProcessing(false);
+      isAuthenticatingRef.current = false;
     }
   };
 
@@ -619,6 +685,31 @@ const KioskCheckIn = () => {
                     ? "Verifying your fingerprint..."
                     : "Place your finger on the sensor to check in"}
                 </p>
+                
+                {/* Authentication Method Status */}
+                {authMethod && (
+                  <div className="mt-4 px-4 py-2 bg-gray-800/60 rounded-lg border border-yellow-500/30">
+                    <div className="text-sm text-gray-300">
+                      <span className="text-yellow-400">📡 </span>
+                      Active: {authMethod.name}
+                      {authMethod.type === 'external_sensor' && (
+                        <span className="ml-2 text-green-400">✅ External Sensor Detected</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Sensor Status */}
+                {sensorStatus === 'detecting' && (
+                  <div className="mt-2 text-sm text-yellow-400 animate-pulse">
+                    🔍 Detecting sensors...
+                  </div>
+                )}
+                {sensorStatus === 'error' && (
+                  <div className="mt-2 text-sm text-red-400">
+                    ⚠️ Sensor detection failed
+                  </div>
+                )}
                 
                 {/* PIN Mode Toggle */}
                 <div className="mt-6">

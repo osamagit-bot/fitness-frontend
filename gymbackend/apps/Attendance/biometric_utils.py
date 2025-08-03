@@ -180,3 +180,130 @@ class BiometricSecurity:
         except Exception as e:
             print(f"Member search error: {e}")
             return None
+    
+    @staticmethod
+    def enhanced_biometric_search(biometric_data: str, sensor_type: str = 'unknown') -> Optional[Member]:
+        """
+        Enhanced biometric search specifically for external sensors
+        Different sensors may provide different data formats
+        """
+        try:
+            print(f"Enhanced search for {sensor_type} sensor data...")
+            
+            # First try standard search
+            member = BiometricSecurity.find_member_by_biometric(biometric_data)
+            if member:
+                return member
+            
+            # Try sensor-specific matching algorithms
+            if sensor_type.lower() in ['digital_persona', 'dp']:
+                return BiometricSecurity._search_digital_persona(biometric_data)
+            elif sensor_type.lower() in ['secugen', 'sg']:
+                return BiometricSecurity._search_secugen(biometric_data)
+            elif sensor_type.lower() in ['futronic', 'ft']:
+                return BiometricSecurity._search_futronic(biometric_data)
+            elif sensor_type.lower() in ['suprema', 'sp']:
+                return BiometricSecurity._search_suprema(biometric_data)
+            else:
+                # Generic external sensor search with lower threshold
+                return BiometricSecurity._search_generic_external(biometric_data)
+            
+        except Exception as e:
+            print(f"Enhanced search error: {e}")
+            return None
+    
+    @staticmethod
+    def _search_digital_persona(biometric_data: str) -> Optional[Member]:
+        """Digital Persona specific search algorithm"""
+        try:
+            # Digital Persona often provides base64 encoded template data
+            # We may need to normalize or decode it
+            normalized_data = biometric_data
+            
+            # If it looks like base64, try to decode and re-encode consistently
+            try:
+                import base64
+                decoded = base64.b64decode(biometric_data)
+                normalized_data = base64.b64encode(decoded).decode()
+            except:
+                pass  # Use original data if decoding fails
+            
+            return BiometricSecurity.find_member_by_biometric(normalized_data)
+            
+        except Exception as e:
+            print(f"Digital Persona search error: {e}")
+            return None
+    
+    @staticmethod
+    def _search_secugen(biometric_data: str) -> Optional[Member]:
+        """SecuGen specific search algorithm"""
+        try:
+            # SecuGen may provide WSQ or other formats
+            # For now, use standard search
+            return BiometricSecurity.find_member_by_biometric(biometric_data)
+            
+        except Exception as e:
+            print(f"SecuGen search error: {e}")
+            return None
+    
+    @staticmethod
+    def _search_futronic(biometric_data: str) -> Optional[Member]:
+        """Futronic specific search algorithm"""
+        try:
+            # Futronic specific processing if needed
+            return BiometricSecurity.find_member_by_biometric(biometric_data)
+            
+        except Exception as e:
+            print(f"Futronic search error: {e}")
+            return None
+    
+    @staticmethod
+    def _search_suprema(biometric_data: str) -> Optional[Member]:
+        """Suprema specific search algorithm"""
+        try:
+            # Suprema specific processing if needed
+            return BiometricSecurity.find_member_by_biometric(biometric_data)
+            
+        except Exception as e:
+            print(f"Suprema search error: {e}")
+            return None
+    
+    @staticmethod
+    def _search_generic_external(biometric_data: str) -> Optional[Member]:
+        """Generic external sensor search with relaxed matching"""
+        try:
+            search_features = BiometricSecurity.extract_biometric_features(biometric_data)
+            if not search_features:
+                return None
+            
+            best_match = None
+            best_similarity = 0.0
+            
+            # Use lower threshold for external sensors
+            EXTERNAL_THRESHOLD = 0.75  # Slightly lower than standard
+            
+            for member in Member.objects.filter(biometric_registered=True).exclude(
+                biometric_hash__isnull=True
+            ).exclude(biometric_hash=''):
+                
+                if not member.biometric_hash:
+                    continue
+                
+                existing_features = BiometricSecurity.extract_biometric_features(member.biometric_hash)
+                if not existing_features:
+                    continue
+                
+                similarity = BiometricSecurity.calculate_similarity(search_features, existing_features)
+                
+                if similarity > best_similarity and similarity >= EXTERNAL_THRESHOLD:
+                    best_similarity = similarity
+                    best_match = member
+            
+            if best_match:
+                print(f"✅ External sensor match: {best_match.first_name} {best_match.last_name} (similarity: {best_similarity:.3f})")
+            
+            return best_match
+            
+        except Exception as e:
+            print(f"Generic external search error: {e}")
+            return None

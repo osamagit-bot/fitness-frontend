@@ -50,25 +50,26 @@ function Hero() {
     });
   }, []);
 
-  // Typewriter effect
+  // Enhanced typewriter effect with smoother animations
   useEffect(() => {
-    const typeSpeed = 100;
-    const deleteSpeed = 50;
-    const pauseTime = 2000;
+    const typeSpeed = 80;
+    const deleteSpeed = 40;
+    const pauseTime = 3000;
+    const characterPauseVariation = Math.random() * 30 + 10; // Natural typing variation
 
     const typeWriter = () => {
       const currentTextFull = texts[currentIndex];
 
       if (!isDeleting) {
-        // Typing
+        // Typing with natural variation
         if (currentText.length < currentTextFull.length) {
           setCurrentText(currentTextFull.substring(0, currentText.length + 1));
         } else {
-          // Pause before deleting
+          // Longer pause at end before deleting
           setTimeout(() => setIsDeleting(true), pauseTime);
         }
       } else {
-        // Deleting
+        // Faster, smoother deleting
         if (currentText.length > 0) {
           setCurrentText(currentTextFull.substring(0, currentText.length - 1));
         } else {
@@ -78,19 +79,22 @@ function Hero() {
       }
     };
 
-    const timer = setTimeout(typeWriter, isDeleting ? deleteSpeed : typeSpeed);
+    const timer = setTimeout(
+      typeWriter, 
+      isDeleting ? deleteSpeed : typeSpeed + characterPauseVariation
+    );
     return () => clearTimeout(timer);
   }, [currentText, currentIndex, isDeleting, texts]);
 
-  // Cursor blinking effect - only show cursor when typing is paused
+  // Enhanced cursor blinking with smooth transitions
   useEffect(() => {
     let cursorTimer;
     if (!isDeleting && currentText.length === texts[currentIndex].length) {
       cursorTimer = setInterval(() => {
         setShowCursor((prev) => !prev);
-      }, 530);
+      }, 600);
     } else {
-      setShowCursor(true); // Keep cursor visible while typing/deleting
+      setShowCursor(true);
     }
     return () => clearInterval(cursorTimer);
   }, [isDeleting, currentText, currentIndex, texts]);
@@ -181,7 +185,7 @@ function Hero() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          {/* Typewriter Heading */}
+          {/* Enhanced Typewriter Heading */}
           <div className="overflow-hidden">
             <h1 className="hero-text text-white text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold tracking-wide leading-tight mb-3 sm:mb-5">
               {texts[currentIndex].split("").map((char, index) => {
@@ -195,23 +199,31 @@ function Hero() {
                 return (
                   <span key={`${currentIndex}-${index}`} className="relative">
                     <span
-                      className={`inline-block transition-all duration-200 ease-out ${
-                        isVisible ? "opacity-100 transform translate-y-0" : "opacity-0 transform translate-y-2"
+                      className={`inline-block transition-all duration-500 ease-out ${
+                        isVisible 
+                          ? "opacity-100 transform translate-y-0 scale-100" 
+                          : "opacity-0 transform translate-y-4 scale-95"
                       } ${
-                        isHighlighted ? "text-yellow-500" : "text-white"
+                        isHighlighted 
+                          ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]" 
+                          : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                       }`}
                       style={{
-                        transitionDelay: isVisible ? `${index * 20}ms` : '0ms'
+                        transitionDelay: isVisible ? `${index * 25}ms` : '0ms',
+                        filter: isHighlighted ? 'brightness(1.1)' : 'brightness(1)',
                       }}
                     >
                       {char === " " ? "\u00A0" : char}
                     </span>
                     {index === currentText.length - 1 && (
                       <span
-                        className={`absolute text-gray-800 text-4xl sm:text-5xl md:text-6xl lg:text-7xl ${
-                          showCursor ? "opacity-100" : "opacity-0"
-                        } transition-opacity duration-10`}
-                        style={{ left: '100%' }}
+                        className={`absolute text-yellow-400 text-4xl sm:text-5xl md:text-6xl lg:text-7xl ${
+                          showCursor ? "opacity-100 scale-100" : "opacity-0 scale-110"
+                        } transition-all duration-300 ease-in-out drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]`}
+                        style={{ 
+                          left: '100%',
+                          animation: showCursor ? 'pulse-glow 1.5s ease-in-out infinite' : 'none'
+                        }}
                       >
                         |
                       </span>
@@ -310,7 +322,7 @@ function Hero() {
         ))}
       </div>
 
-      {/* Custom animations */}
+      {/* Enhanced Custom Animations */}
       <style jsx="true">{`
         @keyframes slideInUp {
           from {
@@ -369,6 +381,56 @@ function Hero() {
           50% {
             opacity: 0;
           }
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% {
+            opacity: 1;
+            filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.8));
+            transform: scale(1.05);
+          }
+        }
+
+        @keyframes text-glow {
+          0%, 100% {
+            text-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
+          }
+          50% {
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 30px rgba(251, 191, 36, 0.4);
+          }
+        }
+
+        @keyframes character-appear {
+          0% {
+            opacity: 0;
+            transform: translateY(30px) translateX(-10px) scale(0.8) rotateX(90deg);
+            filter: blur(4px);
+          }
+          60% {
+            opacity: 0.8;
+            transform: translateY(-5px) translateX(2px) scale(1.1) rotateX(0deg);
+            filter: blur(1px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) translateX(0) scale(1) rotateX(0deg);
+            filter: blur(0px);
+          }
+        }
+
+        .hero-text {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+
+        .text-appear {
+          animation: character-appear 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
       `}</style>
     </>

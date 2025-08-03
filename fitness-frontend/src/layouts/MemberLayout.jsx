@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import MaintenanceCheck from '../components/MaintenanceCheck';
 import MemberSidebar from '../components/shared/MemberSidebar';
 import MemberHeader from '../components/shared/MemberHeader';
 import useMultiAuth from '../hooks/useMultiAuth';
@@ -127,28 +126,26 @@ const MemberDashboard = () => {
   };
 
   return (
-    <MaintenanceCheck>
-      <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
-        {/* Sidebar */}
-        <MemberSidebar userData={userData} />
+    <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+      {/* Sidebar */}
+      <MemberSidebar userData={userData} />
+      
+      {/* Main Content */}
+      <div className="flex-1 lg:ml-64 bg-gradient-to-br from-gray-800 via-gray-800 to-black">
+        {/* Header */}
+        <MemberHeader 
+          memberData={memberData}
+          notifications={notifications}
+          setNotifications={setNotifications}
+          loading={loading}
+        />
         
-        {/* Main Content */}
-        <div className="flex-1 lg:ml-64 bg-gradient-to-br from-gray-800 via-gray-800 to-black">
-          {/* Header */}
-          <MemberHeader 
-            memberData={memberData}
-            notifications={notifications}
-            setNotifications={setNotifications}
-            loading={loading}
-          />
-          
-          {/* Page Content */}
-          <div className="p-4 overflow-auto">
-            <Outlet />
-          </div>
+        {/* Page Content */}
+        <div className="p-4 overflow-auto">
+          <Outlet />
         </div>
       </div>
-    </MaintenanceCheck>
+    </div>
   );
 };
 

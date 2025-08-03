@@ -10,41 +10,56 @@ const MaintenanceCheck = ({ children }) => {
   useEffect(() => {
     const checkMaintenance = async () => {
       try {
-        // Only check maintenance mode for admin users
         const isAdmin = localStorage.getItem('admin_access_token');
         const isMember = localStorage.getItem('member_access_token');
         
-        // Skip maintenance check for members - they don't need to check this
+        // Completely skip maintenance check for members
         if (isMember && !isAdmin) {
+          console.log('Member session detected - skipping maintenance check');
+          setMaintenanceMode(false);
+          setLoading(false);
+          return;
+        }
+        
+        // Only proceed if user is admin
+        if (!isAdmin) {
           setMaintenanceMode(false);
           setLoading(false);
           return;
         }
         
         // Only admins should check maintenance mode
-        if (isAdmin) {
-          const response = await api.get('/admin-dashboard/maintenance-mode/');
-          const isMaintenanceActive = response.data.enabled || false;
+        console.log('Admin session detected - checking maintenance mode');
+        const response = await api.get('/admin-dashboard/maintenance-mode/');
+        const isMaintenanceActive = response.data.enabled || false;
+        
+        if (isMaintenanceActive) {
+          // Clear member session and redirect to login
+          localStorage.removeItem('member_access_token');
+          localStorage.removeItem('member_refresh_token');
+          localStorage.removeItem('member_user_id');
+          localStorage.removeItem('member_username');
+          localStorage.removeItem('member_name');
+          localStorage.removeItem('member_id');
+          localStorage.removeItem('member_isAuthenticated');
           
-          if (isMaintenanceActive) {
-            // Clear member session and redirect to login
-            localStorage.removeItem('member_access_token');
-            localStorage.removeItem('member_refresh_token');
-            localStorage.removeItem('member_user_id');
-            localStorage.removeItem('member_username');
-            localStorage.removeItem('member_name');
-            localStorage.removeItem('member_id');
-            localStorage.removeItem('member_isAuthenticated');
-            
-            navigate('/login');
-            return;
-          }
+          navigate('/login');
+          return;
         }
         
         setMaintenanceMode(false);
       } catch (error) {
-        // Handle all errors gracefully
-        console.log('Maintenance check skipped or failed:', error.message);
+        // Handle all errors gracefully - don't log maintenance errors for members
+        const isMember = localStorage.getItem('member_access_token');
+        const isAdmin = localStorage.getItem('admin_access_token');
+        
+        if (!isAdmin && isMember) {
+          // Silently fail for members
+          console.log('Member maintenance check bypassed');
+        } else {
+          console.log('Admin maintenance check failed:', error.message);
+        }
+        
         setMaintenanceMode(false);
       } finally {
         setLoading(false);
@@ -53,10 +68,19 @@ const MaintenanceCheck = ({ children }) => {
 
     checkMaintenance();
     
-    // Check maintenance mode every 30 seconds
-    const interval = setInterval(checkMaintenance, 30000);
+    // Only set interval for admin users
+    const isAdmin = localStorage.getItem('admin_access_token');
+    const isMember = localStorage.getItem('member_access_token');
     
-    return () => clearInterval(interval);
+    let interval;
+    if (isAdmin && !isMember) {
+      // Check maintenance mode every 30 seconds for admins only
+      interval = setInterval(checkMaintenance, 30000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [navigate]);
 
   if (loading) {

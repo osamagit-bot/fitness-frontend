@@ -52,6 +52,12 @@ def webauthn_register_options(request):
                 {'type': 'public-key', 'alg': -7},   # ES256
                 {'type': 'public-key', 'alg': -257}, # RS256
             ],
+            'authenticatorSelection': {
+                'authenticatorAttachment': 'platform',
+                'userVerification': 'required',
+                'requireResidentKey': True,  # Enable resident keys for automatic detection
+                'residentKey': 'required'    # Explicitly require resident keys
+            },
             'timeout': 60000,
             'attestation': 'direct',
         }
@@ -316,9 +322,9 @@ def kiosk_authentication_options(request):
         
         options = {
             'challenge': challenge,
-            'allowCredentials': credentials,
-            'userVerification': 'required',
-            'timeout': 30000,  # 30 seconds
+            # Completely omit allowCredentials for true discoverable credentials
+            'userVerification': 'discouraged',  # Use 'discouraged' for silent authentication
+            'timeout': 60000,  # 60 seconds for more time
         }
         
         return JsonResponse({'options': options})
@@ -651,6 +657,133 @@ def reset_member_pin(request):
         return JsonResponse({'error': 'Invalid JSON data'}, status=400)
     except Exception as e:
         print(f"Reset PIN error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def external_sensor_checkin(request):
+    """
+    Handle check-in from external USB fingerprint sensors
+    Bypasses Windows Hello/WebAuthn completely
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        fingerprint_data = data.get('fingerprint_data')
+        sensor_type = data.get('sensor_type', 'unknown')
+        quality = data.get('quality', 'unknown')
+        
+        print(f"External sensor check-in: sensor={sensor_type}, quality={quality}")
+        
+        if not fingerprint_data:
+            return JsonResponse({'error': 'Fingerprint data required'}, status=400)
+        
+        # Enhanced member detection using biometric matching
+        from .biometric_utils import BiometricSecurity
+        
+        # Convert external sensor fingerprint data to our internal format
+        # This may need adjustment based on the specific sensor SDK format
+        if isinstance(fingerprint_data, dict):
+            # Extract the actual fingerprint template/hash
+            biometric_hash = fingerprint_data.get('template') or fingerprint_data.get('hash') or str(fingerprint_data)
+        else:
+            biometric_hash = str(fingerprint_data)
+        
+        print(f"Processing biometric hash: {biometric_hash[:20]}...")
+        
+        # Find member by biometric hash
+        member = None
+        
+        # Try exact match first
+        try:
+            member = Member.objects.get(biometric_hash=biometric_hash, biometric_registered=True)
+            print(f"✅ Exact match found: {member.first_name} {member.last_name}")
+        except Member.DoesNotExist:
+            # Try enhanced matching
+            member = BiometricSecurity.find_member_by_biometric(biometric_hash)
+            
+            if not member:
+                # For external sensors, we might need to try different matching algorithms
+                # depending on the sensor type
+                member = BiometricSecurity.enhanced_biometric_search(biometric_hash, sensor_type)
+        
+        if not member:
+            return JsonResponse({
+                'error': 'Fingerprint not recognized. Please ensure your fingerprint is registered.',
+                'error_code': 'EXTERNAL_SENSOR_NOT_RECOGNIZED',
+                'sensor_type': sensor_type,
+                'debug_info': {
+                    'biometric_hash': biometric_hash[:20] + '...',
+                    'total_registered_members': Member.objects.filter(biometric_registered=True).count()
+                }
+            }, status=404)
+        
+        # Check if already checked in today
+        today = date.today()
+        attendance, created = Attendance.objects.get_or_create(
+            member=member,
+            date=today,
+            defaults={
+                'check_in_time': timezone.now(),
+                'verification_method': f'External-{sensor_type}'
+            }
+        )
+        
+        print(f"External sensor check-in {'created' if created else 'already existed'} for {member.first_name}")
+        
+        # Send notification to member
+        if created:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.Notifications.models import Notification
+            
+            try:
+                notification = Notification.objects.create(
+                    user=member.user,
+                    message=f"Welcome back, {member.first_name}! Checked in via external sensor at {get_afghanistan_time(attendance.check_in_time).strftime('%I:%M %p')}"
+                )
+                
+                channel_layer = get_channel_layer()
+                notification_data = {
+                    "id": notification.id,
+                    "message": notification.message,
+                    "created_at": notification.created_at.isoformat(),
+                    "is_read": notification.is_read,
+                    "link": "/member-dashboard/attendance"
+                }
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{member.user.id}_notifications",
+                    {
+                        "type": "send_notification",
+                        "notification": notification_data
+                    }
+                )
+            except Exception as e:
+                print(f"Failed to send external sensor check-in notification: {e}")
+        
+        return JsonResponse({
+            'success': True,
+            'member': {
+                'athlete_id': member.athlete_id,
+                'name': f"{member.first_name} {member.last_name}",
+                'first_name': member.first_name,
+                'last_name': member.last_name,
+            },
+            'already_checked_in': not created,
+            'check_in_time': get_afghanistan_time(attendance.check_in_time).isoformat() if attendance.check_in_time else None,
+            'sensor_info': {
+                'type': sensor_type,
+                'quality': quality
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        print(f"External sensor check-in error: {e}")
+        import traceback
+        print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
