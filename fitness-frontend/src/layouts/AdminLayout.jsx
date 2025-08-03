@@ -253,9 +253,9 @@ function AdminLayout() {
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-gradient-to-br from-gray-900 to-black relative overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen bg-gradient-to-b from-gray-700 to-gray-800 relative overflow-hidden">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-gradient-to-r from-gray-800 to-gray-900 p-4 flex justify-between items-center shadow-lg z-40">
+      <div className="lg:hidden h-20 bg-gradient-to-r from-gray-800 to-gray-900 p-4 flex justify-between items-center shadow-lg z-40">
         <h1 className="text-xl font-bold text-white">Admin Portal</h1>
         <button
           onClick={toggleSidebar}
@@ -265,109 +265,147 @@ function AdminLayout() {
         </button>
       </div>
 
-      {/* Sidebar - Keep your existing sidebar JSX but remove the auth loading logic */}
+      {/* Enhanced Sidebar */}
       <div
         className={`
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-        lg:translate-x-0 lg:w-72 bg-gradient-to-b from-gray-700 to-gray-900 text-white flex flex-col
-        transform transition-all duration-300 ease-in-out
-        fixed lg:relative z-30 h-full lg:h-auto
-        w-80 shadow-2xl
+        lg:translate-x-0 lg:w-80 bg-gradient-to-b from-gray-700 to-gray-800 text-white flex flex-col
+        transform transition-all duration-500 ease-in-out
+        fixed lg:relative z-30 h-full
+        w-80 shadow-2xl border-r border-gray-700
       `}
       >
-        {/* Sidebar Header */}
-        <div className="p-6 pb-4 relative">
-          <div className="absolute top-0 left-0 w-full bg-gray-900"></div>
-          <div className="relative z-10 flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+        {/* Enhanced Sidebar Header */}
+        <div className="p-6 pb-4 relative bg-gradient-to-r from-gray-800 to-gray-700 border-b border-gray-600">
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5"></div>
+          <div className="relative z-10 flex items-center space-x-4">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300">
               <i className="bx bx-shield-alt-2 text-2xl text-black"></i>
             </div>
             <div>
-              <h1 className="text-md font-bold">Admin Dashboard</h1>
-              <p className="text-xs text-gray-400">
-                {userData?.email || "Administrator"}
+              <h1 className="text-lg font-bold text-white">Admin Portal</h1>
+              <p className="text-sm text-gray-300 flex items-center">
+                <i className="bx bx-user text-xs mr-1"></i>
+                {userData?.name || "Administrator"}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Sidebar Menu */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {menuItems.map((item) => {
-            if (item.type === "link") {
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(`/admin/${item.path}`)}
-                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200 ${
-                    activeTab === item.path
-                      ? "bg-yellow-500 text-black shadow-md"
-                      : "text-gray-300 hover:bg-gray-700/50"
-                  }`}
-                >
-                  <i className={`bx ${item.icon} mr-3 text-xl`}></i>
-                  <span className="font-medium">{item.title}</span>
-                </button>
-              );
-            } else if (item.type === "group") {
-              return (
-                <div key={item.title}>
-                  <button
-                    onClick={() => toggleGroup(item.title)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-gray-300 hover:bg-gray-700/50 rounded-lg transition-all duration-200"
-                  >
-                    <div className="flex items-center">
-                      <i className={`bx ${item.icon} mr-3 text-xl`}></i>
-                      <span className="font-medium">{item.title}</span>
-                    </div>
-                    <i
-                      className={`bx bx-chevron-down transition-transform ${
-                        expandedGroups[item.title] ? "rotate-180" : ""
-                      }`}
-                    ></i>
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ${
-                      expandedGroups[item.title]
-                        ? "max-h-96 opacity-100"
-                        : "max-h-0 opacity-0"
+        {/* Enhanced Sidebar Menu */}
+        <nav className="flex-1 px-4 py-4 space-y-1" style={{height: 'calc(100vh - 160px)', overflowY: 'hidden'}}>
+          {/* Enhanced Menu Items */}
+          <div className="space-y-1 h-full">
+            {menuItems.map((item, index) => {
+              if (item.type === "link") {
+                return (
+                  <motion.button
+                    key={item.path}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1, duration: 0.3 }}
+                    onClick={() => navigate(`/admin/${item.path}`)}
+                    className={`w-full flex items-center px-4 py-3 text-left rounded-xl transition-all duration-300 group relative overflow-hidden ${
+                      activeTab === item.path
+                        ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-lg scale-105"
+                        : "text-gray-300 hover:bg-gradient-to-r hover:from-gray-700 hover:to-gray-600 hover:text-yellow-500 hover:scale-102"
                     }`}
                   >
-                    <div className="ml-6 mt-2 space-y-1">
-                      {item.items.map((subItem) => (
-                        <button
-                          key={subItem.path}
-                          onClick={() => navigate(`/admin/${subItem.path}`)}
-                          className={`w-full flex items-center px-3 py-2 text-left rounded-md transition-all duration-200 ${
-                            activeTab === subItem.path
-                              ? "bg-yellow-500 text-black shadow-sm"
-                              : "text-gray-400 hover:bg-gray-700/30 hover:text-white"
-                          }`}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <i className={`bx ${item.icon} mr-4 text-xl relative z-10 ${activeTab === item.path ? 'animate-pulse' : ''}`}></i>
+                    <span className="font-medium relative z-10">{item.title}</span>
+                    {activeTab === item.path && (
+                      <div className="absolute right-3 w-2 h-2 bg-black rounded-full animate-pulse"></div>
+                    )}
+                  </motion.button>
+                );
+              } else if (item.type === "group") {
+                return (
+                  <motion.div 
+                    key={item.title}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1, duration: 0.3 }}
+                    className="relative"
+                  >
+                    <button
+                      onClick={() => toggleGroup(item.title)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-gray-300 hover:bg-gradient-to-r hover:from-gray-700 hover:to-gray-600 hover:text-yellow-500 rounded-xl transition-all duration-300 group relative overflow-hidden"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="flex items-center relative z-10">
+                        <i className={`bx ${item.icon} mr-4 text-xl`}></i>
+                        <span className="font-medium">{item.title}</span>
+                      </div>
+                      <i
+                        className={`bx bx-chevron-down transition-all duration-300 relative z-10 ${
+                          expandedGroups[item.title] ? "rotate-180 text-yellow-400" : ""
+                        }`}
+                      ></i>
+                    </button>
+                    
+                    <AnimatePresence>
+                      {expandedGroups[item.title] && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.4, ease: "easeInOut" }}
+                          className="overflow-hidden"
                         >
-                          <i className={`bx ${subItem.icon} mr-3 text-sm`}></i>
-                          <span className="text-sm">{subItem.title}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })}
+                          <div className="ml-6 mt-1 space-y-1 border-l-2 border-gray-700 pl-4">
+                            {item.items.map((subItem, subIndex) => (
+                              <motion.button
+                                key={subItem.path}
+                                initial={{ opacity: 0, x: -15 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: subIndex * 0.1, duration: 0.3 }}
+                                onClick={() => navigate(`/admin/${subItem.path}`)}
+                                className={`w-full flex items-center px-3 py-2 text-left rounded-lg transition-all duration-300 group relative overflow-hidden ${
+                                  activeTab === subItem.path
+                                    ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-black shadow-md transform scale-105"
+                                    : "text-gray-400 hover:bg-gray-700/50 hover:text-yellow-500 hover:transform hover:translate-x-1"
+                                }`}
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                <i className={`bx ${subItem.icon} mr-3 text-lg relative z-10`}></i>
+                                <span className="text-sm font-medium relative z-10">{subItem.title}</span>
+                                {activeTab === subItem.path && (
+                                  <div className="absolute right-3 w-2 h-2 bg-black rounded-full animate-pulse"></div>
+                                )}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              }
+              return null;
+            })}
+          </div>
         </nav>
 
-        {/* Logout Button */}
-        <div className="p-4">
-          <button
+        {/* Enhanced Logout Button */}
+        <div className="p-3 border-t border-gray-700">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleLogout}
-            className="w-full flex items-center px-4 py-3 text-red-200 hover:text-white bg-red-900/30 hover:bg-red-800/30 rounded-lg transition-all duration-200"
+            className="w-full flex items-center px-4 py-3 text-red-200 hover:text-white bg-gradient-to-r from-red-900/40 to-red-800/40 hover:from-red-800/60 hover:to-red-700/60 rounded-xl transition-all duration-300 group relative overflow-hidden border border-red-800/30"
           >
-            <i className="bx bx-log-out mr-3 text-xl"></i>
-            <span>Logout</span>
-          </button>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <i className="bx bx-log-out mr-3 text-xl relative z-10 group-hover:animate-pulse"></i>
+            <span className="font-medium relative z-10">Logout</span>
+            <div className="absolute right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <i className="bx bx-exit text-sm"></i>
+            </div>
+          </motion.button>
         </div>
       </div>
+
+
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">

@@ -172,43 +172,96 @@ function Stock() {
   });
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-yellow-400 mb-6">Stock In Management</h1>
+    <>
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes slide-in-left {
+          from {
+            opacity: 0;
+            transform: translateX(-50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes slide-in-right {
+          from {
+            opacity: 0;
+            transform: translateX(50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out forwards;
+        }
+        .animate-slide-in-left {
+          animation: slide-in-left 0.8s ease-out forwards;
+        }
+        .animate-slide-in-right {
+          animation: slide-in-right 0.8s ease-out forwards;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.5s ease-out forwards;
+        }
+      `}</style>
+      <div className="p-6 bg-gray-900 min-h-screen">
+        <div className="max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold text-yellow-400 mb-6 animate-fade-in-up">Stock In Management</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Add Stock Form */}
-          <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-white mb-4">
+          <div className="bg-gray-800 rounded-lg shadow-lg p-6 transform transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-yellow-400/20 animate-slide-in-left">
+            <h2 className="text-xl font-semibold text-white mb-4 animate-fade-in">
               {editingId ? 'Edit Stock' : 'Add New Stock'}
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+              <div className="transform transition-all duration-300 hover:translate-x-1">
                 <label className="block text-white text-sm font-medium mb-2">Item Name</label>
                 <input
                   type="text"
                   name="item"
                   value={stockData.item}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
                   required
                 />
               </div>
               
-              <div>
+              <div className="transform transition-all duration-300 hover:translate-x-1">
                 <label className="block text-white text-sm font-medium mb-2">Quantity</label>
                 <input
                   type="number"
                   name="quantity"
                   value={stockData.quantity}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
                   required
                 />
               </div>
               
-              <div>
+              <div className="transform transition-all duration-300 hover:translate-x-1">
                 <label className="block text-white text-sm font-medium mb-2">Price per Unit</label>
                 <input
                   type="number"
@@ -216,19 +269,19 @@ function Stock() {
                   name="price"
                   value={stockData.price}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
                   required
                 />
               </div>
               
-              <div>
+              <div className="transform transition-all duration-300 hover:translate-x-1">
                 <label className="block text-white text-sm font-medium mb-2">Date</label>
                 <input
                   type="date"
                   name="date"
                   value={stockData.date}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none [color-scheme:dark]"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105 [color-scheme:dark]"
                   required
                 />
               </div>
@@ -237,9 +290,17 @@ function Stock() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 px-4 py-2 bg-yellow-500 text-black font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-yellow-500 text-black font-medium rounded-lg hover:bg-yellow-600 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-yellow-400/50 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-none"
                 >
-                  {loading ? 'Saving...' : (editingId ? 'Update Stock' : 'Add Stock')}
+                  {loading ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </span>
+                  ) : (editingId ? 'Update Stock' : 'Add Stock')}
                 </button>
                 {editingId && (
                   <button
@@ -263,25 +324,25 @@ function Stock() {
           </div>
 
           {/* Stock Summary */}
-          <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-white mb-4">Stock Summary</h2>
+          <div className="bg-gray-800 rounded-lg shadow-lg p-6 transform transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-yellow-400/20 animate-slide-in-right">
+            <h2 className="text-xl font-semibold text-white mb-4 animate-fade-in">Stock Summary</h2>
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-gray-700 rounded-lg transform transition-all duration-300 hover:bg-gray-600 hover:scale-105 hover:shadow-lg animate-fade-in-up" style={{animationDelay: '0.1s'}}>
                 <span className="text-gray-300">Total Items</span>
-                <span className="text-yellow-400 font-bold">{summary.total_items}</span>
+                <span className="text-yellow-400 font-bold text-lg animate-pulse">{summary.total_items}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-gray-700 rounded-lg transform transition-all duration-300 hover:bg-gray-600 hover:scale-105 hover:shadow-lg animate-fade-in-up" style={{animationDelay: '0.2s'}}>
                 <span className="text-gray-300">Total Value</span>
-                <span className="text-yellow-400 font-bold">AFN {summary.total_value?.toFixed(2) || '0.00'}</span>
+                <span className="text-yellow-400 font-bold text-lg animate-pulse">AFN {summary.total_value?.toFixed(2) || '0.00'}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Stock List */}
-        <div className="mt-6 bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="mt-6 bg-gray-800 rounded-lg shadow-lg p-6 transform transition-all duration-500 hover:shadow-2xl hover:shadow-yellow-400/10 animate-fade-in-up" style={{animationDelay: '0.3s'}}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-            <h2 className="text-xl font-semibold text-white">Available Stock Inventory</h2>
+            <h2 className="text-xl font-semibold text-white animate-fade-in">Available Stock Inventory</h2>
             
             {/* Search and Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -361,8 +422,8 @@ function Stock() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredStockList.map((item) => (
-                    <tr key={item.id || item.item} className={`border-b border-gray-700 hover:bg-gray-700 ${item.quantity <= 5 && item.quantity > 0 ? 'bg-red-900/30' : item.quantity > 5 && item.quantity <= 15 ? 'bg-yellow-900/30' : ''}`}>
+                  {filteredStockList.map((item, index) => (
+                    <tr key={item.id || item.item} className={`border-b border-gray-700 hover:bg-gray-700 transform transition-all duration-300 hover:scale-105 animate-fade-in-up ${item.quantity <= 5 && item.quantity > 0 ? 'bg-red-900/30' : item.quantity > 5 && item.quantity <= 15 ? 'bg-yellow-900/30' : ''}`} style={{animationDelay: `${index * 0.1}s`}}>
                       <td className="py-3 px-4">{item.item}</td>
                       <td className="py-3 px-4">
                         <span className={item.quantity > 0 ? "text-yellow-400" : "text-red-400"}>
@@ -388,13 +449,13 @@ function Stock() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleRestock(item.item)}
-                            className="px-3 py-1 bg-yellow-600 text-black text-sm rounded hover:bg-yellow-700 transition-colors"
+                            className="px-3 py-1 bg-yellow-600 text-black text-sm rounded hover:bg-yellow-700 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-yellow-600/50"
                           >
                             Restock
                           </button>
                           <button
                             onClick={() => handleDelete(item.id)}
-                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-600/50"
                           >
                             Delete
                           </button>
@@ -422,8 +483,9 @@ function Stock() {
           confirmText={confirmModal.action === 'delete' ? 'Delete' : 'OK'}
           cancelText="Cancel"
         />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

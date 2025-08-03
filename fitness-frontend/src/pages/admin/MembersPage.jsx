@@ -26,6 +26,18 @@ function MembersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
   const [pinModal, setPinModal] = useState({ isOpen: false, member: null });
+  const [editModal, setEditModal] = useState({ isOpen: false, member: null });
+  const [editFormData, setEditFormData] = useState({
+    first_name: '',
+    last_name: '',
+    membership_type: '',
+    box_number: '',
+    monthly_fee: '',
+    time_slot: '',
+    start_date: '',
+    expiry_date: ''
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchAthletes = async () => {
     setIsLoading(true);
@@ -211,6 +223,145 @@ function MembersPage() {
       timeSlot: athlete.time_slot || "morning",
     });
     navigate(`/admin/register?${params.toString()}`);
+  };
+
+  const handleEdit = (athlete) => {
+    setEditFormData({
+      first_name: athlete.first_name || '',
+      last_name: athlete.last_name || '',
+      membership_type: athlete.membership_type || '',
+      box_number: athlete.box_number || '',
+      monthly_fee: athlete.monthly_fee || '',
+      time_slot: athlete.time_slot || '',
+      start_date: athlete.start_date || '',
+      expiry_date: athlete.expiry_date || ''
+    });
+    setEditModal({ isOpen: true, member: athlete });
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleUpdateMember = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    
+    // Basic validation
+    if (!editFormData.first_name?.trim() || !editFormData.last_name?.trim()) {
+      showToast.error("First name and last name are required");
+      setIsUpdating(false);
+      return;
+    }
+    
+    if (!editFormData.membership_type || !editFormData.time_slot) {
+      showToast.error("Membership type and time slot are required");
+      setIsUpdating(false);
+      return;
+    }
+    
+    if (!editFormData.monthly_fee || parseFloat(editFormData.monthly_fee) <= 0) {
+      showToast.error("Valid monthly fee is required");
+      setIsUpdating(false);
+      return;
+    }
+    
+    if (!editFormData.start_date || !editFormData.expiry_date) {
+      showToast.error("Start date and expiry date are required");
+      setIsUpdating(false);
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem("admin_access_token");
+      
+      // Prepare the data for update - ensure all fields are properly formatted
+      const updateData = {
+        athlete_id: editModal.member.athlete_id, // Include the athlete_id
+        first_name: editFormData.first_name?.trim(),
+        last_name: editFormData.last_name?.trim(), 
+        membership_type: editFormData.membership_type,
+        time_slot: editFormData.time_slot,
+        monthly_fee: parseFloat(editFormData.monthly_fee) || 0,
+        box_number: editFormData.box_number?.trim() || null,
+        start_date: editFormData.start_date,
+        expiry_date: editFormData.expiry_date,
+      };
+      
+      // Remove any undefined or empty values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === '') {
+          if (key === 'box_number') {
+            updateData[key] = null; // box_number can be null
+          } else {
+            delete updateData[key];
+          }
+        }
+      });
+      
+      console.log("🔄 Updating member with ID:", editModal.member.athlete_id);
+      console.log("📝 Update data being sent:", updateData);
+      
+      const response = await api.put(`members/${editModal.member.athlete_id}/`, updateData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log("✅ Update successful:", response.data);
+      
+      setEditModal({ isOpen: false, member: null });
+      fetchAthletes();
+      showToast.success("Member updated successfully!");
+    } catch (error) {
+      console.error("❌ Error updating member:", error);
+      console.error("📋 Error response data:", error.response?.data);
+      console.error("📊 Error status:", error.response?.status);
+      
+      // More detailed error message
+      let errorMessage = "Failed to update member. Please try again.";
+      if (error.response?.data) {
+        if (typeof error.response.data === 'object') {
+          // Handle field-specific errors
+          const fieldErrors = [];
+          Object.entries(error.response.data).forEach(([field, messages]) => {
+            if (Array.isArray(messages)) {
+              fieldErrors.push(`${field}: ${messages.join(', ')}`);
+            } else if (typeof messages === 'string') {
+              fieldErrors.push(`${field}: ${messages}`);
+            }
+          });
+          if (fieldErrors.length > 0) {
+            errorMessage = fieldErrors.join('\n');
+          }
+        } else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        }
+      }
+      
+      showToast.error(errorMessage);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModal({ isOpen: false, member: null });
+    setEditFormData({
+      first_name: '',
+      last_name: '',
+      membership_type: '',
+      box_number: '',
+      monthly_fee: '',
+      time_slot: '',
+      start_date: '',
+      expiry_date: ''
+    });
   };
 
   const formatDate = (dateString) => {
@@ -508,6 +659,12 @@ function MembersPage() {
                               </button>
                             )}
                             <button
+                              onClick={() => handleEdit(athlete)}
+                              className="text-green-200 px-2 py-1 text-xs rounded bg-green-500/20 backdrop-blur-sm border border-green-400/30 hover:bg-green-500/30 transition-all"
+                            >
+                              Edit
+                            </button>
+                            <button
                               onClick={() => setPinModal({ isOpen: true, member: athlete })}
                               className="text-blue-200 px-2 py-1 text-xs rounded bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 hover:bg-blue-500/30 transition-all"
                             >
@@ -628,6 +785,12 @@ function MembersPage() {
                                 Renew
                               </button>
                             )}
+                            <button
+                              onClick={() => handleEdit(athlete)}
+                              className="text-green-200 px-2 py-1 rounded bg-green-500/20 backdrop-blur-sm border border-green-400/30 hover:bg-green-500/30 transition-all"
+                            >
+                              Edit
+                            </button>
                             <button
                               onClick={() => setPinModal({ isOpen: true, member: athlete })}
                               className="text-blue-200 px-2 py-1 rounded bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 hover:bg-blue-500/30 transition-all"
@@ -776,6 +939,12 @@ function MembersPage() {
                           </button>
                         )}
                         <button
+                          onClick={() => handleEdit(athlete)}
+                          className="px-3 py-1 bg-green-500/20 backdrop-blur-sm border border-green-400/30 text-green-200 rounded-md text-sm hover:bg-green-500/30 transition-all"
+                        >
+                          Edit
+                        </button>
+                        <button
                           onClick={() => setPinModal({ isOpen: true, member: athlete })}
                           className="px-3 py-1 bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-blue-200 rounded-md text-sm hover:bg-blue-500/30 transition-all"
                         >
@@ -826,6 +995,209 @@ function MembersPage() {
             onClose={() => setPinModal({ isOpen: false, member: null })}
           />
         )
+      )}
+
+      {/* Edit Member Modal */}
+      {editModal.isOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={handleCloseEditModal}
+        >
+          <motion.div 
+            initial={{ scale: 0.7, opacity: 0, y: 50 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.7, opacity: 0, y: 50 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-600"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Edit Member</h2>
+              <button
+                onClick={handleCloseEditModal}
+                className="text-gray-400 hover:text-white transition-colors text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateMember} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">First Name</label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={editFormData.first_name}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    required
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={editFormData.last_name}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    required
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">Membership Type</label>
+                  <select
+                    name="membership_type"
+                    value={editFormData.membership_type}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    <option value="gym">Gym Membership</option>
+                    <option value="fitness">Fitness Only</option>
+                  </select>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">Box Number</label>
+                  <input
+                    type="number"
+                    name="box_number"
+                    value={editFormData.box_number}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">Monthly Fee</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="monthly_fee"
+                    value={editFormData.monthly_fee}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    required
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.35 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">Time Slot</label>
+                  <select
+                    name="time_slot"
+                    value={editFormData.time_slot}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    required
+                  >
+                    <option value="">Select Time</option>
+                    <option value="morning">Morning (6AM - 12PM)</option>
+                    <option value="afternoon">Afternoon (12PM - 6PM)</option>
+                    <option value="evening">Evening (6PM - 10PM)</option>
+                    <option value="all_day">All Day Access</option>
+                  </select>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">Start Date</label>
+                  <input
+                    type="date"
+                    name="start_date"
+                    value={editFormData.start_date}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105 [color-scheme:dark]"
+                    required
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.45 }}
+                >
+                  <label className="block text-white text-sm font-medium mb-2">Expiry Date</label>
+                  <input
+                    type="date"
+                    name="expiry_date"
+                    value={editFormData.expiry_date}
+                    onChange={handleEditFormChange}
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105 [color-scheme:dark]"
+                    required
+                  />
+                </motion.div>
+              </div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="flex justify-end space-x-4 pt-6 border-t border-gray-600"
+              >
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-300 hover:scale-105"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-6 py-2 bg-yellow-500 text-black font-medium rounded-lg hover:bg-yellow-600 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-yellow-400/50 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-none flex items-center"
+                >
+                  {isUpdating ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Member'
+                  )}
+                </button>
+              </motion.div>
+            </form>
+          </motion.div>
+        </motion.div>
       )}
       
       <AppToastContainer />
