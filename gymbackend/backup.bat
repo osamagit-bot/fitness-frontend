@@ -1,4 +1,6 @@
 @echo off
-:: Main backup script - redirects to backup_system
-echo 🔄 Redirecting to centralized backup system...
-call backup_system\backup.bat %*
+:: Main backup script using Django management command
+echo 🔄 Creating comprehensive backup...
+call venv311\Scripts\activate.bat
+python manage.py comprehensive_backup --output-dir backups
+pause

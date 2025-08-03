@@ -14,17 +14,56 @@ from .whatsapp_service import WhatsAppNotificationService
 
 
 class NotificationViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    
+    def partial_update(self, request, pk=None):
+        """Update individual notification (mark as read)"""
+        try:
+            if request.user.is_staff:
+                notification = Notification.objects.get(id=pk, user__isnull=True)
+            else:
+                notification = Notification.objects.get(id=pk, user=request.user)
+            
+            is_read = request.data.get('is_read', notification.is_read)
+            notification.is_read = is_read
+            notification.save()
+            
+            return Response({'id': notification.id, 'is_read': notification.is_read})
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found'}, status=404)
+    
+    def list(self, request):
+        """Get notifications for the current user (member or admin)"""
+        if request.user.is_staff:
+            # Admin gets only admin notifications (no user assigned)
+            notifications = Notification.objects.filter(user__isnull=True).order_by("-created_at")[:30]
+            print(f"Admin notifications count: {notifications.count()}")
+        else:
+            # Members get only their own notifications
+            notifications = Notification.objects.filter(
+                user=request.user
+            ).order_by("-created_at")[:20]
+            print(f"Member notifications count for {request.user}: {notifications.count()}")
+        
+        from apps.Community.views import get_notification_link
+        data = [
+            {
+                "id": n.id,
+                "message": n.message,
+                "created_at": n.created_at.isoformat(),
+                "is_read": n.is_read,
+                "link": get_notification_link(n.message)
+            }
+            for n in notifications
+        ]
+        return Response({"results": data})
     
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def admin_notifications(self, request):
-        print(f"🔍 Admin notifications - User: {request.user}")
-        print(f"🔍 Is authenticated: {request.user.is_authenticated}")
-        print(f"🔍 Is staff: {request.user.is_staff}")
-        
         if not request.user.is_staff:
             return Response({'error': 'Admin access required'}, status=403)
         
-        notifications = Notification.objects.order_by("-created_at")[:30]
+        notifications = Notification.objects.filter(user__isnull=True).order_by("-created_at")[:30]
         data = [
             {
                 "id": n.id,
@@ -36,14 +75,28 @@ class NotificationViewSet(viewsets.ViewSet):
         ]
         return Response({"notifications": data})
 
-    @action(detail=False, methods=["delete"], permission_classes=[IsAdminUser])
+    @action(detail=False, methods=["delete"], permission_classes=[IsAuthenticated])
     def delete_all(self, request):
-        Notification.objects.all().delete()
-        return Response({"detail": "All notifications deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        if request.user.is_staff:
+            # Admin: Delete only admin notifications (user=NULL)
+            deleted_count = Notification.objects.filter(user__isnull=True).delete()[0]
+            return Response({"detail": f"Admin notifications deleted successfully. ({deleted_count} deleted)"}, status=status.HTTP_204_NO_CONTENT)
+        else:
+            # Member: Delete only their own notifications
+            deleted_count = Notification.objects.filter(user=request.user).delete()[0]
+            return Response({"detail": f"Your notifications deleted successfully. ({deleted_count} deleted)"}, status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=["post"], permission_classes=[IsAdminUser])
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
     def mark_all_read(self, request):
-        Notification.objects.filter(is_read=False).update(is_read=True)
+        if request.user.is_staff:
+            # Admin marks only admin notifications as read
+            Notification.objects.filter(is_read=False, user__isnull=True).update(is_read=True)
+        else:
+            # Members mark only their own notifications as read
+            Notification.objects.filter(
+                is_read=False,
+                user=request.user
+            ).update(is_read=True)
         return Response({"status": "all marked as read"})
 
     def check_and_notify_expired_members(self):

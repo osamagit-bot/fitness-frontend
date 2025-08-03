@@ -19,9 +19,11 @@ class NotificationService:
     
     def create_notification(self, message, user_id=None, send_email=False, send_whatsapp=False):
         """Create a notification with optional WebSocket broadcast, email, and WhatsApp"""
+        # For admin notifications, explicitly set user to None
+        # For member notifications, user_id must be provided
         notification = Notification.objects.create(
             message=message,
-            user_id=user_id
+            user_id=user_id  # None for admin notifications, specific user_id for member notifications
         )
         
         # Send real-time notification via WebSocket
@@ -44,7 +46,14 @@ class NotificationService:
     def _send_websocket_notification(self, notification):
         """Send notification via WebSocket to relevant users"""
         try:
-            group_name = "admin_notifications" if not notification.user_id else f"user_{notification.user_id}_notifications"
+            # Admin notifications: user_id is None, send to admin_notifications group
+            # Member notifications: user_id is set, send to specific user group
+            if notification.user_id is None:
+                group_name = "admin_notifications"
+                print(f"✅ Sending admin WebSocket notification: {notification.message}")
+            else:
+                group_name = f"user_{notification.user_id}_notifications"
+                print(f"✅ Sending member WebSocket notification to user {notification.user_id}: {notification.message}")
             
             async_to_sync(self.channel_layer.group_send)(
                 group_name,
@@ -58,9 +67,10 @@ class NotificationService:
                     }
                 }
             )
-            logger.info(f"WebSocket notification sent: {notification.message}")
+            logger.info(f"WebSocket notification sent to {group_name}: {notification.message}")
         except Exception as e:
             logger.error(f"Failed to send WebSocket notification: {str(e)}")
+            print(f"❌ WebSocket notification failed: {str(e)}")
     
     def _send_email_notification(self, message):
         """Send email notification to admins if email notifications are enabled"""
@@ -101,8 +111,8 @@ class NotificationService:
         """Send notification for membership renewal"""
         message = f"Membership renewed for: {member.first_name} {member.last_name}"
         
-        # Create in-app notification
-        notification = self.create_notification(message)
+        # Create admin-only notification
+        notification = self.create_notification(message, user_id=None)
         
         # Send email notification only to admins with email notifications enabled
         self.email_service.send_admin_notification_email(
@@ -124,38 +134,38 @@ class NotificationService:
     def support_ticket_responded(self, ticket_id):
         """Send notification for support ticket response"""
         message = f"Admin responded to support ticket ID: {ticket_id}"
-        return self.create_notification(message)
+        return self.create_notification(message, user_id=None)
     
     def support_ticket_closed(self, ticket_id):
         """Send notification for closed support ticket"""
         message = f"Admin closed support ticket ID: {ticket_id}"
-        return self.create_notification(message)
+        return self.create_notification(message, user_id=None)
     
     def faq_deleted(self, faq_id):
         """Send notification for deleted FAQ"""
         message = f"Admin deleted FAQ ID: {faq_id}"
-        return self.create_notification(message)
+        return self.create_notification(message, user_id=None)
     
     def product_updated(self, product_name):
         """Send notification for product updates"""
         message = f"Product updated: {product_name}"
-        return self.create_notification(message)
+        return self.create_notification(message, user_id=None)
     
     def training_scheduled(self, member_name, trainer_name):
         """Send notification for training schedule"""
         message = f"Training scheduled for {member_name} with {trainer_name}"
-        return self.create_notification(message)
+        return self.create_notification(message, user_id=None)
     
     def payment_received(self, member_name, amount):
         """Send notification for payment received"""
         message = f"Payment received: {amount} AFN from {member_name}"
-        return self.create_notification(message)
+        return self.create_notification(message, user_id=None)
     
     def maintenance_mode(self, enabled=True):
         """Send notification for maintenance mode changes"""
         status = "enabled" if enabled else "disabled"
         message = f"Maintenance mode {status}"
-        return self.create_notification(message)
+        return self.create_notification(message, user_id=None)
 
     def member_checked_in(self, member, check_in_time=None):
         """Send notification for member check-in"""
@@ -167,10 +177,18 @@ class NotificationService:
         kabul_tz = pytz.timezone('Asia/Kabul')
         local_time = check_in_time.astimezone(kabul_tz)
         
-        message = f"Member checked in: {member.first_name} {member.last_name}"
+        # Create admin notification (user_id=None for admin only)
+        admin_message = f"Member checked in: {member.first_name} {member.last_name}"
+        admin_notification = self.create_notification(admin_message, user_id=None)
+        print(f"✅ Admin check-in notification created: {admin_message}")
         
-        # Create in-app notification
-        notification = self.create_notification(message)
+        # Create member notification (with specific user_id for member only)
+        if member.user:
+            member_message = f"Welcome back, {member.first_name}! Checked in at {local_time.strftime('%I:%M %p')}"
+            member_notification = self.create_notification(member_message, user_id=member.user.id)
+            print(f"✅ Member check-in notification created for user {member.user.id}: {member_message}")
+        
+        notification = admin_notification
         
         # Send email notification only to admins with email notifications enabled
         self.email_service.send_admin_notification_email(

@@ -26,7 +26,8 @@ from .serializers import (
 
 )
 from django.contrib.auth import get_user_model
-
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
@@ -36,6 +37,49 @@ from django.http import  Http404
 
 
 User = get_user_model()
+
+def get_notification_link(message):
+    """Determine navigation link based on notification message"""
+    lower = message.lower()
+    if "password" in lower or "profile" in lower or "account" in lower:
+        return "/member-dashboard/settings"
+    if "membership" in lower or "renewed" in lower:
+        return "/member-dashboard"
+    if "purchase" in lower:
+        return "/member-dashboard"
+    return "/member-dashboard"
+
+def send_member_notification(member, message):
+    """Send real-time notification to member and save to database"""
+    try:
+        # Save to database
+        from apps.Notifications.models import Notification
+        notification = Notification.objects.create(
+            user=member.user,
+            message=message
+        )
+        
+        # Determine navigation link
+        link = get_notification_link(message)
+        
+        # Send real-time notification
+        channel_layer = get_channel_layer()
+        notification_data = {
+            "id": notification.id,
+            "message": notification.message,
+            "created_at": notification.created_at.isoformat(),
+            "is_read": notification.is_read,
+            "link": link
+        }
+        async_to_sync(channel_layer.group_send)(
+            f"user_{member.user.id}_notifications",
+            {
+                "type": "send_notification",
+                "notification": notification_data
+            }
+        )
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
 
 
 
@@ -73,13 +117,15 @@ class MemberViewSet(viewsets.ModelViewSet):
         return super().get_object()
 
     def destroy(self, request, *args, **kwargs):
-        """Delete a member and handle token cleanup"""
+        """Delete a member and handle token cleanup - Revenue is NEVER reduced"""
         try:
             member = self.get_object()
             user = member.user
             member_name = f"{member.first_name} {member.last_name}"
+            member_fee = member.monthly_fee
             
-            print(f"🗑️ Deleting member: {member_name} (ID: {member.athlete_id})")
+            print(f"🗑️ Deleting member: {member_name} (ID: {member.athlete_id}, Fee: {member_fee} AFN)")
+            print(f"⚠️ Revenue will NOT be reduced - money already received remains in system")
             
             # Enhanced token cleanup
             try:
@@ -93,12 +139,13 @@ class MemberViewSet(viewsets.ModelViewSet):
                 print(f"⚠️ Token cleanup failed: {e}")
             
             # Delete the member (this will also delete the user due to CASCADE)
+            # Revenue tracking is NOT affected - money already received stays in system
             response = super().destroy(request, *args, **kwargs)
             
             # Send notification after successful deletion
             try:
                 from apps.Notifications.services import notification_service
-                message = f"Member Deleted - {member_name} (ID: {member.athlete_id}) has been removed from the system"
+                message = f"Member Deleted - {member_name} (ID: {member.athlete_id}) has been removed from the system. Revenue remains unchanged."
                 notification_service.create_notification(message)
                 print(f"📧 Member deletion notification sent")
             except Exception as e:
@@ -145,7 +192,17 @@ class MemberViewSet(viewsets.ModelViewSet):
             # Membership renewal notification handled by service layer
             from Community.services import notification_service
             notification_service.membership_renewed(instance)
+        else:
+            send_member_notification(instance, f"Profile updated successfully for {instance.first_name} {instance.last_name}")
+        
         return Response(serializer.data)
+    
+    def perform_update(self, serializer):
+        """Override perform_update to add notifications for profile updates"""
+        instance = serializer.save()
+        # Send notification for profile updates (not expiry changes)
+        if 'expiry_date' not in serializer.validated_data:
+            send_member_notification(instance, f"Profile updated successfully for {instance.first_name} {instance.last_name}")
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.AllowAny])
     def register(self, request):
@@ -172,9 +229,17 @@ class MemberViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             member = serializer.save()
 
+            # Revenue is automatically added by post_save signal, no need to add manually here
+            from .models import MembershipRevenue
+            current_revenue = MembershipRevenue.get_current_month_revenue()
+            print(f"✅ Revenue will be updated by signal: (+{member.monthly_fee}) for {member.first_name} {member.last_name}")
+            
+            # Create payment record AFTER revenue tracking (for audit only)
             MembershipPayment.objects.create(member=member, amount=member.monthly_fee, description="Registration fee")
 
-            # Member registration notification handled automatically by signals
+            # Send welcome notification
+            send_member_notification(member, f"Welcome to the gym, {member.first_name}! Your membership is now active.")
+            
             return Response(
                 {
                     "message": "Member registered successfully",
@@ -272,20 +337,34 @@ class MemberViewSet(viewsets.ModelViewSet):
         member = self.get_object()
         serializer = self.get_serializer(member, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            # Member profile update notification handled automatically by signals
+            member = serializer.save()
+            send_member_notification(member, f"Profile updated successfully for {member.first_name} {member.last_name}")
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 
     @action(detail=True, methods=["post"])
     def change_password(self, request, athlete_id=None):
+        print(f"🔒 Password change request for athlete_id: {athlete_id}")
+        print(f"🔒 Request data: {request.data}")
+        
         member = self.get_object()
+        print(f"🔒 Member found: {member.first_name} {member.last_name}")
+        
         current_password = request.data.get("current_password")
         new_password = request.data.get("new_password")
+        
         if not check_password(current_password, member.user.password):
             return Response({"detail": "Current password incorrect."}, status=400)
+            
         member.user.set_password(new_password)
         member.user.save()
+        print(f"🔒 Password updated successfully")
+        
+        # Send notification
+        print(f"🔒 Sending notification...")
+        send_member_notification(member, f"Password changed successfully for {member.first_name} {member.last_name}")
+        print(f"🔒 Notification sent")
+        
         refresh = RefreshToken.for_user(member.user)
         return Response({"message": "Password changed", "token": str(refresh.access_token), "refresh": str(refresh)})
 
@@ -337,11 +416,14 @@ class MemberViewSet(viewsets.ModelViewSet):
             member.delete_requested = True
             member.save()
 
-            # Member account deletion request notification
+            # Send notification to member
+            send_member_notification(member, "Account deletion request submitted. Admin will review your request.")
+            
+            # Admin notification (user_id=None for admin only)
             from apps.Notifications.services import notification_service
             notification_service.create_notification(
                 f"Member '{user.username}' has requested account deletion.",
-                user_id=user.id
+                user_id=None
             )
             return Response({"detail": "Member account deletion request sent."}, status=status.HTTP_200_OK)
 
@@ -370,6 +452,13 @@ class MemberViewSet(viewsets.ModelViewSet):
 
         print(f"Renewing member {member.athlete_id}: old expiry {member.expiry_date}, new expiry {new_expiry}")
 
+        # ONLY add to persistent revenue tracking for renewal
+        from .models import MembershipRevenue
+        old_revenue = MembershipRevenue.get_current_month_revenue()
+        new_revenue = MembershipRevenue.add_member_revenue(member.monthly_fee, member.athlete_id)
+        print(f"✅ Revenue updated: {old_revenue} -> {new_revenue} AFN (+{member.monthly_fee}) for renewal of {member.first_name} {member.last_name}")
+        
+        # Create payment record AFTER revenue tracking (for audit only)
         MembershipPayment.objects.create(
             member=member,
             member_name=f"{member.first_name} {member.last_name}",
@@ -385,8 +474,8 @@ class MemberViewSet(viewsets.ModelViewSet):
 
         print(f"After save, expiry date is {member.expiry_date}")
 
-        # Membership renewal notification handled by service layer
-     
+        # Send renewal notification
+        send_member_notification(member, f"Membership renewed until {new_expiry.strftime('%B %d, %Y')}")
         notification_service.membership_renewed(member)
 
         return Response({"detail": f"Membership renewed until {new_expiry}", "expiry_date": member.expiry_date})
@@ -428,92 +517,258 @@ class MemberViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Member is already active."}, status=status.HTTP_400_BAD_REQUEST)
         member.is_active = True
         member.save()
+        send_member_notification(member, f"Your account has been activated, {member.first_name}!")
         return Response({"detail": "Member activated successfully."}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
-    def refresh_revenue(self, request):
-        """Get current membership revenue status (revenue persists when members leave)"""
+    def fix_revenue_doubling(self, request):
+        """Fix revenue doubling by resetting to correct member fee totals"""
         try:
             from .models import MembershipRevenue
+            from datetime import datetime
+            from decimal import Decimal
             
-            # Get current stats
-            member_count = Member.objects.count()
-            current_total = Member.objects.aggregate(
-                total=models.Sum('monthly_fee')
-            )['total'] or 0
+            current_month = datetime.now().replace(day=1).date()
             
-            # Get current month revenue (doesn't change it, just retrieves)
-            current_revenue = MembershipRevenue.update_current_month_revenue()
+            # Get actual member data
+            members = Member.objects.all()
+            actual_count = members.count()
+            actual_total = sum(float(member.monthly_fee) for member in members)
+            
+            # Get or create revenue record
+            revenue_record, created = MembershipRevenue.objects.get_or_create(
+                month=current_month,
+                defaults={
+                    'total_revenue': Decimal(str(actual_total)),
+                    'member_count': actual_count
+                }
+            )
+            
+            old_revenue = float(revenue_record.total_revenue)
+            
+            # Reset to correct values
+            revenue_record.total_revenue = Decimal(str(actual_total))
+            revenue_record.member_count = actual_count
+            revenue_record.save()
+            
+            print(f"✅ Revenue fixed: {old_revenue} -> {actual_total} AFN")
             
             return Response({
-                "detail": "Revenue status retrieved successfully",
-                "member_count": member_count,
-                "current_active_members_total": float(current_total),
-                "actual_monthly_revenue": float(current_revenue),
-                "note": "Revenue includes payments from members who may have left this month"
+                "detail": "Revenue doubling fixed successfully",
+                "old_revenue": old_revenue,
+                "new_revenue": actual_total,
+                "member_count": actual_count,
+                "note": "Revenue now matches sum of current member fees"
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
             return Response({
-                "detail": f"Error getting revenue status: {str(e)}"
+                "detail": f"Error fixing revenue: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def refresh_revenue(self, request):
+        """Refresh and sync membership revenue - ONLY use persistent revenue tracking"""
+        try:
+            from .models import MembershipRevenue
+            from datetime import datetime
+            
+            # Get current persistent revenue (this is the correct source)
+            current_month = datetime.now().replace(day=1).date()
+            revenue_record, created = MembershipRevenue.objects.get_or_create(
+                month=current_month,
+                defaults={
+                    'total_revenue': 0,
+                    'member_count': 0
+                }
+            )
+            
+            # Get current member count for reference
+            member_count = Member.objects.count()
+            
+            print(f"✅ Current persistent revenue: {revenue_record.total_revenue} AFN for {member_count} members")
+            
+            return Response({
+                "detail": "Revenue data retrieved successfully",
+                "member_count": member_count,
+                "persistent_revenue": float(revenue_record.total_revenue),
+                "note": "Revenue only increases when members register/renew, never decreases when deleted"
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                "detail": f"Error getting revenue: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def check_membership_expiry(self, request):
+        """Manually trigger membership expiry check"""
+        try:
+            from django.core.management import call_command
+            from io import StringIO
+            
+            # Capture command output
+            out = StringIO()
+            call_command('check_membership_expiry', stdout=out)
+            output = out.getvalue()
+            
+            return Response({
+                "detail": "Membership expiry check completed",
+                "output": output
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                "detail": f"Error checking membership expiry: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def debug_revenue(self, request):
+        """Debug endpoint to check revenue calculation"""
+        try:
+            from .models import MembershipRevenue
+            from datetime import datetime
+            
+            current_month = datetime.now().replace(day=1).date()
+            
+            # Get persistent revenue
+            try:
+                revenue_record = MembershipRevenue.objects.get(month=current_month)
+                persistent_revenue = float(revenue_record.total_revenue)
+                persistent_count = revenue_record.member_count
+            except MembershipRevenue.DoesNotExist:
+                persistent_revenue = 0
+                persistent_count = 0
+            
+            # Get actual member data
+            members = Member.objects.all()
+            actual_count = members.count()
+            actual_total = sum(float(member.monthly_fee) for member in members)
+            
+            # Get payment records
+            payments = MembershipPayment.objects.filter(
+                paid_on__month=current_month.month,
+                paid_on__year=current_month.year
+            )
+            payment_total = sum(float(payment.amount) for payment in payments)
+            
+            return Response({
+                "persistent_revenue": persistent_revenue,
+                "persistent_member_count": persistent_count,
+                "actual_member_count": actual_count,
+                "actual_total_fees": actual_total,
+                "payment_records_count": payments.count(),
+                "payment_records_total": payment_total,
+                "issue_detected": persistent_revenue != actual_total,
+                "note": "Persistent revenue should equal actual total fees, not payment records"
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def membership_payments(self, request):
-        """Get membership payments filtered by date range"""
+        """Get membership revenue using persistent tracking (not payment records)"""
         try:
             start_date = request.query_params.get('start_date')
             end_date = request.query_params.get('end_date')
             
-            # Build query
-            payments_query = MembershipPayment.objects.all()
+            from .models import MembershipRevenue
+            from datetime import datetime
             
-            if start_date:
-                try:
-                    start_date_obj = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
-                    payments_query = payments_query.filter(paid_on__gte=start_date_obj)
-                except ValueError:
+            # For current month, use persistent revenue
+            current_month = datetime.now().replace(day=1).date()
+            
+            if start_date and end_date:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                
+                # Check if requesting current month
+                if (start_date_obj.year == current_month.year and 
+                    start_date_obj.month == current_month.month):
+                    
+                    # Use persistent revenue for current month
+                    revenue_record, created = MembershipRevenue.objects.get_or_create(
+                        month=current_month,
+                        defaults={'total_revenue': 0, 'member_count': 0}
+                    )
+                    total_revenue = revenue_record.total_revenue
+                    
+                    print(f"✅ Using persistent revenue for current month: {total_revenue} AFN")
+                    
+                    # Get payment records for display purposes only
+                    payments_query = MembershipPayment.objects.filter(
+                        paid_on__gte=start_date_obj,
+                        paid_on__lte=end_date_obj
+                    ).order_by('-paid_on')
+                    
+                    payment_data = []
+                    for payment in payments_query:
+                        payment_data.append({
+                            'id': payment.id,
+                            'member_name': payment.member_name or (payment.member.first_name + ' ' + payment.member.last_name if payment.member else 'Unknown'),
+                            'amount': float(payment.amount),
+                            'paid_on': payment.paid_on.strftime('%Y-%m-%d'),
+                            'description': payment.description
+                        })
+                    
                     return Response({
-                        "detail": "Invalid start_date format. Use YYYY-MM-DD"
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            
-            if end_date:
-                try:
-                    end_date_obj = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
-                    payments_query = payments_query.filter(paid_on__lte=end_date_obj)
-                except ValueError:
+                        "payments": payment_data,
+                        "total_revenue": float(total_revenue),
+                        "count": payments_query.count(),
+                        "date_range": {
+                            "start_date": start_date,
+                            "end_date": end_date
+                        },
+                        "note": "Revenue from persistent tracking (prevents double counting)"
+                    }, status=status.HTTP_200_OK)
+                else:
+                    # For other months, use payment records
+                    payments_query = MembershipPayment.objects.filter(
+                        paid_on__gte=start_date_obj,
+                        paid_on__lte=end_date_obj
+                    ).order_by('-paid_on')
+                    
+                    total_revenue = payments_query.aggregate(total=models.Sum('amount'))['total'] or 0
+                    
+                    payment_data = []
+                    for payment in payments_query:
+                        payment_data.append({
+                            'id': payment.id,
+                            'member_name': payment.member_name or (payment.member.first_name + ' ' + payment.member.last_name if payment.member else 'Unknown'),
+                            'amount': float(payment.amount),
+                            'paid_on': payment.paid_on.strftime('%Y-%m-%d'),
+                            'description': payment.description
+                        })
+                    
                     return Response({
-                        "detail": "Invalid end_date format. Use YYYY-MM-DD"
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Get payments and calculate total
-            payments = payments_query.order_by('-paid_on')
-            total_revenue = payments.aggregate(total=models.Sum('amount'))['total'] or 0
-            
-            # Serialize payment data
-            payment_data = []
-            for payment in payments:
-                payment_data.append({
-                    'id': payment.id,
-                    'member_name': payment.member_name or (payment.member.first_name + ' ' + payment.member.last_name if payment.member else 'Unknown'),
-                    'amount': float(payment.amount),
-                    'paid_on': payment.paid_on.strftime('%Y-%m-%d'),
-                    'description': payment.description
-                })
-            
-            return Response({
-                "payments": payment_data,
-                "total_revenue": float(total_revenue),
-                "count": payments.count(),
-                "date_range": {
-                    "start_date": start_date,
-                    "end_date": end_date
-                }
-            }, status=status.HTTP_200_OK)
+                        "payments": payment_data,
+                        "total_revenue": float(total_revenue),
+                        "count": payments_query.count(),
+                        "date_range": {
+                            "start_date": start_date,
+                            "end_date": end_date
+                        }
+                    }, status=status.HTTP_200_OK)
+            else:
+                # Default to current month persistent revenue
+                revenue_record, created = MembershipRevenue.objects.get_or_create(
+                    month=current_month,
+                    defaults={'total_revenue': 0, 'member_count': 0}
+                )
+                
+                return Response({
+                    "payments": [],
+                    "total_revenue": float(revenue_record.total_revenue),
+                    "count": 0,
+                    "note": "Current month persistent revenue"
+                }, status=status.HTTP_200_OK)
             
         except Exception as e:
             return Response({
-                "detail": f"Error getting membership payments: {str(e)}"
+                "detail": f"Error getting membership revenue: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

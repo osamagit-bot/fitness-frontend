@@ -12,11 +12,12 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE',
 django.setup()
 
 from apps.Notifications import routing
+from apps.Authentication.websocket_middleware import JWTAuthMiddleware
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AllowedHostsOriginValidator(
-        AuthMiddlewareStack(
+        JWTAuthMiddleware(
             URLRouter(routing.websocket_urlpatterns)
         )
     ),

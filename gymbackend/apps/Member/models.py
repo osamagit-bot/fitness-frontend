@@ -49,6 +49,11 @@ class Member(models.Model):
     biometric_templates = models.JSONField(default=list, blank=True, help_text="Stores multiple biometric templates for comparison")
     biometric_quality_threshold = models.FloatField(default=0.8, help_text="Minimum quality score for biometric matching")
     last_biometric_update = models.DateTimeField(null=True, blank=True)
+    
+    # PIN authentication field
+    pin = models.CharField(max_length=6, unique=True, null=True, blank=True, help_text="4-6 digit PIN for check-in")
+    pin_enabled = models.BooleanField(default=False, help_text="Enable PIN-based check-in for this member")
+    pin_reference_photo = models.ImageField(upload_to='pin_photos/', null=True, blank=True, help_text="Reference photo for PIN verification")
 
     
     first_name = models.CharField(
@@ -207,7 +212,7 @@ class MembershipRevenue(models.Model):
         unique_together = ['month']
     
     @classmethod
-    def add_member_revenue(cls, member_fee):
+    def add_member_revenue(cls, member_fee, member_id=None):
         """Add revenue when a new member joins (pays for current month)"""
         from datetime import datetime
         
@@ -223,9 +228,12 @@ class MembershipRevenue(models.Model):
         )
         
         # Add the new member's fee to total revenue
+        old_revenue = revenue_record.total_revenue
         revenue_record.total_revenue += Decimal(str(member_fee))
         revenue_record.member_count += 1
         revenue_record.save()
+        
+        print(f"✅ Revenue tracking: {old_revenue} + {member_fee} = {revenue_record.total_revenue} AFN (Member: {member_id})")
         
         return revenue_record.total_revenue
     
@@ -245,18 +253,16 @@ class MembershipRevenue(models.Model):
             }
         )
         
-        # If this is a new record, initialize with current active members
-        if created:
-            current_revenue = Member.objects.aggregate(
-                total=models.Sum('monthly_fee')
-            )['total'] or Decimal('0')
-            current_count = Member.objects.count()
-            
-            revenue_record.total_revenue = current_revenue
-            revenue_record.member_count = current_count
-            revenue_record.save()
-        
+        # Revenue only increases through add_member_revenue calls, never decreases
         return revenue_record.total_revenue
+    
+    @classmethod
+    def remove_member_revenue(cls, member_fee):
+        """DO NOT remove revenue when members are deleted - revenue should never decrease"""
+        # This method intentionally does nothing to prevent revenue from decreasing
+        # when members are deleted. Revenue represents money actually received.
+        print(f"⚠️ Revenue removal blocked: {member_fee} AFN (revenue never decreases)")
+        return cls.get_current_month_revenue()
     
     @classmethod
     def get_current_month_revenue(cls):

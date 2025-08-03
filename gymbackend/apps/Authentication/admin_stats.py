@@ -32,17 +32,11 @@ def get_admin_stats():
         # Calculate monthly revenue - use persistent tracking to prevent resets
         from apps.Member.models import MembershipRevenue
         
-        # Update current month revenue (only increases, never decreases)
-        persistent_revenue = MembershipRevenue.update_current_month_revenue()
+        # Get persistent revenue (only increases, never decreases)
+        persistent_revenue = MembershipRevenue.get_current_month_revenue()
+        monthly_revenue = float(persistent_revenue)
         
-        # Also calculate current revenue for comparison
-        monthly_revenue_query = Member.objects.aggregate(
-            total=Sum('monthly_fee')
-        )
-        current_revenue = monthly_revenue_query['total'] or 0
-        
-        # Use the higher of persistent or current revenue
-        monthly_revenue = max(float(persistent_revenue), float(current_revenue))
+        print(f"DEBUG - Persistent monthly revenue: {monthly_revenue}")
         
         print(f"DEBUG - Persistent revenue: {persistent_revenue}, Current revenue: {current_revenue}, Final: {monthly_revenue}")
         

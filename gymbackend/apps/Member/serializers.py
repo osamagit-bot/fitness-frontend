@@ -21,6 +21,7 @@ class MemberSerializer(serializers.ModelSerializer):
             'athlete_id', 'first_name', 'last_name', 'monthly_fee',
             'membership_type', 'phone', 'start_date', 'expiry_date',
             'box_number', 'time_slot', 'username', 'password', 'user', 'biometric_registered','user_email',
+            'pin', 'pin_enabled',
         ]
         read_only_fields = ['user']
 
@@ -37,7 +38,15 @@ class MemberSerializer(serializers.ModelSerializer):
         # Extract and remove password
         password = validated_data.pop('password', None)
 
-        # ✅ Extract athlete_id first
+        # Check if this is a restoration (user already exists)
+        user_id = self.initial_data.get('user')
+        if user_id and User.objects.filter(id=user_id).exists():
+            # This is a restoration - use existing user
+            user = User.objects.get(id=user_id)
+            member = Member.objects.create(user=user, **validated_data)
+            return member
+
+        # Normal member creation
         athlete_id = validated_data.get('athlete_id')
         first_name = validated_data.get('first_name', '').lower()
         email = validated_data.get('email')
@@ -45,14 +54,18 @@ class MemberSerializer(serializers.ModelSerializer):
             email = self.initial_data.get('email')
         if not email:
             email = f"{athlete_id}@gym.temp"
-        username = self.initial_data.get('username') or f"{first_name}{athlete_id}"
+        
+        username = self.initial_data.get('username')
+        if not username:
+            username = f"{first_name}{athlete_id}"
 
-        # Generate a secure temporary password if not provided
         import secrets
         temp_password = password or secrets.token_urlsafe(12)
 
-        # ✅ Prevent duplicate email
-        existing_user = User.objects.filter(email=email).first()
+        existing_user = User.objects.filter(username=username).first()
+        if not existing_user:
+            existing_user = User.objects.filter(email=email).first()
+        
         if existing_user:
             user = existing_user
         else:

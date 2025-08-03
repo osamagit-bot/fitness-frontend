@@ -1,0 +1,13 @@
+{
+  "name": "gymfitness-backend",
+  "version": "1.0.0",
+  "description": "GymFitness Club Management System Backend",
+  "scripts": {
+    "dev": "python start_dev.py",
+    "start": "python start_prod.py",
+    "dev-win": "start_dev.bat",
+    "start-win": "start_prod.bat"
+  },
+  "keywords": ["django", "gym", "fitness", "websocket"],
+  "author": "GymFitness Team"
+}

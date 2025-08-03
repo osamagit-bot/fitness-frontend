@@ -1,6 +1,8 @@
 import base64
 import traceback
 import json
+import pytz
+from datetime import timedelta
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -8,7 +10,11 @@ from django.utils import timezone
 from datetime import date
 from apps.Member.models import Member
 from apps.Authentication.models import WebAuthnCredential
-from apps.Attendance.models import Attendance
+from apps.Attendance.models import Attendance, CheckInPhoto
+
+def get_afghanistan_time(utc_time):
+    """Convert UTC time to Afghanistan time (UTC+4:30)"""
+    return utc_time + timedelta(hours=4, minutes=30)
 
 @csrf_exempt
 def webauthn_register_options(request):
@@ -105,6 +111,37 @@ def webauthn_register_complete(request):
         member.biometric_registered = True
         member.save()
         
+        # Send notification to member
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.Notifications.models import Notification
+            
+            # Save to database
+            notification = Notification.objects.create(
+                user=member.user,
+                message=f"Fingerprint registered successfully for {member.first_name} {member.last_name}"
+            )
+            
+            # Send real-time notification
+            channel_layer = get_channel_layer()
+            notification_data = {
+                "id": notification.id,
+                "message": notification.message,
+                "created_at": notification.created_at.isoformat(),
+                "is_read": notification.is_read,
+                "link": "/member-dashboard/attendance"
+            }
+            async_to_sync(channel_layer.group_send)(
+                f"user_{member.user.id}_notifications",
+                {
+                    "type": "send_notification",
+                    "notification": notification_data
+                }
+            )
+        except Exception as e:
+            print(f"Failed to send fingerprint registration notification: {e}")
+        
         print(f"✅ Fingerprint successfully registered for {member.first_name} {member.last_name}")
         return JsonResponse({
             'status': 'ok',
@@ -145,7 +182,39 @@ def webauthn_check_in(request):
         )
         if not created:
             return JsonResponse({'message': 'Already checked in today'}, status=200)
-        # Notification is handled by signals.py - no need to call here
+        
+        # Send notification to member
+        if created:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.Notifications.models import Notification
+            
+            try:
+                # Save to database
+                notification = Notification.objects.create(
+                    user=member.user,
+                    message=f"Welcome back, {member.first_name}! Checked in at {get_afghanistan_time(attendance.check_in_time).strftime('%I:%M %p')}"
+                )
+                
+                # Send real-time notification
+                channel_layer = get_channel_layer()
+                notification_data = {
+                    "id": notification.id,
+                    "message": notification.message,
+                    "created_at": notification.created_at.isoformat(),
+                    "is_read": notification.is_read,
+                    "link": "/member-dashboard/attendance"
+                }
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{member.user.id}_notifications",
+                    {
+                        "type": "send_notification",
+                        "notification": notification_data
+                    }
+                )
+            except Exception as e:
+                print(f"Failed to send check-in notification: {e}")
+        
         return JsonResponse({'message': 'Check-in successful'})
     except Exception as e:
         import traceback
@@ -154,9 +223,6 @@ def webauthn_check_in(request):
     
 @csrf_exempt
 def attendance_history(request):
-    print(f"🔍 Attendance history request: {request.method}")
-    print(f"🔍 Query params: {request.GET}")
-    
     if request.method != 'GET':
         return JsonResponse({'error': 'GET method required'}, status=405)
     
@@ -167,54 +233,60 @@ def attendance_history(request):
         
         qs = Attendance.objects.all().select_related('member').order_by('-date', '-check_in_time')
         
-        # SECURITY: If member_id is provided, only show that member's records
-        if member_id:
-            try:
-                from apps.Member.models import Member
-                member = Member.objects.get(athlete_id=member_id)
-                qs = qs.filter(member=member)
-                print(f"🔒 Filtered to member: {member.first_name} {member.last_name}")
-            except Member.DoesNotExist:
-                return JsonResponse({'error': 'Member not found'}, status=404)
-        
         # Apply date filters
         if today_only:
             from datetime import date as date_class
             today = date_class.today()
             qs = qs.filter(date=today)
-            print(f"🔍 Filtered to today: {today}")
         elif date:
-            qs = qs.filter(date=date)
-            print(f"🔍 Filtered to date: {date}")
+            try:
+                from datetime import datetime
+                filter_date = datetime.strptime(date, '%Y-%m-%d').date()
+                qs = qs.filter(date=filter_date)
+            except ValueError:
+                return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=400)
         
-        # Build response data with member stats
+        # If member_id is provided, filter to that member
+        if member_id:
+            try:
+                from apps.Member.models import Member
+                member = Member.objects.get(athlete_id=member_id)
+                qs = qs.filter(member=member)
+            except Member.DoesNotExist:
+                return JsonResponse({'error': 'Member not found'}, status=404)
+        
+        # Build response data
         data = []
         for attendance in qs:
-            # Calculate member's total attendance and absent days
-            member_total_attendance = Attendance.objects.filter(member=attendance.member).count()
-            
-            data.append({
-                'id': attendance.id,
-                'member_id': attendance.member.athlete_id,
-                'member_name': f"{attendance.member.first_name} {attendance.member.last_name}",
-                'date': attendance.date.strftime('%Y-%m-%d'),
-                'check_in_time': attendance.check_in_time.isoformat(),  # Full datetime format
-                'verification_method': attendance.verification_method,
-                'member_start_date': attendance.member.start_date.strftime('%Y-%m-%d') if attendance.member.start_date else None,
-                'member_total_attendance': member_total_attendance,
-                # Add member object for compatibility
-                'member': {
-                    'first_name': attendance.member.first_name,
-                    'last_name': attendance.member.last_name,
-                    'athlete_id': attendance.member.athlete_id
-                }
-            })
+            try:
+                # Check if attendance has a photo
+                has_photo = hasattr(attendance, 'photo')
+                photo_url = None
+                if has_photo:
+                    try:
+                        photo_url = attendance.photo.photo.url
+                    except:
+                        has_photo = False
+                
+                data.append({
+                    'id': attendance.id,
+                    'member_id': attendance.member.athlete_id,
+                    'member_name': f"{attendance.member.first_name} {attendance.member.last_name}",
+                    'date': attendance.date.strftime('%Y-%m-%d'),
+                    'check_in_time': attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+                    'check_in_datetime': attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+                    'verification_method': attendance.verification_method or 'Manual',
+                    'has_photo': bool(has_photo),
+                    'photo_url': str(photo_url) if photo_url else None
+                })
+            except Exception as record_error:
+                print(f"Error processing attendance record {attendance.id}: {record_error}")
+                continue
         
-        print(f"✅ Returning {len(data)} attendance records")
         return JsonResponse(data, safe=False)
         
     except Exception as e:
-        print(f"🚨 Error in attendance_history: {str(e)}")
+        print(f"Error in attendance_history: {str(e)}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
@@ -351,7 +423,37 @@ def kiosk_checkin(request):
 
         print(f"Check-in {'created' if created else 'already existed'} for {member.first_name}")
 
-        # Notification is handled by signals.py - no need to call here
+        # Send notification to member
+        if created:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.Notifications.models import Notification
+            
+            try:
+                # Save to database
+                notification = Notification.objects.create(
+                    user=member.user,
+                    message=f"Welcome back, {member.first_name}! Checked in at {get_afghanistan_time(attendance.check_in_time).strftime('%I:%M %p')}"
+                )
+                
+                # Send real-time notification
+                channel_layer = get_channel_layer()
+                notification_data = {
+                    "id": notification.id,
+                    "message": notification.message,
+                    "created_at": notification.created_at.isoformat(),
+                    "is_read": notification.is_read,
+                    "link": "/member-dashboard/attendance"
+                }
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{member.user.id}_notifications",
+                    {
+                        "type": "send_notification",
+                        "notification": notification_data
+                    }
+                )
+            except Exception as e:
+                print(f"Failed to send check-in notification: {e}")
 
         return JsonResponse({
             'success': True,
@@ -362,7 +464,7 @@ def kiosk_checkin(request):
                 'last_name': member.last_name,
             },
             'already_checked_in': not created,
-            'check_in_time': attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+            'check_in_time': get_afghanistan_time(attendance.check_in_time).isoformat() if attendance.check_in_time else None,
         })
         
     except json.JSONDecodeError:
@@ -371,6 +473,184 @@ def kiosk_checkin(request):
         print(f"Kiosk check-in error: {e}")
         import traceback
         print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def set_member_pin(request):
+    """Set or update member PIN with reference photo"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        athlete_id = data.get('athlete_id')
+        pin = data.get('pin')
+        photo_data = data.get('photo')
+        enable_pin = data.get('enable_pin', True)
+        
+        if not athlete_id or not pin:
+            return JsonResponse({'error': 'athlete_id and pin are required'}, status=400)
+            
+        if not photo_data:
+            return JsonResponse({'error': 'Reference photo is required for PIN setup'}, status=400)
+        
+        if len(pin) < 4 or len(pin) > 6 or not pin.isdigit():
+            return JsonResponse({'error': 'PIN must be 4-6 digits'}, status=400)
+        
+        try:
+            member = Member.objects.get(athlete_id=athlete_id)
+        except Member.DoesNotExist:
+            return JsonResponse({'error': 'Member not found'}, status=404)
+        
+        # Check if member already has a PIN set (prevent multiple registrations)
+        if member.pin and member.pin_enabled:
+            return JsonResponse({
+                'error': 'PIN already registered for this member. Contact admin to reset.',
+                'error_code': 'PIN_ALREADY_SET'
+            }, status=400)
+        
+        # Check if PIN is already used by another member
+        existing_pin = Member.objects.filter(pin=pin).exclude(athlete_id=athlete_id).first()
+        if existing_pin:
+            return JsonResponse({
+                'error': 'PIN already used by someone else',
+                'error_code': 'PIN_ALREADY_EXISTS'
+            }, status=400)
+        
+        # Save reference photo
+        if photo_data.startswith('data:image/'):
+            format, imgstr = photo_data.split(';base64,')
+            ext = 'jpg'
+        else:
+            imgstr = photo_data
+            ext = 'jpg'
+        
+        from django.core.files.base import ContentFile
+        import uuid
+        
+        photo_file = ContentFile(
+            base64.b64decode(imgstr),
+            name=f'{athlete_id}_pin_ref_{uuid.uuid4().hex[:8]}.{ext}'
+        )
+        
+        member.pin = pin
+        member.pin_enabled = enable_pin
+        member.pin_reference_photo = photo_file
+        member.save()
+        
+        # Send notification to member
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.Notifications.models import Notification
+            
+            # Save to database
+            notification = Notification.objects.create(
+                user=member.user,
+                message=f"PIN setup completed successfully for {member.first_name} {member.last_name}"
+            )
+            
+            # Send real-time notification
+            channel_layer = get_channel_layer()
+            notification_data = {
+                "id": notification.id,
+                "message": notification.message,
+                "created_at": notification.created_at.isoformat(),
+                "is_read": notification.is_read,
+                "link": "/member-dashboard/attendance"
+            }
+            async_to_sync(channel_layer.group_send)(
+                f"user_{member.user.id}_notifications",
+                {
+                    "type": "send_notification",
+                    "notification": notification_data
+                }
+            )
+        except Exception as e:
+            print(f"Failed to send PIN setup notification: {e}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'PIN and reference photo saved for {member.first_name} {member.last_name}',
+            'member': {
+                'athlete_id': member.athlete_id,
+                'name': f"{member.first_name} {member.last_name}",
+                'pin_enabled': member.pin_enabled
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        print(f"Set PIN error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def check_member_pin(request):
+    """Check if member has PIN and reference photo"""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET required'}, status=405)
+    
+    try:
+        athlete_id = request.GET.get('athlete_id')
+        if not athlete_id:
+            return JsonResponse({'error': 'athlete_id is required'}, status=400)
+        
+        try:
+            member = Member.objects.get(athlete_id=athlete_id)
+        except Member.DoesNotExist:
+            return JsonResponse({'error': 'Member not found'}, status=404)
+        
+        return JsonResponse({
+            'athlete_id': member.athlete_id,
+            'name': f"{member.first_name} {member.last_name}",
+            'has_pin': bool(member.pin),
+            'pin_enabled': member.pin_enabled,
+            'has_reference_photo': bool(member.pin_reference_photo),
+            'reference_photo_url': member.pin_reference_photo.url if member.pin_reference_photo else None
+        })
+        
+    except Exception as e:
+        print(f"Check PIN error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def reset_member_pin(request):
+    """Reset member PIN (admin only)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        athlete_id = data.get('athlete_id')
+        
+        if not athlete_id:
+            return JsonResponse({'error': 'athlete_id is required'}, status=400)
+        
+        try:
+            member = Member.objects.get(athlete_id=athlete_id)
+        except Member.DoesNotExist:
+            return JsonResponse({'error': 'Member not found'}, status=404)
+        
+        # Reset PIN
+        member.pin = None
+        member.pin_enabled = False
+        member.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'PIN reset for {member.first_name} {member.last_name}',
+            'member': {
+                'athlete_id': member.athlete_id,
+                'name': f"{member.first_name} {member.last_name}",
+                'pin_enabled': False
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        print(f"Reset PIN error: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
@@ -395,6 +675,212 @@ def debug_attendance(request):
         }, json_dumps_params={'indent': 2})
         
     except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def pin_checkin(request):
+    """Handle PIN-based check-in with photo verification"""
+    print(f"PIN check-in request received: {request.method}")
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        print(f"Processing PIN check-in request body: {request.body[:100]}...")
+        from django.core.cache import cache
+        from django.core.files.base import ContentFile
+        import uuid
+        
+        data = json.loads(request.body)
+        print(f"JSON parsed successfully: {list(data.keys())}")
+        pin = data.get('pin')
+        photo_data = data.get('photo')
+        ip = request.META.get('REMOTE_ADDR', 'unknown')
+        print(f"PIN: {pin}, Photo data length: {len(photo_data) if photo_data else 0}")
+        
+        if not pin:
+            return JsonResponse({'error': 'PIN is required'}, status=400)
+        
+        # We'll check time after finding the member
+        
+        # Rate limiting
+        attempts_key = f'pin_attempts_{ip}'
+        attempts = cache.get(attempts_key, 0)
+        if attempts >= 5:
+            return JsonResponse({
+                'error': 'Too many failed attempts. Please try again in 5 minutes.',
+                'error_code': 'RATE_LIMITED'
+            }, status=429)
+        
+        try:
+            member = Member.objects.get(pin=pin, pin_enabled=True)
+        except Member.DoesNotExist:
+            # Increment failed attempts
+            cache.set(attempts_key, attempts + 1, 300)  # 5 min timeout
+            return JsonResponse({
+                'error': 'Invalid PIN or PIN not enabled',
+                'error_code': 'INVALID_PIN'
+            }, status=400)
+        
+        # Photo is required for PIN verification
+        if not photo_data:
+            return JsonResponse({
+                'error': 'Photo required for PIN verification',
+                'error_code': 'PHOTO_REQUIRED'
+            }, status=400)
+        
+        # Check if member has reference photo
+        if not member.pin_reference_photo:
+            return JsonResponse({
+                'error': 'No reference photo found. Please contact admin to set up PIN with photo.',
+                'error_code': 'NO_REFERENCE_PHOTO'
+            }, status=400)
+        
+        # Compare photos using face recognition
+        from .face_utils_simple import FaceComparison
+        
+        print(f"Comparing photos for {member.first_name}")
+        
+        try:
+            # Validate current photo has a face
+            print(f"Validating photo for {member.first_name}...")
+            is_valid, validation_error = FaceComparison.validate_face_photo(photo_data)
+            print(f"Photo validation result: valid={is_valid}, error={validation_error}")
+            
+            if not is_valid:
+                return JsonResponse({
+                    'error': f'Photo validation failed: {validation_error}',
+                    'error_code': 'INVALID_PHOTO'
+                }, status=400)
+            
+            # Compare with reference photo
+            print(f"Comparing with reference photo: {member.pin_reference_photo.path}")
+            is_match, confidence, comparison_error = FaceComparison.compare_faces(
+                member.pin_reference_photo.path, 
+                photo_data,
+                tolerance=0.3
+            )
+            
+            print(f"Comparison result: match={is_match}, confidence={confidence:.2f}, error={comparison_error}")
+            
+            if comparison_error:
+                return JsonResponse({
+                    'error': f'Face comparison failed: {comparison_error}',
+                    'error_code': 'COMPARISON_ERROR'
+                }, status=500)
+            
+            if not is_match:
+                print(f"Face mismatch for {member.first_name}: confidence={confidence:.2f}")
+                return JsonResponse({
+                    'error': f'PIN+Photo verification failed. Face does not match (confidence: {confidence:.2f})',
+                    'error_code': 'FACE_MISMATCH',
+                    'confidence': float(round(confidence, 2))
+                }, status=403)
+            
+            print(f"Face match successful for {member.first_name}: confidence={confidence:.2f}")
+            
+        except Exception as face_error:
+            print(f"Face comparison exception: {face_error}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'error': f'Face comparison system error: {str(face_error)}',
+                'error_code': 'SYSTEM_ERROR'
+            }, status=500)
+        
+        # Check if already checked in today
+        today = date.today()
+        attendance, created = Attendance.objects.get_or_create(
+            member=member,
+            date=today,
+            defaults={
+                'check_in_time': timezone.now(),
+                'verification_method': 'PIN+Photo'
+            }
+        )
+        
+        # Send notification to member
+        if created:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            from apps.Notifications.models import Notification
+            
+            try:
+                # Save to database
+                notification = Notification.objects.create(
+                    user=member.user,
+                    message=f"Welcome back, {member.first_name}! Checked in at {get_afghanistan_time(attendance.check_in_time).strftime('%I:%M %p')}"
+                )
+                
+                # Send real-time notification
+                channel_layer = get_channel_layer()
+                notification_data = {
+                    "id": notification.id,
+                    "message": notification.message,
+                    "created_at": notification.created_at.isoformat(),
+                    "is_read": notification.is_read,
+                    "link": "/member-dashboard/attendance"
+                }
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{member.user.id}_notifications",
+                    {
+                        "type": "send_notification",
+                        "notification": notification_data
+                    }
+                )
+            except Exception as e:
+                print(f"Failed to send check-in notification: {e}")
+        
+        # Save photo if provided
+        if created and photo_data:
+            try:
+                if photo_data.startswith('data:image/'):
+                    format, imgstr = photo_data.split(';base64,')
+                    ext = 'jpg'
+                else:
+                    imgstr = photo_data
+                    ext = 'jpg'
+                
+                photo_file = ContentFile(
+                    base64.b64decode(imgstr),
+                    name=f'{member.athlete_id}_{uuid.uuid4().hex[:8]}.{ext}'
+                )
+                
+                CheckInPhoto.objects.create(
+                    attendance=attendance,
+                    photo=photo_file
+                )
+                
+                print(f"Photo saved for {member.first_name} {member.last_name}")
+                
+            except Exception as photo_error:
+                print(f"Photo save failed: {photo_error}")
+                import traceback
+                traceback.print_exc()
+
+        
+        # Reset attempts on success
+        cache.delete(attempts_key)
+        
+        return JsonResponse({
+            'success': True,
+            'member': {
+                'athlete_id': member.athlete_id,
+                'name': f"{member.first_name} {member.last_name}",
+                'first_name': member.first_name,
+                'last_name': member.last_name,
+            },
+            'already_checked_in': not created,
+            'check_in_time': get_afghanistan_time(attendance.check_in_time).isoformat(),
+            'verification_method': 'PIN+Photo'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        print(f"PIN check-in error: {e}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
@@ -425,12 +911,73 @@ def today_stats(request):
         print(f"🚨 Error in today_stats: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
+@csrf_exempt
+def checkin_photos(request):
+    """Get recent check-in photos for admin review"""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'GET method required'}, status=405)
+    
+    try:
+        from .models import CheckInPhoto
+        from datetime import date as date_class, timedelta
+        
+        # Get date range (default: last 7 days)
+        days = int(request.GET.get('days', 7))
+        start_date = date_class.today() - timedelta(days=days)
+        
+        # Get photos with attendance info
+        photos = CheckInPhoto.objects.filter(
+            attendance__date__gte=start_date
+        ).select_related('attendance__member').order_by('-created_at')
+        
+        data = []
+        for photo in photos:
+            data.append({
+                'id': photo.id,
+                'member_id': photo.attendance.member.athlete_id,
+                'member_name': f"{photo.attendance.member.first_name} {photo.attendance.member.last_name}",
+                'date': photo.attendance.date.strftime('%Y-%m-%d'),
+                'check_in_time': photo.attendance.check_in_time.isoformat(),
+                'verification_method': photo.attendance.verification_method,
+                'photo_url': photo.photo.url if photo.photo else None,
+                'created_at': photo.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'photos': data,
+            'total_count': len(data),
+            'date_range': f"{start_date} to {date_class.today()}"
+        })
+        
+    except Exception as e:
+        print(f"Error in checkin_photos: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
 
-
-
-
-
-
-
+@csrf_exempt
+def delete_checkin_photo(request, photo_id):
+    """Delete a check-in photo"""
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'DELETE method required'}, status=405)
+    
+    try:
+        from .models import CheckInPhoto
+        import os
+        
+        photo = CheckInPhoto.objects.get(id=photo_id)
+        
+        # Delete the actual file
+        if photo.photo and os.path.exists(photo.photo.path):
+            os.remove(photo.photo.path)
+        
+        # Delete the database record
+        photo.delete()
+        
+        return JsonResponse({'success': True, 'message': 'Photo deleted successfully'})
+        
+    except CheckInPhoto.DoesNotExist:
+        return JsonResponse({'error': 'Photo not found'}, status=404)
+    except Exception as e:
+        print(f"Error deleting photo: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 

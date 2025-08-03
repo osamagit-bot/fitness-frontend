@@ -4,13 +4,12 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager, Group, Per
 from django.core.validators import MinLengthValidator
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-from apps.Member.models import Member
 
 
 
 
 class WebAuthnCredential(models.Model):
-    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='webauthn_credentials')
+    member = models.ForeignKey('Member.Member', on_delete=models.CASCADE, related_name='webauthn_credentials')
     credential_id = models.CharField(max_length=255)
     public_key = models.TextField()
     sign_count = models.PositiveIntegerField(default=0)

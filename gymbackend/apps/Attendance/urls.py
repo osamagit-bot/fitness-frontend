@@ -20,6 +20,16 @@ urlpatterns = [
     path('webauthn/kiosk/options/', biometric_views.kiosk_authentication_options, name='kiosk-auth-options'),
     path('webauthn/kiosk/checkin/', biometric_views.kiosk_checkin, name='kiosk-checkin'),
     
+    # PIN endpoints
+    path('pin/checkin/', biometric_views.pin_checkin, name='pin-checkin'),
+    path('pin/set/', biometric_views.set_member_pin, name='set-member-pin'),
+    path('pin/check/', biometric_views.check_member_pin, name='check-member-pin'),
+    path('pin/reset/', biometric_views.reset_member_pin, name='reset-member-pin'),
+    
     # Debug endpoints
     path('debug/', biometric_views.debug_attendance, name='debug-attendance'),
+    
+    # Photo review endpoints
+    path('checkin_photos/', biometric_views.checkin_photos, name='checkin-photos'),
+    path('checkin_photos/<int:photo_id>/delete/', biometric_views.delete_checkin_photo, name='delete-checkin-photo'),
 ]

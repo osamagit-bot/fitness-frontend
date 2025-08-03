@@ -6,11 +6,41 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from apps.Member.models import Member
 from .models import Product,Purchase
 import logging
+from django.utils import timezone
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from .serializers import ProductSerializer,PurchaseSerializer
 
 logger = logging.getLogger(__name__)
 
-from django.utils import timezone
-from .serializers import ProductSerializer,PurchaseSerializer
+def send_member_notification(member, message):
+    """Send real-time notification to member and save to database"""
+    try:
+        # Save to database
+        from apps.Notifications.models import Notification
+        notification = Notification.objects.create(
+            user=member.user,
+            message=message
+        )
+        
+        # Send real-time notification
+        channel_layer = get_channel_layer()
+        notification_data = {
+            "id": notification.id,
+            "message": notification.message,
+            "created_at": notification.created_at.isoformat(),
+            "is_read": notification.is_read,
+            "link": "/member-dashboard"
+        }
+        async_to_sync(channel_layer.group_send)(
+            f"user_{member.user.id}_notifications",
+            {
+                "type": "send_notification",
+                "notification": notification_data
+            }
+        )
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
 
 
 
@@ -37,9 +67,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         response = super().create(request, *args, **kwargs)
         try:
             product_name = response.data.get("name", "Unknown Product")
-            # Product creation notification handled by service layer
-            from apps.Notifications.services import notification_service  # ✅ Fixed import
-            notification_service.create_notification(f"Product added successfully: {product_name}")
+            # Admin notification for product creation
+            from apps.Notifications.services import notification_service
+            notification_service.create_notification(
+                f"Product added successfully: {product_name}",
+                user_id=None  # Admin-only notification
+            )
         except Exception as e:
             print(f"Failed to create product notification: {e}")
         return response
@@ -79,11 +112,21 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         purchase = serializer.save()
         product_name = purchase.product.name
         total_price = purchase.total_price
+        
+        # Send notification to member
+        if purchase.member:
+            send_member_notification(
+                purchase.member,
+                f"Purchase confirmed: {product_name} for ${total_price:.2f}"
+            )
 
-        # Product purchase notification handled by service layer
+        # Admin notification for purchase
         try:
             from apps.Notifications.services import notification_service
-            notification_service.create_notification(f"{product_name} sold for {total_price:.2f} AFN")
+            notification_service.create_notification(
+                f"{product_name} sold for {total_price:.2f} AFN",
+                user_id=None  # Admin-only notification
+            )
         except ImportError as e:
             logger.error(f"Failed to create notification: {e}")
 

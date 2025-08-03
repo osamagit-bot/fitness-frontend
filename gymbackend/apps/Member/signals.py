@@ -9,9 +9,9 @@ def update_membership_revenue_on_save(sender, instance, created, **kwargs):
     if created:  # Only for new members
         try:
             MembershipRevenue.add_member_revenue(instance.monthly_fee)
-            print(f"✅ Added {instance.monthly_fee} AFN revenue for new member: {instance.first_name} {instance.last_name}")
+            print(f"Added {instance.monthly_fee} AFN revenue for new member: {instance.first_name} {instance.last_name}")
         except Exception as e:
-            print(f"❌ Error adding membership revenue: {e}")
+            print(f"Error adding membership revenue: {e}")
     # Note: We don't update revenue when member details are just updated
 
 

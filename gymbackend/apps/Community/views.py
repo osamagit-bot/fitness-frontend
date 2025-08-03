@@ -10,16 +10,26 @@ from rest_framework.authentication import TokenAuthentication, SessionAuthentica
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import PostSerializer, CommentSerializer, AnnouncementSerializer, ChallengeSerializer, SupportTicketSerializer, TicketResponseSerializer,FAQCategorySerializer,FAQSerializer,TicketResponseSerializer,FAQ
-from apps.Notifications.services import notification_service
+
 from rest_framework.permissions import IsAdminUser
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from apps.Member.models import Member
 import traceback
 from apps.Authentication.permissions import IsOwnerOrReadOnly
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
-
-
+def get_notification_link(message):
+    """Determine navigation link based on notification message"""
+    lower = message.lower()
+    if "challenge" in lower:
+        return "/member-dashboard/community"
+    if "announcement" in lower:
+        return "/member-dashboard/community"
+    if "post" in lower:
+        return "/member-dashboard/community"
+    return "/member-dashboard"
 
 class CommunityViewSet(viewsets.ViewSet):
     authentication_classes = [JWTAuthentication, TokenAuthentication, SessionAuthentication]
@@ -41,7 +51,9 @@ class CommunityViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="posts/create")
     def create_community_post(self, request):
+        print(f"📝 Post creation request received via CommunityViewSet")
         member_id = request.data.get("memberID")
+        print(f"📝 Member ID: {member_id}")
 
         if not member_id:
             return Response({"error": "memberID is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -49,6 +61,7 @@ class CommunityViewSet(viewsets.ViewSet):
         try:
             member = Member.objects.get(athlete_id=member_id)
             user = member.user
+            print(f"📝 Member found: {member.first_name} {member.last_name}")
 
             data = {
                 "title": request.data.get("title"),
@@ -58,7 +71,6 @@ class CommunityViewSet(viewsets.ViewSet):
             serializer = PostSerializer(data=data)
             if serializer.is_valid():
                 post = serializer.save(created_by=user)
-                # Community post creation notification handled automatically by signals
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -107,7 +119,6 @@ class CommunityViewSet(viewsets.ViewSet):
                 return Response({"error": "You have already joined this challenge"}, status=400)
 
             ChallengeParticipant.objects.create(challenge=challenge, member=member)
-
             return Response({"detail": "Challenge joined successfully"}, status=201)
 
         except Exception as e:
@@ -143,7 +154,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Set the created_by field to the current user when creating a post"""
-        serializer.save(created_by=self.request.user)
+        post = serializer.save(created_by=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
         post = self.get_object()
@@ -175,6 +186,8 @@ class PostViewSet(viewsets.ModelViewSet):
         else:
             post.likes.add(user)
             liked = True
+            
+
 
         return Response({
             "liked": liked,
@@ -194,7 +207,9 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         post_id = self.kwargs.get('post_pk')
         post = Post.objects.get(id=post_id)
-        serializer.save(author=self.request.user, post=post)
+        comment = serializer.save(author=self.request.user, post=post)
+        
+
 
     def destroy(self, request, *args, **kwargs):
         comment = self.get_object()
@@ -254,11 +269,7 @@ class SupportViewSet(viewsets.ViewSet):
             serializer = SupportTicketSerializer(data=data)
             if serializer.is_valid():
                 ticket = serializer.save(member=member)
-                # Support ticket creation notification
-                
-                notification_service.create_notification(
-                    f"New support ticket created by {member.first_name} {member.last_name}"
-                )
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 print("Serializer errors:", serializer.errors)
@@ -321,7 +332,6 @@ class AdminCommunityViewSet(viewsets.ViewSet):
         serializer = AnnouncementSerializer(data=request.data)
         if serializer.is_valid():
             announcement = serializer.save(created_by=request.user)
-            # Announcement creation notification handled automatically by signals
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -343,12 +353,23 @@ class AdminCommunityViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"])
     def create_challenge(self, request):
-        serializer = ChallengeSerializer(data=request.data)
-        if serializer.is_valid():
-            challenge = serializer.save(created_by=request.user)
-            # Challenge creation notification handled automatically by signals
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            serializer = ChallengeSerializer(data=request.data)
+            if serializer.is_valid():
+                challenge = serializer.save(created_by=request.user)
+                return Response({
+                    "message": "Challenge created successfully",
+                    "challenge": serializer.data
+                }, status=status.HTTP_201_CREATED)
+            return Response({
+                "error": "Validation failed",
+                "details": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "error": "Failed to create challenge",
+                "details": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["delete"], url_path="delete_challenge")
     def delete_challenge(self, request, pk=None):
@@ -394,9 +415,8 @@ class AdminSupportViewSet(viewsets.ViewSet):
             ticket = SupportTicket.objects.get(id=pk)
             response = TicketResponse(ticket=ticket, message=request.data.get("message", ""), responder=request.user)
             response.save()
-            # Support ticket response notification handled by service layer
+            
 
-            notification_service.support_ticket_responded(pk)
             serializer = TicketResponseSerializer(response)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except SupportTicket.DoesNotExist:
@@ -408,9 +428,8 @@ class AdminSupportViewSet(viewsets.ViewSet):
             ticket = SupportTicket.objects.get(id=pk)
             ticket.status = "closed"
             ticket.save()
-            # Support ticket close notification handled by service layer
-          
-            notification_service.support_ticket_closed(pk)
+            
+
             serializer = SupportTicketSerializer(ticket)
             return Response(serializer.data)
         except SupportTicket.DoesNotExist:
@@ -435,9 +454,7 @@ class AdminSupportViewSet(viewsets.ViewSet):
         try:
             faq = FAQ.objects.get(id=pk)
             faq.delete()
-            # FAQ deletion notification handled by service layer
-            
-            notification_service.faq_deleted(pk)
+
             return Response(status=status.HTTP_204_NO_CONTENT)
         except:
             return Response(status=status.HTTP_404_NOT_FOUND)

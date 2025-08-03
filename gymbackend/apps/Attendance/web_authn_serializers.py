@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from Authentication.models import WebAuthnCredential
+from apps.Authentication.models import WebAuthnCredential
 
 class WebAuthnCredentialSerializer(serializers.ModelSerializer):
     class Meta:

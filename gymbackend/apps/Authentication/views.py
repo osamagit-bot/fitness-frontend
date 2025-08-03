@@ -104,28 +104,38 @@ class AdminDashboardViewSet(viewsets.ViewSet):
             except:
                 monthly_revenue_shop = 0
 
-            # Calculate membership payments for current month
-            monthly_renewal_revenue = MembershipPayment.objects.filter(
-                paid_on__month=now.month, paid_on__year=now.year
-            ).aggregate(total=Sum("amount"))["total"] or 0
+            # Use ONLY persistent revenue tracking to prevent double counting
+            try:
+                from apps.Member.models import MembershipRevenue
+                monthly_membership_revenue = MembershipRevenue.get_current_month_revenue()
+                print(f"✅ Using persistent membership revenue: {monthly_membership_revenue} AFN")
+            except Exception as e:
+                print(f"❌ Error getting persistent revenue: {e}")
+                monthly_membership_revenue = 0
 
-            # Calculate total revenue from all time
-            total_membership_revenue = MembershipPayment.objects.aggregate(total=Sum("amount"))["total"] or 0
+            # Calculate total revenue from all time (shop + all membership revenue)
             try:
                 total_shop_revenue = Purchase.objects.aggregate(total=Sum("total_price"))["total"] or 0
             except:
                 total_shop_revenue = 0
-            total_revenue = total_membership_revenue + total_shop_revenue
-
-            # Monthly membership revenue from member fees - use persistent tracking
+            
+            # For total revenue, we need to sum all months of membership revenue
             try:
                 from apps.Member.models import MembershipRevenue
-                monthly_membership_revenue = MembershipRevenue.update_current_month_revenue()
-            except:
-                monthly_membership_revenue = Member.objects.aggregate(total=Sum("monthly_fee"))["total"] or 0
+                all_membership_revenue = MembershipRevenue.objects.aggregate(total=Sum("total_revenue"))["total"] or 0
+                total_revenue = float(all_membership_revenue) + float(total_shop_revenue)
+                print(f"✅ Total revenue: {all_membership_revenue} (membership) + {total_shop_revenue} (shop) = {total_revenue} AFN")
+            except Exception as e:
+                print(f"❌ Error calculating total revenue: {e}")
+                total_revenue = float(monthly_membership_revenue) + float(total_shop_revenue)
 
-            # Total monthly revenue should be shop revenue + membership revenue (not double-counted)
+            # Total monthly revenue = shop revenue + membership revenue (from persistent tracking)
             total_monthly_revenue = float(monthly_revenue_shop) + float(monthly_membership_revenue)
+            
+            # Monthly renewal revenue is for display purposes only (not used in calculations)
+            monthly_renewal_revenue = MembershipPayment.objects.filter(
+                paid_on__month=now.month, paid_on__year=now.year
+            ).aggregate(total=Sum("amount"))["total"] or 0
 
             days_in_month = (
                 timezone.datetime(now.year + (now.month == 12), ((now.month % 12) + 1), 1) -
@@ -143,6 +153,7 @@ class AdminDashboardViewSet(viewsets.ViewSet):
                 "daily_revenue": f"{daily_revenue:.2f} AFN",
                 "total_revenue": float(total_revenue),
                 "total_monthly_revenue": float(total_monthly_revenue),
+                "note": "Revenue uses persistent tracking to prevent double counting",
             })
 
         except Exception as e:
@@ -156,7 +167,8 @@ class AdminDashboardViewSet(viewsets.ViewSet):
                 "daily_revenue": "0.00 AFN",
                 "total_revenue": 0,
                 "total_monthly_revenue": 0,
-                "error": str(e)
+                "error": str(e),
+                "note": "Error occurred in revenue calculation"
             }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], url_path="login", permission_classes=[permissions.AllowAny])
@@ -164,40 +176,43 @@ class AdminDashboardViewSet(viewsets.ViewSet):
         username = request.data.get("username")
         password = request.data.get("password")
         
-        print(f"🔐 ADMIN LOGIN ATTEMPT:")
-        print(f"📧 Username/Email: {username}")
-        print(f"🔑 Password provided: {'Yes' if password else 'No'}")
+        print(f"ADMIN LOGIN ATTEMPT:")
+        print(f"Username/Email: {username}")
+        print(f"Password provided: {'Yes' if password else 'No'}")
         
         # Try to find user by username OR email
         user_obj = None
         try:
             # First try username
             user_obj = CustomUser.objects.get(username=username)
-            print(f"👤 User found by username: {user_obj.username}")
+            # IMPORTANT: Only use 'monthly_revenue' for dashboard membership revenue display.
+            # Do NOT add 'monthly_renewal_revenue' to 'monthly_revenue' or 'total_monthly_revenue'.
+            # 'monthly_renewal_revenue' is for display/reference only and is already included in persistent tracking.
+            print(f"User found by username: {user_obj.username}")
         except CustomUser.DoesNotExist:
             try:
                 # Then try email
                 user_obj = CustomUser.objects.get(email=username)
-                print(f"👤 User found by email: {user_obj.email}")
+                print(f"User found by email: {user_obj.email}")
             except CustomUser.DoesNotExist:
-                print(f"❌ User does not exist: {username}")
+                print(f"User does not exist: {username}")
                 return Response({"detail": "Invalid credentials"}, status=401)
         
-        print(f"🏢 Is staff: {user_obj.is_staff}")
-        print(f"✅ Is active: {user_obj.is_active}")
-        print(f"🔍 DEBUG - user_obj.username: '{user_obj.username}'")
-        print(f"🔍 DEBUG - user_obj.email: '{user_obj.email}'")
+        print(f"Is staff: {user_obj.is_staff}")
+        print(f"Is active: {user_obj.is_active}")
+        print(f"DEBUG - user_obj.username: '{user_obj.username}'")
+        print(f"DEBUG - user_obj.email: '{user_obj.email}'")
         
         # Use username if available, otherwise use email for authentication
         auth_username = user_obj.username if user_obj.username else user_obj.email
-        print(f"🔍 Authenticating with: '{auth_username}'")
+        print(f"Authenticating with: '{auth_username}'")
         
         user = authenticate(username=auth_username, password=password)
-        print(f"🔓 Authentication result: {user}")
+        print(f"Authentication result: {user}")
 
         if user is not None and user.is_staff:
             refresh = RefreshToken.for_user(user)
-            print(f"✅ Admin login successful for: {user.username or user.email}")
+            print(f"Admin login successful for: {user.username or user.email}")
             return Response({
                 "access_token": str(refresh.access_token),
                 "refresh": str(refresh),
@@ -207,10 +222,10 @@ class AdminDashboardViewSet(viewsets.ViewSet):
                 "is_admin": True,
             })
         elif user is None:
-            print(f"❌ Authentication failed for: {auth_username}")
+            print(f"Authentication failed for: {auth_username}")
             return Response({"detail": "Invalid credentials"}, status=401)
         else:
-            print(f"❌ User is not admin: {auth_username}")
+            print(f"User is not admin: {auth_username}")
             return Response({"detail": "User is not an admin"}, status=403)
 
     @action(detail=False, methods=["get"], url_path="refresh")
@@ -548,17 +563,17 @@ class CustomTokenRefreshView(TokenRefreshView):
         try:
             return super().post(request, *args, **kwargs)
         except TokenError as e:
-            print(f"🚨 Token refresh error: {str(e)}")
+            print(f"Token refresh error: {str(e)}")
             return Response({
                 'detail': 'Token is invalid or expired',
                 'code': 'token_not_valid'
             }, status=status.HTTP_401_UNAUTHORIZED)
         except Exception as e:
-            print(f"🚨 Unexpected token refresh error: {str(e)}")
+            print(f"Unexpected token refresh error: {str(e)}")
             
             # Check if it's a user deletion issue
             if "CustomUser matching query does not exist" in str(e):
-                print("🚨 User was deleted but token still exists - clearing session")
+                print("User was deleted but token still exists - clearing session")
                 
                 # Try to get user info from token to determine user type
                 try:
@@ -567,9 +582,9 @@ class CustomTokenRefreshView(TokenRefreshView):
                         from rest_framework_simplejwt.tokens import RefreshToken
                         token = RefreshToken(refresh_token)
                         user_id = token.get('user_id')
-                        print(f"🔍 Deleted user ID from token: {user_id}")
+                        print(f"Deleted user ID from token: {user_id}")
                 except Exception as token_error:
-                    print(f"⚠️ Could not extract user info from token: {token_error}")
+                    print(f"Could not extract user info from token: {token_error}")
                 
                 return Response({
                     'detail': 'User account no longer exists',
@@ -598,7 +613,7 @@ def home(request):
 def check_auth(request):
     try:
         user = request.user
-        print(f"🔍 Auth check - User: {user}")
+        print(f"Auth check - User: {user}")
         
         # Try to get member data
         member_data = None
@@ -612,9 +627,9 @@ def check_auth(request):
                 'last_name': member.last_name,
                 'biometric_registered': getattr(member, 'biometric_registered', False)
             }
-            print(f"🔍 Found member: {member_data}")
+            print(f"Found member: {member_data}")
         except Member.DoesNotExist:
-            print(f"🚨 No member found for user: {user}")
+            print(f"No member found for user: {user}")
         
         response_data = {
             'user_id': user.id,
@@ -630,7 +645,7 @@ def check_auth(request):
         
         return Response(response_data)
     except Exception as e:
-        print(f"🚨 Auth check error: {str(e)}")
+        print(f"Auth check error: {str(e)}")
         return Response({'error': str(e)}, status=500)
 
 
@@ -667,13 +682,13 @@ class EmailOrUsernameModelBackend(ModelBackend):
     Custom authentication backend that allows users to authenticate using either email or username
     """
     def authenticate(self, request, username=None, password=None, **kwargs):
-        print(f"🔍 Custom backend called with username: {username}")
+        print(f"Custom backend called with username: {username}")
         
         if username is None:
             username = kwargs.get(User.USERNAME_FIELD)
         
         if username is None or password is None:
-            print(f"❌ Missing credentials: username={username}, password={'***' if password else None}")
+            print(f"Missing credentials: username={username}, password={'***' if password else None}")
             return None
         
         try:
@@ -681,27 +696,27 @@ class EmailOrUsernameModelBackend(ModelBackend):
             if '@' in username:
                 # It's an email
                 user = User.objects.get(email__iexact=username)
-                print(f"✅ Found user by email: {user}")
+                print(f"Found user by email: {user}")
             else:
                 # It's a username
                 user = User.objects.get(username__iexact=username)
-                print(f"✅ Found user by username: {user}")
+                print(f"Found user by username: {user}")
         except User.DoesNotExist:
-            print(f"❌ User not found: {username}")
+            print(f"User not found: {username}")
             # Run the default password hasher once to reduce timing differences
             User().set_password(password)
             return None
         
         password_valid = user.check_password(password)
         can_auth = self.user_can_authenticate(user)
-        print(f"🔑 Password valid: {password_valid}")
-        print(f"👤 Can authenticate: {can_auth}")
+        print(f"Password valid: {password_valid}")
+        print(f"Can authenticate: {can_auth}")
         
         if password_valid and can_auth:
-            print(f"✅ Authentication successful: {user}")
+            print(f"Authentication successful: {user}")
             return user
         
-        print(f"❌ Authentication failed")
+        print(f"Authentication failed")
         return None
 
     def get_user(self, user_id):
