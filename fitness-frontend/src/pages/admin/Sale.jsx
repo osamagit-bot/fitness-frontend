@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
-import { getRelativeTime } from "../../utils/timeUtils";
 import { formatDateTime } from "../../utils/dateUtils";
+import { getRelativeTime } from "../../utils/timeUtils";
 
 function Sale() {
   const [saleData, setSaleData] = useState({
@@ -22,7 +22,7 @@ function Sale() {
   const [deletedItems, setDeletedItems] = useState([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("all"); // all, today, yesterday, specific
+  const [dateFilter, setDateFilter] = useState("today"); // all, today, yesterday, specific
   const [selectedDate, setSelectedDate] = useState("");
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
@@ -378,7 +378,7 @@ function Sale() {
                   name="item"
                   value={saleData.item}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
                   required
                 >
                   <option value="">Select Item</option>
@@ -409,7 +409,7 @@ function Sale() {
                   onChange={handleInputChange}
                   min="1"
                   max={saleData.item ? availableItems.find(item => item.item === saleData.item)?.quantity || 0 : undefined}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none "
                   required
                 />
               </div>
@@ -429,7 +429,7 @@ function Sale() {
                   name="price"
                   value={saleData.price}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none "
                   placeholder="Enter selling price per unit"
                   required
                 />
@@ -452,7 +452,7 @@ function Sale() {
                   name="date"
                   value={saleData.date}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 [color-scheme:dark]"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none  [color-scheme:dark]"
                   required
                 />
               </div>
@@ -541,7 +541,7 @@ function Sale() {
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full sm:w-64 px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 pl-10"
+                  className="w-full sm:w-64 px-3 py-2 bg-gray-700 text-white rounded-lg outline-none pl-10"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -559,7 +559,7 @@ function Sale() {
                     setSelectedDate("");
                   }
                 }}
-                className="px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="px-3 py-2 bg-gray-700 text-white rounded-lg outline-none "
               >
                 <option value="all">All Sales</option>
                 <option value="today">Today's Sales</option>
@@ -573,7 +573,7 @@ function Sale() {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 [color-scheme:dark]"
+                  className="px-3 py-2 bg-gray-700 text-white rounded-lg outline-none  [color-scheme:dark]"
                 />
               )}
             </div>

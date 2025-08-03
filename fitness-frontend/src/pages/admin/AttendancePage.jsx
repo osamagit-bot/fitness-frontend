@@ -10,6 +10,7 @@ const AttendancePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMember, setSelectedMember] = useState('');
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({
     todayCount: 0,
     weeklyCount: 0,
@@ -17,26 +18,34 @@ const AttendancePage = () => {
     totalMembers: 0
   });
 
-  const calculateMemberAbsentDays = (memberStartDate, attendanceCount) => {
-    if (!memberStartDate) return 0;
+  const calculateMemberAbsentDays = (memberId) => {
+    const member = members.find(m => m.athlete_id === memberId);
+    if (!member || !member.start_date) return 0;
     
-    const startDate = new Date(memberStartDate);
+    const startDate = new Date(member.start_date);
     const today = new Date();
     const totalDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
     
-    return Math.max(0, totalDays - attendanceCount);
+    // Count actual attendance records for this member
+    const memberAttendanceCount = attendanceData.filter(record => record.member_id === memberId).length;
+    
+    return Math.max(0, totalDays - memberAttendanceCount);
   };
 
-  const calculateMemberAttendanceRate = (memberStartDate, attendanceCount) => {
-    if (!memberStartDate) return 0;
+  const calculateMemberAttendanceRate = (memberId) => {
+    const member = members.find(m => m.athlete_id === memberId);
+    if (!member || !member.start_date) return 0;
     
-    const startDate = new Date(memberStartDate);
+    const startDate = new Date(member.start_date);
     const today = new Date();
     const totalDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
     
     if (totalDays === 0) return 100;
     
-    return Math.min(100, Math.round((attendanceCount / totalDays) * 100));
+    // Count actual attendance records for this member
+    const memberAttendanceCount = attendanceData.filter(record => record.member_id === memberId).length;
+    
+    return Math.min(100, Math.round((memberAttendanceCount / totalDays) * 100));
   };
 
   useEffect(() => {
@@ -194,6 +203,15 @@ const AttendancePage = () => {
       day: 'numeric'
     });
   };
+
+  const filteredAttendanceData = attendanceData.filter(record => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      record.member_name?.toLowerCase().includes(searchLower) ||
+      record.member_id?.toString().includes(searchLower)
+    );
+  });
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -365,20 +383,15 @@ const AttendancePage = () => {
           
           <div>
             <label className="block text-sm font-medium text-white mb-2">
-              Filter by Member
+              Search Member
             </label>
-            <select
-              value={selectedMember}
-              onChange={(e) => setSelectedMember(e.target.value)}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Members</option>
-              {members.map(member => (
-                <option key={member.athlete_id} value={member.athlete_id}>
-                  {member.first_name} {member.last_name}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              placeholder="Search by name or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+            />
           </div>
           
           <div className="flex items-end">
@@ -386,6 +399,7 @@ const AttendancePage = () => {
               onClick={() => {
                 setSelectedDate('');
                 setSelectedMember('');
+                setSearchTerm('');
               }}
               className="w-full bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors"
             >
@@ -406,7 +420,7 @@ const AttendancePage = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white">Attendance Records</h2>
             <div className="text-sm text-gray-300">
-              {attendanceData.length} records found
+              {filteredAttendanceData.length} of {attendanceData.length} records
             </div>
           </div>
         </div>
@@ -417,14 +431,14 @@ const AttendancePage = () => {
             <p className="text-gray-300">Loading attendance data...</p>
             <p className="text-sm text-gray-400 mt-1">Please wait while we fetch the records</p>
           </div>
-        ) : attendanceData.length === 0 ? (
+        ) : filteredAttendanceData.length === 0 ? (
           <div className="p-8 text-center">
             <i className="bx bx-calendar-x text-4xl text-gray-300 mb-4"></i>
             <p className="text-gray-300">No attendance records found</p>
             <p className="text-sm text-gray-400">Try adjusting your filters</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full">
               <thead className="bg-gray-600">
                 <tr>
@@ -443,7 +457,7 @@ const AttendancePage = () => {
                 </tr>
               </thead>
               <tbody className="bg-gray-700 divide-y divide-gray-600">
-                {attendanceData.map((record, index) => (
+                {filteredAttendanceData.map((record, index) => (
                   <tr key={record.id} className="hover:bg-gray-600">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -473,10 +487,10 @@ const AttendancePage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                       <div className="flex flex-col">
                         <span className="text-red-400 font-medium">
-                          {calculateMemberAbsentDays(record.member_start_date, record.member_total_attendance)} absent
+                          {calculateMemberAbsentDays(record.member_id)} absent
                         </span>
                         <span className="text-green-400 text-xs">
-                          {calculateMemberAttendanceRate(record.member_start_date, record.member_total_attendance)}% rate
+                          {calculateMemberAttendanceRate(record.member_id)}% rate
                         </span>
                       </div>
                     </td>

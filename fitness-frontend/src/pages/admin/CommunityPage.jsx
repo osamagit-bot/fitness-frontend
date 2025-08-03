@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import AppToastContainer from "../../components/ui/ToastContainer";
 import ConfirmModal from "../../components/ui/ConfirmModal";
+import AppToastContainer from "../../components/ui/ToastContainer";
 import api from "../../utils/api";
-import { formatDate, formatDateTime, getDateFromObject } from "../../utils/dateUtils";
-import { showToast } from "../../utils/toast";
+import { formatDate, getDateFromObject } from "../../utils/dateUtils";
 import { getRelativeTime } from "../../utils/timeUtils";
+import { showToast } from "../../utils/toast";
 
 function AdminCommunityManagement() {
   const [posts, setPosts] = useState([]);
@@ -16,6 +16,8 @@ function AdminCommunityManagement() {
 
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '' });
   const [newChallenge, setNewChallenge] = useState({ title: '', description: '', startDate: '', endDate: '' });
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+  const [showChallengeForm, setShowChallengeForm] = useState(false);
   const [showComments, setShowComments] = useState({});
   const [showReplies, setShowReplies] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
@@ -68,6 +70,7 @@ function AdminCommunityManagement() {
 
       setAnnouncements([response.data, ...announcements]);
       setNewAnnouncement({ title: '', content: '' });
+      setShowAnnouncementForm(false);
       showToast.success('Announcement created successfully!');
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to create announcement.';
@@ -97,28 +100,65 @@ function AdminCommunityManagement() {
 
   const handleCreateChallenge = async (e) => {
     e.preventDefault();
-    if (!newChallenge.title || !newChallenge.description || !newChallenge.startDate || !newChallenge.endDate) {
+    
+    if (!newChallenge.title.trim() || !newChallenge.description.trim() || !newChallenge.startDate || !newChallenge.endDate) {
       showToast.warn('Please fill in all challenge fields');
       return;
     }
 
     const payload = {
-      title: newChallenge.title,
-      description: newChallenge.description,
+      title: newChallenge.title.trim(),
+      description: newChallenge.description.trim(),
       start_date: newChallenge.startDate,
       end_date: newChallenge.endDate,
     };
 
     try {
-      const response = await api.post('admin-community/create_challenge/', payload);
-
-      setChallenges([response.data, ...challenges]);
+      // Show loading state
+      setLoading(true);
+      
+      const response = await Promise.race([
+        api.post('admin-community/create_challenge/', payload),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 8000)
+        )
+      ]);
+      
+      setChallenges(prevChallenges => [response.data, ...prevChallenges]);
       setNewChallenge({ title: '', description: '', startDate: '', endDate: '' });
+      setShowChallengeForm(false);
       showToast.success('Challenge created successfully!');
+      
     } catch (err) {
-      console.error('Challenge creation error:', err.response?.data);
-      const errorMsg = err.response?.data?.detail || 'Failed to create challenge.';
-      showToast.error(errorMsg);
+      console.error('Challenge creation error:', err);
+      
+      // If it's a timeout, refresh data to check if challenge was created
+      if (err.message === 'Request timeout') {
+        const originalChallengeCount = challenges.length;
+        
+        setTimeout(async () => {
+          try {
+            const challengesResponse = await api.get('admin-community/challenges/');
+            setChallenges(challengesResponse.data);
+            
+            // Check if a new challenge was added
+            if (challengesResponse.data.length > originalChallengeCount) {
+              showToast.success('Challenge created successfully!');
+              setNewChallenge({ title: '', description: '', startDate: '', endDate: '' });
+              setShowChallengeForm(false);
+            } else {
+              showToast.error('Challenge creation failed. Please try again.');
+            }
+          } catch (refreshErr) {
+            showToast.error('Unable to verify challenge creation. Please refresh the page.');
+          }
+        }, 1000);
+      } else {
+        const errorMsg = err.response?.data?.detail || err.response?.data?.message || 'Failed to create challenge.';
+        showToast.error(errorMsg);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -167,7 +207,7 @@ function AdminCommunityManagement() {
 
   return (
     <>
-      <div className="container mx-auto p-2 sm:p-4 max-w-6xl">
+      <div className="container mx-auto p-2 sm:p-4 max-w-6xl h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Community Management</h1>
         <p className="text-gray-300 text-sm sm:text-base">Create and manage community content for members.</p>
@@ -195,28 +235,41 @@ function AdminCommunityManagement() {
 
       {/* Announcements Tab */}
       {activeTab === 'announcements' && (
-        <div>
-          <div className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
-            <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Create New Announcement</h2>
-            <form onSubmit={handleCreateAnnouncement}>
-              <input
-                type="text"
-                placeholder="Title"
-                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
-                value={newAnnouncement.title}
-                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
-              />
-              <textarea
-                placeholder="Content"
-                rows="3"
-                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
-                value={newAnnouncement.content}
-                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
-              />
-              <button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium">
-                Post Announcement
-              </button>
-            </form>
+        <div className="flex-1 overflow-y-auto">
+          <div className="mb-4 sm:mb-6">
+            <button
+              onClick={() => setShowAnnouncementForm(!showAnnouncementForm)}
+              className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium"
+            >
+              {showAnnouncementForm ? 'Cancel' : 'Post New Announcement'}
+            </button>
+          </div>
+          
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out mb-4 sm:mb-6 ${
+            showAnnouncementForm ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          }`}>
+            <div className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Create New Announcement</h2>
+              <form onSubmit={handleCreateAnnouncement}>
+                <input
+                  type="text"
+                  placeholder="Title"
+                  className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
+                  value={newAnnouncement.title}
+                  onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                />
+                <textarea
+                  placeholder="Content"
+                  rows="3"
+                  className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
+                  value={newAnnouncement.content}
+                  onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
+                />
+                <button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium">
+                  Post Announcement
+                </button>
+              </form>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -247,48 +300,65 @@ function AdminCommunityManagement() {
 
       {/* Challenges Tab */}
       {activeTab === 'challenges' && (
-        <div>
-          <div className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
-            <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Create New Challenge</h2>
-            <form onSubmit={handleCreateChallenge}>
-              <input
-                type="text"
-                placeholder="Title"
-                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
-                value={newChallenge.title}
-                onChange={(e) => setNewChallenge({ ...newChallenge, title: e.target.value })}
-              />
-              <textarea
-                placeholder="Description"
-                rows="3"
-                className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
-                value={newChallenge.description}
-                onChange={(e) => setNewChallenge({ ...newChallenge, description: e.target.value })}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 sm:hidden">Start Date</label>
-                  <input
-                    type="date"
-                    className="w-full p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white text-sm sm:text-base"
-                    value={newChallenge.startDate}
-                    onChange={(e) => setNewChallenge({ ...newChallenge, startDate: e.target.value })}
-                  />
+        <div className="flex-1 overflow-y-auto">
+          <div className="mb-4 sm:mb-6">
+            <button
+              onClick={() => setShowChallengeForm(!showChallengeForm)}
+              className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium"
+            >
+              {showChallengeForm ? 'Cancel' : 'Post New Challenge'}
+            </button>
+          </div>
+          
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out mb-4 sm:mb-6 ${
+            showChallengeForm ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          }`}>
+            <div className="bg-gray-700 rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Create New Challenge</h2>
+              <form onSubmit={handleCreateChallenge}>
+                <input
+                  type="text"
+                  placeholder="Title"
+                  className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
+                  value={newChallenge.title}
+                  onChange={(e) => setNewChallenge({ ...newChallenge, title: e.target.value })}
+                />
+                <textarea
+                  placeholder="Description"
+                  rows="3"
+                  className="w-full mb-3 sm:mb-4 p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white placeholder-gray-400 text-sm sm:text-base"
+                  value={newChallenge.description}
+                  onChange={(e) => setNewChallenge({ ...newChallenge, description: e.target.value })}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1 sm:hidden">Start Date</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white text-sm sm:text-base [color-scheme:dark]"
+                      value={newChallenge.startDate}
+                      onChange={(e) => setNewChallenge({ ...newChallenge, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1 sm:hidden">End Date</label>
+                    <input
+                      type="date"
+                      className="w-full p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white text-sm sm:text-base [color-scheme:dark]"
+                      value={newChallenge.endDate}
+                      onChange={(e) => setNewChallenge({ ...newChallenge, endDate: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1 sm:hidden">End Date</label>
-                  <input
-                    type="date"
-                    className="w-full p-2 sm:p-3 border border-gray-600 rounded bg-gray-800 text-white text-sm sm:text-base"
-                    value={newChallenge.endDate}
-                    onChange={(e) => setNewChallenge({ ...newChallenge, endDate: e.target.value })}
-                  />
-                </div>
-              </div>
-              <button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium">
-                Create Challenge
-              </button>
-            </form>
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-black px-4 py-2 rounded hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Creating...' : 'Create Challenge'}
+                </button>
+              </form>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -301,9 +371,9 @@ function AdminCommunityManagement() {
                 <div key={challenge.id} className="bg-gray-700 rounded shadow p-3 sm:p-4 relative">
                   <h3 className="text-lg sm:text-xl font-bold text-white pr-12">{challenge.title}</h3>
                   <p className="mb-2 text-gray-300 text-sm sm:text-base">{challenge.description}</p>
-                  <div className="text-xs sm:text-sm text-gray-400 space-y-1">
-                    <p>Participants: {challenge.participants || 0}</p>
-                    <p>Ends: {challenge.end_date ? new Date(challenge.end_date).toLocaleDateString() : 'No end date'}</p>
+                  <div className="text-xs sm:text-sm text-gray-300 space-y-1">
+                    <p className="text-white">Participants: {challenge.participants || 0}</p>
+                    <p className="text-white">Ends: {challenge.end_date ? new Date(challenge.end_date).toLocaleDateString() : 'No end date'}</p>
                   </div>
                   <button
                     onClick={() => handleDeleteChallenge(challenge.id)}
@@ -315,7 +385,7 @@ function AdminCommunityManagement() {
               );
               })
             ) : (
-              <p>No challenges available.</p>
+              <p className='text-gray-200'>No challenges available.</p>
             )}
           </div>
         </div>
@@ -323,7 +393,7 @@ function AdminCommunityManagement() {
 
       {/* Posts Tab */}
       {activeTab === 'posts' && (
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4">
           {loading ? (
             <p>Loading...</p>
           ) : posts.length > 0 ? (

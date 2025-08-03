@@ -4,6 +4,7 @@ import "../../styles/kiosk.css";
 // --- CHANGE: Import both api and publicApi ---
 import { publicApi } from "../../utils/api";
 import { isWebAuthnSupported, kioskAuthenticate } from "../../utils/webauthn";
+import PinCheckIn from "../../components/PinCheckIn";
 
 const KioskCheckIn = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -17,6 +18,7 @@ const KioskCheckIn = () => {
     const saved = localStorage.getItem("kioskAutoMode");
     return saved === "true";
   });
+  const [showPinMode, setShowPinMode] = useState(false);
   const intervalRef = useRef(null);
   const checkInTimeoutRef = useRef(null);
   const authTimeoutRef = useRef(null);
@@ -75,13 +77,13 @@ const KioskCheckIn = () => {
     try {
       const today = new Date().toISOString().split("T")[0];
       const response = await publicApi.get(
-        `attendance_history/?date=${today}&limit=5`
+        `attendance_history/?date=${today}`
       );
       
       console.log("🔍 Recent check-ins raw data:", response.data);
       
       // Validate and clean the data
-      const validCheckIns = response.data.slice(0, 5).map(checkIn => {
+      const validCheckIns = (Array.isArray(response.data) ? response.data : []).slice(0, 4).map(checkIn => {
         // Combine date and time if they're separate
         let fullDateTime = checkIn.check_in_datetime || checkIn.check_in_time;
         
@@ -375,6 +377,9 @@ const KioskCheckIn = () => {
 
   const handleSuccessfulCheckIn = (data) => {
     const { member, already_checked_in } = data;
+    
+    // Keep PIN mode visible after successful check-in
+    // setShowPinMode(false); // Removed this line
 
     if (already_checked_in) {
       setWelcomeMessage({
@@ -523,15 +528,32 @@ const KioskCheckIn = () => {
                 <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg border-2 border-yellow-400/50">
                   <i className="bx bx-check text-6xl text-white"></i>
                 </div>
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent text-center">
-                  {welcomeMessage.message}
+                <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-center ${
+                  welcomeMessage.member?.wrong_time_access ? 'text-yellow-400' : 'bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent'
+                }`}>
+                  {welcomeMessage.member?.wrong_time_access ? 'Access Granted (Wrong Time)' : welcomeMessage.message}
                 </h2>
                 <p className="text-lg sm:text-xl text-gray-300 text-center">
                   {welcomeMessage.submessage}
                 </p>
                 <div className="mt-4 text-gray-200">
                   <p>Member ID: {welcomeMessage.member.athlete_id}</p>
+                  {welcomeMessage.member?.time_slot && (
+                    <p className="text-sm text-gray-300 mt-1">
+                      Time Slot: {welcomeMessage.member.time_slot} ({welcomeMessage.member.allowed_time})
+                    </p>
+                  )}
                 </div>
+                {welcomeMessage.member?.wrong_time_access && (
+                  <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
+                    <p className="text-yellow-300 text-sm">
+                      ⚠️ Check-in outside registered time slot
+                    </p>
+                    <p className="text-yellow-300 text-xs mt-1">
+                      Security photo captured for verification
+                    </p>
+                  </div>
+                )}
               </motion.div>
             ) : errorMessage ? (
               <motion.div
@@ -597,6 +619,16 @@ const KioskCheckIn = () => {
                     ? "Verifying your fingerprint..."
                     : "Place your finger on the sensor to check in"}
                 </p>
+                
+                {/* PIN Mode Toggle */}
+                <div className="mt-6">
+                  <button
+                    onClick={() => setShowPinMode(!showPinMode)}
+                    className="text-yellow-400 hover:text-yellow-300 text-lg font-medium"
+                  >
+                    {showPinMode ? 'Use Fingerprint' : 'Use PIN Instead'}
+                  </button>
+                </div>
 
                 {/* Always show disable button when auto mode is active */}
                 {isAutoMode && isProcessing && (
@@ -616,59 +648,85 @@ const KioskCheckIn = () => {
                   </motion.div>
                 )}
 
-                {!isProcessing ? (
-                  <motion.div className="mt-4 sm:mt-8 mb-8">
-                    {isAutoMode ? (
-                      <motion.div className="text-center">
-                        <motion.div
-                          animate={{ opacity: [0.7, 1, 0.7] }}
-                          transition={{ repeat: Infinity, duration: 2 }}
-                          className="mb-4"
-                        >
-                          <i className="bx bx-wifi text-3xl text-yellow-400 mb-2"></i>
-                          <p className="text-lg text-yellow-400 font-semibold">
-                            Auto mode - Listening for fingerprint...
+                {/* Show PIN input or fingerprint controls */}
+                <AnimatePresence mode="wait">
+                  {showPinMode ? (
+                    <motion.div 
+                      key="pin-mode"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-8"
+                    >
+                      <PinCheckIn
+                        onSuccess={handleSuccessfulCheckIn}
+                        onError={showTemporaryError}
+                      />
+                    </motion.div>
+                  ) : (
+                  !isProcessing ? (
+                    <motion.div 
+                      key="fingerprint-mode"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-4 sm:mt-8 mb-8"
+                    >
+                      {isAutoMode ? (
+                        <motion.div className="text-center">
+                          <motion.div
+                            animate={{ opacity: [0.7, 1, 0.7] }}
+                            transition={{ repeat: Infinity, duration: 2 }}
+                            className="mb-4"
+                          >
+                            <i className="bx bx-wifi text-3xl text-yellow-400 mb-2"></i>
+                            <p className="text-lg text-yellow-400 font-semibold">
+                              Auto mode - Listening for fingerprint...
+                            </p>
+                          </motion.div>
+                          <motion.button
+                            onClick={disableAutoMode}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl text-base sm:text-lg font-semibold shadow-lg transition-colors"
+                          >
+                            <i className="bx bx-x text-lg sm:text-xl mr-1 sm:mr-2"></i>
+                            <span className="hidden sm:inline">
+                              Disable Auto Mode
+                            </span>
+                            <span className="sm:hidden">Stop Auto</span>
+                          </motion.button>
+                        </motion.div>
+                      ) : (
+                        <motion.div className="text-center">
+                          <motion.button
+                            onClick={enableAutoMode}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black px-8 py-4 rounded-xl text-xl font-semibold shadow-lg transition-all duration-200 mb-4"
+                          >
+                            <i className="bx bx-fingerprint text-2xl mr-2"></i>
+                            Enable Auto Sensor
+                          </motion.button>
+                          <p className="text-sm text-gray-300">
+                            or manually touch the sensor above
                           </p>
                         </motion.div>
-                        <motion.button
-                          onClick={disableAutoMode}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl text-base sm:text-lg font-semibold shadow-lg transition-colors"
-                        >
-                          <i className="bx bx-x text-lg sm:text-xl mr-1 sm:mr-2"></i>
-                          <span className="hidden sm:inline">
-                            Disable Auto Mode
-                          </span>
-                          <span className="sm:hidden">Stop Auto</span>
-                        </motion.button>
-                      </motion.div>
-                    ) : (
-                      <motion.div className="text-center">
-                        <motion.button
-                          onClick={enableAutoMode}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black px-8 py-4 rounded-xl text-xl font-semibold shadow-lg transition-all duration-200 mb-4"
-                        >
-                          <i className="bx bx-fingerprint text-2xl mr-2"></i>
-                          Enable Auto Sensor
-                        </motion.button>
-                        <p className="text-sm text-gray-300">
-                          or manually touch the sensor above
-                        </p>
-                      </motion.div>
-                    )}
+                      )}
 
-                    <motion.div
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ repeat: Infinity, duration: 3, delay: 1 }}
-                      className="mt-6"
-                    >
-                      <i className="bx bx-down-arrow-alt text-4xl text-gray-200"></i>
+                      <motion.div
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ repeat: Infinity, duration: 3, delay: 1 }}
+                        className="mt-6"
+                      >
+                        <i className="bx bx-down-arrow-alt text-4xl text-gray-200"></i>
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
-                ) : null}
+                  ) : null
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
           </AnimatePresence>
@@ -734,8 +792,13 @@ const KioskCheckIn = () => {
                         <div className="text-xs sm:text-sm font-medium text-white">
                           {formatTime(checkIn.check_in_datetime)}
                         </div>
-                        <div className="text-xs text-gray-300">
+                        <div className="flex items-center gap-1 text-xs text-gray-300">
                           {checkIn.verification_method}
+                          {checkIn.has_photo && (
+                            <span className="text-green-400" title="Photo verified">
+                              📷
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

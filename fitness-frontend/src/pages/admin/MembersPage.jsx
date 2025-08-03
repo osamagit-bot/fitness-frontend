@@ -4,6 +4,7 @@ import { FiSearch, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import ConfirmModal from "../../components/ui/ConfirmModal";
 import AppToastContainer from "../../components/ui/ToastContainer";
+import PinManagement from "../../components/PinManagement";
 import api from "../../utils/api";
 import { showToast } from "../../utils/toast";
 
@@ -24,6 +25,7 @@ function MembersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
+  const [pinModal, setPinModal] = useState({ isOpen: false, member: null });
 
   const fetchAthletes = async () => {
     setIsLoading(true);
@@ -506,6 +508,12 @@ function MembersPage() {
                               </button>
                             )}
                             <button
+                              onClick={() => setPinModal({ isOpen: true, member: athlete })}
+                              className="text-blue-200 px-2 py-1 text-xs rounded bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 hover:bg-blue-500/30 transition-all"
+                            >
+                              PIN
+                            </button>
+                            <button
                               onClick={() => deleteAthlete(athlete.athlete_id)}
                               className="text-red-200 px-2 py-1 text-xs rounded bg-red-500/20 backdrop-blur-sm border border-red-400/30 hover:bg-red-500/30 transition-all"
                             >
@@ -620,6 +628,12 @@ function MembersPage() {
                                 Renew
                               </button>
                             )}
+                            <button
+                              onClick={() => setPinModal({ isOpen: true, member: athlete })}
+                              className="text-blue-200 px-2 py-1 rounded bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 hover:bg-blue-500/30 transition-all"
+                            >
+                              PIN
+                            </button>
                             <button
                               onClick={() => deleteAthlete(athlete.athlete_id)}
                               className="text-red-200 px-2 py-1 rounded bg-red-500/20 backdrop-blur-sm border border-red-400/30 hover:bg-red-500/30 transition-all"
@@ -762,6 +776,12 @@ function MembersPage() {
                           </button>
                         )}
                         <button
+                          onClick={() => setPinModal({ isOpen: true, member: athlete })}
+                          className="px-3 py-1 bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-blue-200 rounded-md text-sm hover:bg-blue-500/30 transition-all"
+                        >
+                          PIN
+                        </button>
+                        <button
                           onClick={() => deleteAthlete(athlete.athlete_id)}
                           className="px-3 py-1 bg-red-500/20 backdrop-blur-sm border border-red-400/30 text-red-200 rounded-md text-sm hover:bg-red-500/30 transition-all"
                         >
@@ -784,6 +804,29 @@ function MembersPage() {
         title={confirmModal.title}
         message={confirmModal.message}
       />
+      
+      {pinModal.isOpen && (
+        pinModal.member?.pin && pinModal.member?.pin_enabled ? (
+          <ConfirmModal
+            isOpen={true}
+            onClose={() => setPinModal({ isOpen: false, member: null })}
+            onConfirm={() => setPinModal({ isOpen: false, member: null })}
+            title="PIN Already Set"
+            message={`${pinModal.member.first_name} ${pinModal.member.last_name} has already set their PIN. Contact admin to reset their PIN.`}
+            confirmText="OK"
+            showCancel={false}
+          />
+        ) : (
+          <PinManagement
+            member={pinModal.member}
+            onUpdate={(updatedMember) => {
+              showToast.success('PIN updated successfully!');
+              fetchAthletes();
+            }}
+            onClose={() => setPinModal({ isOpen: false, member: null })}
+          />
+        )
+      )}
       
       <AppToastContainer />
     </>

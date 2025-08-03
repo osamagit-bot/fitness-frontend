@@ -18,7 +18,9 @@ const MemberDashboard = () => {
       setUserData(authState.member.user);
       fetchMemberData();
       fetchNotifications();
-      setupWebSocket();
+      // Setup WebSocket for real-time notifications (optional)
+      const cleanup = setupWebSocket();
+      return cleanup;
     }
   }, [authState.member.isAuthenticated]);
 
@@ -41,8 +43,9 @@ const MemberDashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await api.get("member/notifications/");
-      setNotifications(res.data.notifications || []);
+      const res = await api.get("notifications/");
+      console.log('Notifications response:', res.data);
+      setNotifications(res.data.results || res.data || []);
     } catch (err) {
       console.error("Error fetching notifications:", err);
       setNotifications([]);
@@ -59,7 +62,7 @@ const MemberDashboard = () => {
     const wsUrl = `${protocol}://${backendHost}/ws/notifications/?token=${token}`;
     let socket;
     let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
+    const maxReconnectAttempts = 3;
     let heartbeatInterval;
 
     const connectWebSocket = () => {
@@ -67,6 +70,7 @@ const MemberDashboard = () => {
         socket = new WebSocket(wsUrl);
 
         socket.onopen = () => {
+          console.log('WebSocket connected successfully');
           reconnectAttempts = 0;
           heartbeatInterval = setInterval(() => {
             if (socket && socket.readyState === WebSocket.OPEN) {
@@ -89,21 +93,28 @@ const MemberDashboard = () => {
           }
         };
 
+        socket.onerror = (error) => {
+          console.warn('WebSocket error (real-time notifications disabled):', error);
+        };
+
         socket.onclose = (event) => {
           if (heartbeatInterval) {
             clearInterval(heartbeatInterval);
             heartbeatInterval = null;
           }
           if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+            console.log(`WebSocket reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1})`);
             setTimeout(() => {
               reconnectAttempts++;
               connectWebSocket();
             }, delay);
+          } else if (reconnectAttempts >= maxReconnectAttempts) {
+            console.warn('WebSocket connection failed after max attempts. Real-time notifications disabled.');
           }
         };
       } catch (error) {
-        console.error("Error creating WebSocket connection:", error);
+        console.warn("WebSocket not available (real-time notifications disabled):", error);
       }
     };
 

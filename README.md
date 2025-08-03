@@ -115,9 +115,16 @@ GymFitness_Club_MS/
    python manage.py createsuperuser
    ```
 
-7. **Start development server**
+7. **Start development server with WebSocket support**
    ```bash
-   python manage.py runserver
+   # Windows
+   start_dev.bat
+   
+   # Linux/macOS
+   python start_dev.py
+   
+   # Or manually with Daphne
+   daphne -b 127.0.0.1 -p 8000 --reload gymbackend.asgi:application
    ```
 
 ### Frontend Setup
@@ -209,7 +216,25 @@ The backend provides RESTful APIs for:
 - [ ] Configure domain and DNS
 - [ ] Setup monitoring and logging
 
-### Deployment Options
+### Production Deployment
+
+#### Option 1: Simple Production Server
+```bash
+# Windows
+start_prod.bat
+
+# Linux/macOS
+python start_prod.py
+```
+
+#### Option 2: Docker Deployment
+```bash
+# Build and run with Docker
+docker build -t gymfitness-backend .
+docker run -p 8000:8000 gymfitness-backend
+```
+
+### Deployment Platforms
 - **Frontend**: Netlify, Vercel, or AWS S3
 - **Backend**: Heroku, DigitalOcean, or AWS EC2
 - **Database**: PostgreSQL on AWS RDS or DigitalOcean

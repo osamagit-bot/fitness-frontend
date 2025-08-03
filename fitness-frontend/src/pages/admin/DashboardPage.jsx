@@ -1,39 +1,42 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    FiAward,
-    FiCalendar,
-    FiCheckCircle,
-    FiDollarSign,
-    FiEye,
-    FiPlus,
-    FiRefreshCw,
-    FiSettings,
-    FiShoppingCart,
-    FiTarget,
-    FiUserCheck,
-    FiUsers
+  FiAward,
+  FiCalendar,
+  FiCheckCircle,
+  FiDollarSign,
+  FiEye,
+  FiPlus,
+  FiSettings,
+  FiShoppingCart,
+  FiTarget,
+  FiUserCheck,
+  FiUsers
 } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import {
-    Area,
-    AreaChart,
-    Bar,
-    BarChart,
-    Cell,
-    Line,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  Cell,
+  Line,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from "recharts";
 import api from "../../utils/api";
 import { formatDate, formatDateTime } from "../../utils/dateUtils";
+import { getRelativeTime } from "../../utils/timeUtils";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  // IMPORTANT: Only use stats.monthlyRevenue for membership revenue display.
+  // Do NOT add stats.outstandingPayments to stats.monthlyRevenue or totalRevenue.
+  // outstandingPayments is for reference only and is already included in persistent tracking from backend.
   const [stats, setStats] = useState({
     activeMembers: 0,
     todayCheckIns: 0,
@@ -51,7 +54,7 @@ const DashboardPage = () => {
     memberRetention: 92,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [recentMembers, setRecentMembers] = useState([]);
@@ -96,20 +99,51 @@ const DashboardPage = () => {
 
   // Add a global initialization state
   const [isInitializing, setIsInitializing] = useState(false);
+  // Separate state for manual refresh vs initial load
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Debug function to check states
+  const debugStates = () => {
+    console.log('🔍 Current states:', {
+      loading,
+      isInitializing,
+      isRefreshing,
+      initializingRef: initializingRef.current,
+      isInitialized
+    });
+  };
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (isInitialized || initializingRef.current) return;
+    
     // Listen for purchase completion events
     const handlePurchaseCompleted = () => {
       console.log('🔄 DashboardPage: Purchase completed, refreshing data...');
-      setTimeout(() => {
-        fetchDashboardData();
-      }, 1000);
+      // Only refresh if not currently initializing
+      if (!initializingRef.current && !isInitializing && isInitialized) {
+        setTimeout(() => {
+          fetchDashboardData();
+        }, 1000);
+      }
+    };
+    
+    // Listen for member registration events
+    const handleMemberRegistered = () => {
+      console.log('🔄 DashboardPage: Member registered, refreshing data...');
+      // Only refresh if not currently initializing
+      if (!initializingRef.current && !isInitializing && isInitialized) {
+        setTimeout(() => {
+          fetchDashboardData();
+        }, 1500);
+      }
     };
     
     window.addEventListener('purchaseCompleted', handlePurchaseCompleted);
+    window.addEventListener('memberRegistered', handleMemberRegistered);
     
     const initializeDashboard = async () => {
-      if (initializingRef.current) return;
+      if (initializingRef.current || isInitialized) return;
       initializingRef.current = true;
       setIsInitializing(true);
 
@@ -141,13 +175,22 @@ const DashboardPage = () => {
           };
           
           const backendShopRevenue = parseRevenue(backendStats.monthly_revenue_shop);
+          const membershipRevenue = parseRevenue(backendStats.monthly_revenue);
+          const totalMonthlyRevenue = parseRevenue(backendStats.total_monthly_revenue);
+          
+          console.log('🔍 Dashboard revenue data:', {
+            membershipRevenue,
+            shopRevenue: backendShopRevenue,
+            totalMonthlyRevenue,
+            note: backendStats.note
+          });
           
           newStats = {
             ...newStats,
             activeMembers: backendStats.total_members || 0,
             activeTrainers: backendStats.total_trainers || 0,
-            monthlyRevenue: parseRevenue(backendStats.monthly_revenue),
-            totalRevenue: parseRevenue(backendStats.total_monthly_revenue), // Use monthly total instead of all-time total
+            monthlyRevenue: membershipRevenue,
+            totalRevenue: totalMonthlyRevenue, // Use monthly total from backend
             shopRevenue: backendShopRevenue,
             outstandingPayments: parseRevenue(backendStats.monthly_renewal_revenue),
           };
@@ -168,36 +211,32 @@ const DashboardPage = () => {
           }
         }
 
-        // Single batch update to prevent blinking
+        // Batch all data processing before any state updates
+        const memberInsights = processMemberInsightsSync(membersList);
+        const topMembers = await fetchTopActiveMembersSync();
+        const revenueData = await generateRevenueDataSync();
+        const attendanceData = await generateAttendanceTrendSync();
+        
+        // Single batch update to prevent blinking - update all states at once
         setStats(newStats);
         setRecentMembers(membersList.slice(0, 5));
+        setMembershipStats(memberInsights.membershipStats);
+        setGenderDistribution(memberInsights.genderDistribution);
+        setMemberFrequency(memberInsights.memberFrequency);
+        setTopActiveMembers(topMembers);
+        setRevenueData(revenueData);
+        setAttendanceTrend(attendanceData);
         
-        // Process all data synchronously to avoid multiple renders
-        processMemberInsights(membersList);
-        
-        // Fetch top active members
-        await fetchTopActiveMembers();
-        
-        // Generate revenue chart data after stats are set
-        setTimeout(() => generateRevenueData(), 100);
-        
-        setAttendanceTrend(Array(7).fill(0).map((_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - (6 - i));
-          return {
-            day: date.toLocaleDateString("en-US", { weekday: "short" }),
-            date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-            attendance: Math.floor(Math.random() * 40) + 15,
-            capacity: 60,
-            percentage: Math.floor(Math.random() * 30) + 60,
-          };
-        }));
+        // Force update last update time to trigger re-render
+        setLastUpdate(new Date());
         
       } catch (error) {
         console.error("❌ Error initializing dashboard:", error);
         setError("Failed to load dashboard data");
       } finally {
-        // Don't change loading states to prevent blinking
+        // Set loading to false after initialization is complete
+        setLoading(false);
+        setIsInitialized(true);
         initializingRef.current = false;
       }
     };
@@ -206,8 +245,22 @@ const DashboardPage = () => {
     
     return () => {
       window.removeEventListener('purchaseCompleted', handlePurchaseCompleted);
+      window.removeEventListener('memberRegistered', handleMemberRegistered);
     };
-  }, []); // Run only once
+  }, [isInitialized]); // Only run when initialization status changes
+
+  // Auto-reset stuck states - only for manual refresh, not initial load
+  useEffect(() => {
+    if (isRefreshing) {
+      const autoReset = setTimeout(() => {
+        console.warn('⚠️ Auto-resetting stuck refresh after 20 seconds');
+        setIsRefreshing(false);
+        setError('Refresh operation timed out. The server may be slow.');
+      }, 20000);
+
+      return () => clearTimeout(autoReset);
+    }
+  }, [isRefreshing]);
 
   const generateTopActiveMembers = async (membersList) => {
     try {
@@ -474,7 +527,7 @@ const DashboardPage = () => {
   };
 
   const fetchDashboardData = async () => {
-    if (loading || initializingRef.current) return;
+    if (loading || initializingRef.current || isInitializing) return;
     
     setLoading(true);
     try {
@@ -514,12 +567,16 @@ const DashboardPage = () => {
       };
 
       const backendStats = statsResponse.data;
-      const backendShopRevenue = parseRevenue(
-        backendStats.monthly_revenue_shop
-      );
+      const backendShopRevenue = parseRevenue(backendStats.monthly_revenue_shop);
+      const membershipRevenue = parseRevenue(backendStats.monthly_revenue);
+      const totalMonthlyRevenue = parseRevenue(backendStats.total_monthly_revenue);
 
-      // Use backend shop revenue directly - it's calculated correctly from Purchase records
-      console.log('🔍 DashboardPage shop revenue from backend:', backendShopRevenue, 'AFN');
+      console.log('🔍 DashboardPage revenue refresh:', {
+        membershipRevenue,
+        shopRevenue: backendShopRevenue,
+        totalMonthlyRevenue,
+        note: backendStats.note
+      });
 
       setStats((prevStats) => ({
         ...prevStats,
@@ -527,26 +584,26 @@ const DashboardPage = () => {
         activeTrainers: backendStats.total_trainers || 0,
         todayCheckIns: todayAttendanceResponse.data.length,
         totalAttendance: todayAttendanceResponse.data.length,
-        monthlyRevenue: parseRevenue(backendStats.monthly_revenue),
-        totalRevenue: parseRevenue(backendStats.total_revenue),
-        shopRevenue: finalShopRevenue,
-        outstandingPayments: parseRevenue(backendStats.monthly_renewal_revenue),
+        monthlyRevenue: membershipRevenue,
+        totalRevenue: totalMonthlyRevenue, // Use total monthly revenue from backend
+        shopRevenue: backendShopRevenue,
+        // outstandingPayments is not used in revenue display
         memberGrowth: Math.random() * 10 + 5,
         revenueGrowth: Math.random() * 10 + 3,
         completionRate: Math.min(100, Math.floor(
-          (parseRevenue(backendStats.monthly_revenue) / 50000) * 100
+          (membershipRevenue / 50000) * 100
         )),
       }));
 
       console.log("🔍 Final stats update:", {
-        backendShopRevenue,
-        manualShopRevenue,
-        finalShopRevenue,
-        totalPurchases: purchases.length,
-        currentMonthPurchases: currentMonthPurchases.length,
+        shopRevenue: backendShopRevenue,
+        membershipRevenue,
+        totalMonthlyRevenue,
+        note: 'Revenue uses persistent tracking to prevent double counting'
       });
       
-      // This localStorage update is now handled above before setting stats
+      // Force update last update time to trigger re-render
+      setLastUpdate(new Date());
     } catch (error) {
       console.error("❌ Error fetching dashboard data:", error);
       setError("Failed to load dashboard data");
@@ -638,17 +695,32 @@ const DashboardPage = () => {
             </div>
             
             <>
-              <p className={`text-2xl sm:text-3xl font-bold mb-1 ${
-                gradient ? "text-white" : "text-white"
-              }`}>
-                {value || 0}
-              </p>
-              {subtitle && (
-                <p className={`text-sm font-medium ${
-                  gradient ? "text-white/80" : "text-gray-300"
-                }`}>
-                  {subtitle}
-                </p>
+              {isLoading ? (
+                <div className="animate-pulse">
+                  <div className={`h-8 sm:h-10 w-20 rounded mb-1 ${
+                    gradient ? "bg-white/20" : "bg-gray-600"
+                  }`}></div>
+                  {subtitle && (
+                    <div className={`h-4 w-16 rounded ${
+                      gradient ? "bg-white/10" : "bg-gray-700"
+                    }`}></div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <p className={`text-2xl sm:text-3xl font-bold mb-1 ${
+                    gradient ? "text-white" : "text-white"
+                  }`}>
+                    {value || 0}
+                  </p>
+                  {subtitle && (
+                    <p className={`text-sm font-medium ${
+                      gradient ? "text-white/80" : "text-gray-300"
+                    }`}>
+                      {subtitle}
+                    </p>
+                  )}
+                </>
               )}
             </>
           </div>
@@ -709,24 +781,37 @@ const DashboardPage = () => {
   };
 
   const generateAttendanceTrendOptimized = async () => {
+    if (attendanceLoading) return; // Prevent duplicate calls
+    
+    setAttendanceLoading(true);
     try {
-      // Get all 7 days in a single API call using date range
+      console.log('🔍 Generating weekly attendance trend...');
+      
+      // Get last 7 days including today
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - 6);
       const startDateStr = startDate.toISOString().split('T')[0];
       
+      console.log('🔍 Fetching attendance from', startDateStr, 'to', endDate);
+      
       const response = await api.get(`attendance_history/?start_date=${startDateStr}&end_date=${endDate}`);
       const allAttendance = response.data || [];
+      
+      console.log('🔍 Total attendance records:', allAttendance.length);
       
       // Group by date
       const attendanceByDate = {};
       allAttendance.forEach(record => {
         const date = record.date;
-        attendanceByDate[date] = (attendanceByDate[date] || 0) + 1;
+        if (date) {
+          attendanceByDate[date] = (attendanceByDate[date] || 0) + 1;
+        }
       });
       
-      // Generate 7-day trend
+      console.log('🔍 Attendance by date:', attendanceByDate);
+      
+      // Generate 7-day trend with real data
       const attendanceData = Array(7).fill(0).map((_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - (6 - i));
@@ -738,26 +823,33 @@ const DashboardPage = () => {
           date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           attendance: dayAttendance,
           capacity: 60,
-          percentage: Math.floor((dayAttendance / 60) * 100),
+          percentage: dayAttendance > 0 ? Math.floor((dayAttendance / 60) * 100) : 0,
         };
       });
       
+      console.log('🔍 Final attendance data:', attendanceData);
       setAttendanceTrend(attendanceData);
+      
     } catch (error) {
-      console.error("Error generating attendance trend:", error);
-      // Fallback to mock data
-      const mockData = Array(7).fill(0).map((_, i) => {
+      console.error("❌ Error generating attendance trend:", error);
+      
+      // Fallback: Create empty data for last 7 days
+      const fallbackData = Array(7).fill(0).map((_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - (6 - i));
         return {
           day: date.toLocaleDateString("en-US", { weekday: "short" }),
           date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          attendance: Math.floor(Math.random() * 40) + 15,
+          attendance: 0,
           capacity: 60,
-          percentage: Math.floor(Math.random() * 30) + 60,
+          percentage: 0,
         };
       });
-      setAttendanceTrend(mockData);
+      
+      console.log('🔍 Using fallback data:', fallbackData);
+      setAttendanceTrend(fallbackData);
+    } finally {
+      setAttendanceLoading(false);
     }
   };
 
@@ -773,21 +865,144 @@ const DashboardPage = () => {
     }
   };
 
-  // Helper function to process member insights
-  const processMemberInsights = (membersList) => {
+  // Helper function to process member insights synchronously
+  const processMemberInsightsSync = (membersList) => {
     // Membership type distribution
     const membershipTypes = {};
     membersList.forEach((member) => {
       const type = member.membership_type || "Standard";
       membershipTypes[type] = (membershipTypes[type] || 0) + 1;
     });
-    setMembershipStats(
-      Object.keys(membershipTypes).map((type, index) => ({
-        name: type,
-        value: membershipTypes[type],
-        fill: CHART_COLORS.primary[index % CHART_COLORS.primary.length],
-      }))
-    );
+    
+    const membershipStats = Object.keys(membershipTypes).map((type, index) => ({
+      name: type,
+      value: membershipTypes[type],
+      fill: CHART_COLORS.primary[index % CHART_COLORS.primary.length],
+    }));
+
+    // Gender distribution
+    const genderCounts = { Male: 0, Female: 0, Other: 0 };
+    membersList.forEach((member) => {
+      const gender = member.gender || "Other";
+      genderCounts[gender] = (genderCounts[gender] || 0) + 1;
+    });
+    
+    const genderDistribution = Object.keys(genderCounts).map((gender, index) => ({
+      name: gender,
+      value: genderCounts[gender],
+      fill: CHART_COLORS.primary[index % CHART_COLORS.primary.length],
+    }));
+
+    // Member frequency (mock data for now)
+    const memberFrequency = [
+      { name: "Daily", value: Math.floor(membersList.length * 0.2) },
+      { name: "Weekly", value: Math.floor(membersList.length * 0.5) },
+      { name: "Monthly", value: Math.floor(membersList.length * 0.3) },
+    ].map((item, index) => ({
+      ...item,
+      fill: CHART_COLORS.primary[index % CHART_COLORS.primary.length],
+    }));
+
+    return { membershipStats, genderDistribution, memberFrequency };
+  };
+
+  // Synchronous version of fetchTopActiveMembers
+  const fetchTopActiveMembersSync = async () => {
+    try {
+      const response = await api.get("admin-dashboard/top-active-members/");
+      return response.data.top_active_members || [];
+    } catch (error) {
+      console.error("Error fetching top active members:", error);
+      return [];
+    }
+  };
+
+  // Synchronous version of generateRevenueData
+  const generateRevenueDataSync = async () => {
+    try {
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endDate = new Date(today);
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      
+      const response = await api.get(`members/membership_payments/?start_date=${startDateStr}&end_date=${endDateStr}`);
+      const currentMonthRevenue = response.data.total_revenue || 0;
+      
+      const currentMonth = today.toLocaleDateString('en-US', { month: 'short' });
+      
+      return [{
+        month: currentMonth,
+        revenue: currentMonthRevenue,
+        target: 50000,
+        growth: 0
+      }];
+    } catch (error) {
+      console.error("Error fetching revenue trend:", error);
+      const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short' });
+      return [{
+        month: currentMonth,
+        revenue: 0,
+        target: 50000,
+        growth: 0
+      }];
+    }
+  };
+
+  // Synchronous version of generateAttendanceTrendOptimized
+  const generateAttendanceTrendSync = async () => {
+    try {
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 6);
+      const startDateStr = startDate.toISOString().split('T')[0];
+      
+      const response = await api.get(`attendance_history/?start_date=${startDateStr}&end_date=${endDate}`);
+      const allAttendance = response.data || [];
+      
+      const attendanceByDate = {};
+      allAttendance.forEach(record => {
+        const date = record.date;
+        if (date) {
+          attendanceByDate[date] = (attendanceByDate[date] || 0) + 1;
+        }
+      });
+      
+      return Array(7).fill(0).map((_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        const dateStr = date.toISOString().split('T')[0];
+        const dayAttendance = attendanceByDate[dateStr] || 0;
+        
+        return {
+          day: date.toLocaleDateString("en-US", { weekday: "short" }),
+          date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          attendance: dayAttendance,
+          capacity: 60,
+          percentage: dayAttendance > 0 ? Math.floor((dayAttendance / 60) * 100) : 0,
+        };
+      });
+    } catch (error) {
+      console.error("❌ Error generating attendance trend:", error);
+      return Array(7).fill(0).map((_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return {
+          day: date.toLocaleDateString("en-US", { weekday: "short" }),
+          date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          attendance: 0,
+          capacity: 60,
+          percentage: 0,
+        };
+      });
+    }
+  };
+
+  // Legacy function for backward compatibility
+  const processMemberInsights = (membersList) => {
+    const insights = processMemberInsightsSync(membersList);
+    setMembershipStats(insights.membershipStats);
 
     // Gender distribution
     const genderCount = { Male: 0, Female: 0, Other: 0 };
@@ -823,7 +1038,7 @@ const DashboardPage = () => {
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-                    Elite Fitness Dashboard
+                    Atalan Fitness Dashboard
                   </h1>
                   <p className="text-gray-400 text-xs sm:text-sm font-medium">
                     Real-time insights and analytics
@@ -837,56 +1052,12 @@ const DashboardPage = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              {/* Modern Refresh Button */}
-              <motion.button
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={async () => {
-                  if (isInitializing || initializingRef.current) return;
-
-                  initializingRef.current = true;
-                  setIsInitializing(true);
-                  try {
-                    // Call the refresh endpoint first
-                    await api.get("admin-dashboard/refresh/");
-                    // Refresh membership revenue to ensure it's up to date
-                    await refreshMembershipRevenue();
-                    await fetchDashboardData();
-                    await fetchRecentMembers();
-                    await fetchTopActiveMembers();
-                    await generateMemberInsights();
-                    await generateRevenueData();
-                    await generateAttendanceTrendOptimized();
-                    setLastUpdate(new Date());
-                  } finally {
-                    setIsInitializing(false);
-                    initializingRef.current = false;
-                  }
-                }}
-                disabled={isInitializing}
-                className="group relative overflow-hidden px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-yellow-500 via-yellow-600 to-yellow-700 text-black rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 disabled:opacity-50"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative flex items-center justify-center gap-2">
-                  <FiRefreshCw
-                    className={`h-4 w-4 ${
-                      isInitializing ? "animate-spin" : "group-hover:rotate-180"
-                    } transition-transform duration-300`}
-                  />
-                  <span className="font-medium text-sm sm:text-base">
-                    {isInitializing ? "Refreshing..." : "Refresh Data"}
-                  </span>
-                </div>
-              </motion.button>
-
-              {/* Quick Stats Indicator */}
-              <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-yellow-500/20">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm font-medium text-gray-300">
-                  {stats.activeMembers} Active
-                </span>
-              </div>
+            {/* Quick Stats Indicator */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-yellow-500/20">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+              <span className="text-sm font-medium text-gray-300">
+                {stats.activeMembers} Active
+              </span>
             </div>
           </div>
         </div>
@@ -917,66 +1088,74 @@ const DashboardPage = () => {
         </AnimatePresence>
 
         {/* Modern Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8 lg:mt-10">
-          <StatCard
-            title="Membership Revenue"
-            value={formatCurrency(stats.monthlyRevenue)}
-            icon={FiDollarSign}
-            trend="up"
-            trendValue={`${(stats.revenueGrowth || 0).toFixed(1)}%`}
-            className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
-          />
+        {useMemo(() => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8 lg:mt-10">
+            <StatCard
+              title="Membership Revenue"
+              value={formatCurrency(stats.monthlyRevenue)}
+              icon={FiDollarSign}
+              trend="up"
+              trendValue={`${(stats.revenueGrowth || 0).toFixed(1)}%`}
+              className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
+              isLoading={loading}
+            />
 
-          <StatCard
-            title="Shop Revenue"
-            value={formatCurrency(stats.shopRevenue)}
-            icon={FiShoppingCart}
-            trend="up"
-            trendValue="12.3%"
-            className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
-          />
+            <StatCard
+              title="Shop Revenue"
+              value={formatCurrency(stats.shopRevenue)}
+              icon={FiShoppingCart}
+              trend="up"
+              trendValue="12.3%"
+              className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
+              isLoading={loading}
+            />
 
-          <StatCard
-            title="Total Monthly Revenue"
-            value={formatCurrency(stats.totalRevenue)}
-            icon={FiDollarSign}
-            trend="up"
-            trendValue={`${(stats.revenueGrowth || 0).toFixed(1)}%`}
-            subtitle="This month's total"
-            className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
-          />
+            <StatCard
+              title="Total Monthly Revenue"
+              value={formatCurrency(stats.totalRevenue)}
+              icon={FiDollarSign}
+              trend="up"
+              trendValue={`${(stats.revenueGrowth || 0).toFixed(1)}%`}
+              subtitle="This month's total"
+              className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
+              isLoading={loading}
+            />
 
-          <StatCard
-            title="Active Members"
-            value={stats.activeMembers || 0}
-            icon={FiUsers}
-            trend="up"
-            trendValue={`${(stats.memberGrowth || 0).toFixed(1)}%`}
-            color="green"
-            subtitle="Total registered"
-            className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
-          />
+            <StatCard
+              title="Active Members"
+              value={stats.activeMembers || 0}
+              icon={FiUsers}
+              trend="up"
+              trendValue={`${(stats.memberGrowth || 0).toFixed(1)}%`}
+              color="green"
+              subtitle="Total registered"
+              className="bg-gray-800/40 backdrop-blur-lg border border-gray-600/30 shadow-2xl hover:shadow-gray-500/10"
+              isLoading={loading}
+            />
 
-          <StatCard
-            title="Active Trainers"
-            value={stats.activeTrainers || 0}
-            icon={FiUserCheck}
-            trend="stable"
-            trendValue="0%"
-            color="yellow"
-            subtitle="Available staff"
-          />
+            <StatCard
+              title="Active Trainers"
+              value={stats.activeTrainers || 0}
+              icon={FiUserCheck}
+              trend="stable"
+              trendValue="0%"
+              color="yellow"
+              subtitle="Available staff"
+              isLoading={loading}
+            />
 
-          <StatCard
-            title="Today's Check-ins"
-            value={stats.todayCheckIns || 0}
-            icon={FiCheckCircle}
-            trend="up"
-            trendValue="8.1%"
-            color="yellow"
-            subtitle="Total attendance"
-          />
-        </div>
+            <StatCard
+              title="Today's Check-ins"
+              value={stats.todayCheckIns || 0}
+              icon={FiCheckCircle}
+              trend="up"
+              trendValue="8.1%"
+              color="yellow"
+              isLoading={loading}
+              subtitle="Total attendance"
+            />
+          </div>
+        ), [stats, loading, formatCurrency])}
 
         {/* Performance Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -1370,6 +1549,9 @@ const DashboardPage = () => {
                     Status
                   </th>
                   <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Biometric
+                  </th>
+                  <th className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Joined
                   </th>
                 </tr>
@@ -1458,12 +1640,41 @@ const DashboardPage = () => {
                               {isExpired ? "Expired" : "Active"}
                             </span>
                           </td>
+                          <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                member.biometric_registered
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {member.biometric_registered ? "Registered" : "Not Registered"}
+                            </span>
+                          </td>
                           <td className="px-3 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-gray-300">
-                            {member.start_date
-                              ? formatDate(member.start_date)
-                              : member.created_at
-                              ? formatDate(member.created_at)
-                              : "N/A"}
+                            <div className="flex flex-col">
+                              <span className="text-white">
+                                {member.start_date
+                                  ? formatDate(member.start_date)
+                                  : member.created_at
+                                  ? formatDate(member.created_at)
+                                  : "N/A"}
+                              </span>
+                              <span className="text-gray-400 text-xs">
+                                {(() => {
+                                  const timestamp = member.created_at || member.start_date;
+                                  if (!timestamp) return "";
+                                  // If it's just a date (no time), treat it as today
+                                  if (timestamp.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                    const today = new Date().toISOString().split('T')[0];
+                                    if (timestamp === today) {
+                                      return 'Today';
+                                    }
+                                  }
+                                  return getRelativeTime(timestamp);
+                                })()}
+                              </span>
+                            </div>
                           </td>
                         </motion.tr>
                       );
@@ -1545,6 +1756,14 @@ const DashboardPage = () => {
                             {member.membership_type || "Standard"}
                           </div>
                         </div>
+                        <div>
+                          <div className="text-gray-400 text-xs">Biometric</div>
+                          <div className={`text-xs font-medium ${
+                            member.biometric_registered ? "text-green-400" : "text-red-400"
+                          }`}>
+                            {member.biometric_registered ? "Registered" : "Not Registered"}
+                          </div>
+                        </div>
                         <div className="col-span-2">
                           <div className="text-gray-400 text-xs">Joined</div>
                           <div className="text-white text-xs">
@@ -1553,6 +1772,20 @@ const DashboardPage = () => {
                               : member.created_at
                               ? formatDate(member.created_at)
                               : "N/A"}
+                          </div>
+                          <div className="text-gray-400 text-xs">
+                            {(() => {
+                              const timestamp = member.created_at || member.start_date;
+                              if (!timestamp) return "";
+                              // If it's just a date (no time), treat it as today
+                              if (timestamp.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                const today = new Date().toISOString().split('T')[0];
+                                if (timestamp === today) {
+                                  return 'Today';
+                                }
+                              }
+                              return getRelativeTime(timestamp);
+                            })()}
                           </div>
                         </div>
                       </div>

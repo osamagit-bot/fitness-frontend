@@ -4,6 +4,7 @@ import { FiEye, FiEyeOff, FiLock, FiMail, FiPhone, FiX } from 'react-icons/fi';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from "../../utils/api";
+import { getRelativeTime } from "../../utils/timeUtils";
 
 function MemberSettingsPage() {
 
@@ -13,7 +14,8 @@ function MemberSettingsPage() {
     name: '',
     email: '',
     phone: '',
-    avatar: 'https://randomuser.me/api/portraits/men/1.jpg'
+    avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
+    passwordLastChanged: null
   });
 
   // Modal states
@@ -49,9 +51,18 @@ function MemberSettingsPage() {
           { headers: { 'Authorization': `Bearer ${token}` }}
         );
   
-        const { first_name, last_name, user_email, phone, avatar } = response.data;
+        const { first_name, last_name, user_email, phone, avatar, password_last_changed } = response.data;
         const fullName = `${first_name || ''} ${last_name || ''}`.trim();
-        setUserData({ name: fullName, email:user_email, phone, avatar });
+        const storedPasswordChanged = localStorage.getItem(`passwordLastChanged_${memberId}`);
+        const passwordChanged = password_last_changed || storedPasswordChanged;
+        
+        setUserData({ 
+          name: fullName, 
+          email: user_email, 
+          phone, 
+          avatar,
+          passwordLastChanged: passwordChanged
+        });
   
         // Log for debug
         console.log(response.data);
@@ -138,6 +149,9 @@ function MemberSettingsPage() {
       );
       setShowPasswordForm(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      const newTimestamp = new Date().toISOString();
+      setUserData(prev => ({ ...prev, passwordLastChanged: newTimestamp }));
+      localStorage.setItem(`passwordLastChanged_${memberId}`, newTimestamp);
       toast.success("Password changed successfully!");
     } catch (err) {
       toast.error(`Failed to change password: ${err.response?.data?.detail || err.message}`);
@@ -306,7 +320,9 @@ function MemberSettingsPage() {
                         <FiLock className="text-yellow-400 flex-shrink-0" />
                         <div className="min-w-0">
                           <p className="font-medium text-white text-sm sm:text-base">Password</p>
-                          <p className="text-xs sm:text-sm text-gray-400">Last changed 3 months ago</p>
+                          <p className="text-xs sm:text-sm text-gray-400">
+                            Last changed {userData.passwordLastChanged ? getRelativeTime(userData.passwordLastChanged) : 'never'}
+                          </p>
                         </div>
                       </div>
                       <button 

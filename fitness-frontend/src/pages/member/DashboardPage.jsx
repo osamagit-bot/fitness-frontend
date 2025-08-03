@@ -224,7 +224,71 @@ const MemberDashboardPage = () => {
               </div>
             </div>
           </motion.div>
+
+          {/* Biometric Status */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-gray-700 rounded-xl shadow-sm p-6 border border-gray-600"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-300">
+                  Biometric Status
+                </p>
+                <p className={`text-lg font-semibold ${
+                  memberData?.biometric_registered ? "text-green-400" : "text-red-400"
+                }`}>
+                  {memberData?.biometric_registered ? "Registered" : "Not Registered"}
+                </p>
+              </div>
+              <div className={`p-3 rounded-full ${
+                memberData?.biometric_registered ? "bg-green-500/20" : "bg-red-500/20"
+              }`}>
+                <i className={`bx ${
+                  memberData?.biometric_registered ? "bx-fingerprint text-green-400" : "bx-error text-red-400"
+                } text-2xl`}></i>
+              </div>
+            </div>
+          </motion.div>
         </div>
+
+        {/* PIN Check-in Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-gradient-to-r from-yellow-600 to-yellow-700 rounded-xl shadow-lg p-6 mb-8 border border-yellow-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-black mb-2">
+                Your Check-in PIN
+              </h3>
+              <p className="text-black/80 text-sm">
+                Use this PIN for quick attendance check-in at the kiosk
+              </p>
+            </div>
+            <div className="text-right">
+              {memberData?.pin && memberData?.pin_enabled ? (
+                <div className="bg-black/20 rounded-lg p-4">
+                  <div className="text-3xl font-mono font-bold text-black tracking-widest">
+                    {memberData.pin}
+                  </div>
+                  <div className="text-xs text-black/70 mt-1">PIN Code</div>
+                </div>
+              ) : (
+                <div className="bg-black/20 rounded-lg p-4">
+                  <div className="text-lg font-semibold text-black">
+                    No PIN Set
+                  </div>
+                  <div className="text-xs text-black/70 mt-1">Contact admin to set PIN</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
 
         {/* Member Profile Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

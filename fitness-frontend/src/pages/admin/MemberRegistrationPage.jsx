@@ -788,6 +788,13 @@ const RegisterPage = () => {
       }
 
       await refreshStats();
+      
+      // Dispatch event to notify other components to refresh
+      window.dispatchEvent(new CustomEvent('memberRegistered', {
+        detail: { memberData, isRenewal }
+      }));
+      
+      console.log('🔄 Member registration completed, dispatching refresh event...');
     } catch (error) {
       console.error("Registration/renewal error:", error);
 

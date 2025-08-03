@@ -10,26 +10,41 @@ const MaintenanceCheck = ({ children }) => {
   useEffect(() => {
     const checkMaintenance = async () => {
       try {
-        const response = await api.get('/admin-dashboard/maintenance-mode/');
-        const isMaintenanceActive = response.data.enabled || false;
+        // Only check maintenance mode for admin users
+        const isAdmin = localStorage.getItem('admin_access_token');
+        const isMember = localStorage.getItem('member_access_token');
         
-        if (isMaintenanceActive) {
-          // Clear member session and redirect to login
-          localStorage.removeItem('member_access_token');
-          localStorage.removeItem('member_refresh_token');
-          localStorage.removeItem('member_user_id');
-          localStorage.removeItem('member_username');
-          localStorage.removeItem('member_name');
-          localStorage.removeItem('member_id');
-          localStorage.removeItem('member_isAuthenticated');
-          
-          navigate('/login');
+        // Skip maintenance check for members - they don't need to check this
+        if (isMember && !isAdmin) {
+          setMaintenanceMode(false);
+          setLoading(false);
           return;
+        }
+        
+        // Only admins should check maintenance mode
+        if (isAdmin) {
+          const response = await api.get('/admin-dashboard/maintenance-mode/');
+          const isMaintenanceActive = response.data.enabled || false;
+          
+          if (isMaintenanceActive) {
+            // Clear member session and redirect to login
+            localStorage.removeItem('member_access_token');
+            localStorage.removeItem('member_refresh_token');
+            localStorage.removeItem('member_user_id');
+            localStorage.removeItem('member_username');
+            localStorage.removeItem('member_name');
+            localStorage.removeItem('member_id');
+            localStorage.removeItem('member_isAuthenticated');
+            
+            navigate('/login');
+            return;
+          }
         }
         
         setMaintenanceMode(false);
       } catch (error) {
-        console.error('Error checking maintenance mode:', error);
+        // Handle all errors gracefully
+        console.log('Maintenance check skipped or failed:', error.message);
         setMaintenanceMode(false);
       } finally {
         setLoading(false);

@@ -59,8 +59,20 @@ function RevenuePage() {
       }, 1000);
     };
     
+    // Listen for member registration events
+    const handleMemberRegistered = () => {
+      console.log('🔄 Member registered, refreshing revenue data...');
+      setTimeout(() => {
+        fetchAllData();
+      }, 1500);
+    };
+    
     window.addEventListener('purchaseCompleted', handlePurchaseCompleted);
-    return () => window.removeEventListener('purchaseCompleted', handlePurchaseCompleted);
+    window.addEventListener('memberRegistered', handleMemberRegistered);
+    return () => {
+      window.removeEventListener('purchaseCompleted', handlePurchaseCompleted);
+      window.removeEventListener('memberRegistered', handleMemberRegistered);
+    };
   }, []);
 
   const fetchAllData = async () => {
@@ -84,10 +96,21 @@ function RevenuePage() {
         }
         return parseFloat(value) || 0;
       };
+      const membershipRevenue = parseRevenue(statsRes.data.monthly_revenue);
+      const shopRevenue = parseRevenue(statsRes.data.monthly_revenue_shop);
+      const totalMonthlyRevenue = parseRevenue(statsRes.data.total_monthly_revenue);
+      
+      console.log('🔍 RevenuePage stats:', {
+        membershipRevenue,
+        shopRevenue,
+        totalMonthlyRevenue,
+        note: statsRes.data.note
+      });
+      
       setStats({
-        monthlyRevenue: parseRevenue(statsRes.data.monthly_revenue),
-        shopRevenue: parseRevenue(statsRes.data.monthly_revenue_shop),
-        totalMonthlyRevenue: parseRevenue(statsRes.data.total_monthly_revenue),
+        monthlyRevenue: membershipRevenue,
+        shopRevenue: shopRevenue,
+        totalMonthlyRevenue: totalMonthlyRevenue,
       });
       // Ensure we always have arrays
       const membersData = Array.isArray(membersRes.data) 
@@ -583,7 +606,7 @@ function RevenuePage() {
     // Only calculate product revenue and charts from purchases
     calculateProductRevenueAndCharts();
     // eslint-disable-next-line
-  }, [purchases, dateRange]);
+  }, [purchases, dateRange, stats.monthlyRevenue]);
 
   function calculateProductRevenueAndCharts() {
     // Range product revenue
@@ -627,6 +650,17 @@ function RevenuePage() {
     try {
       const startDate = dateRange.startDate.toISOString().split('T')[0];
       const endDate = dateRange.endDate.toISOString().split('T')[0];
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const rangeMonth = dateRange.startDate.getMonth();
+      const rangeYear = dateRange.startDate.getFullYear();
+      
+      // If the date range is current month, use backend stats for consistency
+      if (dateRangeType === "monthly" && rangeMonth === currentMonth && rangeYear === currentYear) {
+        console.log('🔍 Using backend persistent revenue for current month:', stats.monthlyRevenue, 'AFN');
+        setRangeMembershipRevenue(stats.monthlyRevenue);
+        return stats.monthlyRevenue;
+      }
       
       const response = await api.get(`members/membership_payments/?start_date=${startDate}&end_date=${endDate}`);
       const membershipRevenue = response.data.total_revenue || 0;
@@ -648,10 +682,26 @@ function RevenuePage() {
     try {
       const startDate = dateRange.startDate.toISOString().split('T')[0];
       const endDate = dateRange.endDate.toISOString().split('T')[0];
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const rangeMonth = dateRange.startDate.getMonth();
+      const rangeYear = dateRange.startDate.getFullYear();
       
-      // Fetch membership payments for the date range
-      const membershipResponse = await api.get(`members/membership_payments/?start_date=${startDate}&end_date=${endDate}`);
-      const membershipPayments = membershipResponse.data.payments || [];
+      let membershipPayments = [];
+      
+      // For current month, try to get more accurate data
+      if (dateRangeType === "monthly" && rangeMonth === currentMonth && rangeYear === currentYear) {
+        try {
+          const membershipResponse = await api.get(`members/membership_payments/?start_date=${startDate}&end_date=${endDate}`);
+          membershipPayments = membershipResponse.data.payments || [];
+        } catch (error) {
+          console.warn('Could not fetch detailed membership payments, using fallback');
+        }
+      } else {
+        // For other date ranges, fetch membership payments
+        const membershipResponse = await api.get(`members/membership_payments/?start_date=${startDate}&end_date=${endDate}`);
+        membershipPayments = membershipResponse.data.payments || [];
+      }
       
       // Generate all days in range
       const days = [];

@@ -191,7 +191,7 @@ function Stock() {
                   name="item"
                   value={stockData.item}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
                   required
                 />
               </div>
@@ -203,7 +203,7 @@ function Stock() {
                   name="quantity"
                   value={stockData.quantity}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
                   required
                 />
               </div>
@@ -216,7 +216,7 @@ function Stock() {
                   name="price"
                   value={stockData.price}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
                   required
                 />
               </div>
@@ -228,7 +228,7 @@ function Stock() {
                   name="date"
                   value={stockData.date}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 [color-scheme:dark]"
+                  className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none [color-scheme:dark]"
                   required
                 />
               </div>
@@ -292,7 +292,7 @@ function Stock() {
                   placeholder="Search items..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full sm:w-64 px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 pl-10"
+                  className="w-full sm:w-64 px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,7 +310,7 @@ function Stock() {
                     setSelectedDate("");
                   }
                 }}
-                className="px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="px-3 py-2 bg-gray-700 text-white rounded-lg outline-none"
               >
                 <option value="all">All Items</option>
                 <option value="today">Added Today</option>
@@ -324,7 +324,7 @@ function Stock() {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 [color-scheme:dark]"
+                  className="px-3 py-2 bg-gray-700 text-white rounded-lg outline-none [color-scheme:dark]"
                 />
               )}
             </div>
@@ -362,7 +362,7 @@ function Stock() {
                 </thead>
                 <tbody>
                   {filteredStockList.map((item) => (
-                    <tr key={item.id || item.item} className="border-b border-gray-700 hover:bg-gray-700">
+                    <tr key={item.id || item.item} className={`border-b border-gray-700 hover:bg-gray-700 ${item.quantity <= 5 && item.quantity > 0 ? 'bg-red-900/30' : item.quantity > 5 && item.quantity <= 15 ? 'bg-yellow-900/30' : ''}`}>
                       <td className="py-3 px-4">{item.item}</td>
                       <td className="py-3 px-4">
                         <span className={item.quantity > 0 ? "text-yellow-400" : "text-red-400"}>

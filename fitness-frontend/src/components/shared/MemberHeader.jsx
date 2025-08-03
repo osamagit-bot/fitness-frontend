@@ -53,6 +53,74 @@ function MemberHeader({ memberData, notifications, setNotifications, loading }) 
     }
   };
 
+  const handleNotificationClick = async (notification) => {
+    console.log('Notification clicked:', notification.message);
+    console.log('Navigation link:', notification.link || getNotificationLink(notification.message));
+    
+    // Mark as read if not already
+    if (!notification.is_read) {
+      // Update locally first
+      setNotifications(prev => 
+        prev.map(n => n.id === notification.id ? {...n, is_read: true} : n)
+      );
+      
+      // Update in database
+      try {
+        await api.patch(`notifications/${notification.id}/`, { is_read: true });
+      } catch (err) {
+        console.error('Failed to mark notification as read:', err);
+      }
+    }
+    
+    // Navigate to the appropriate page
+    const link = notification.link || getNotificationLink(notification.message);
+    navigate(link);
+    setShowNotifications(false);
+  };
+
+  const getNotificationLink = (message) => {
+    const lower = message.toLowerCase();
+    
+    // Community related
+    if (lower.includes('post') && (lower.includes('published') || lower.includes('liked') || lower.includes('commented'))) {
+      return '/member-dashboard/community';
+    }
+    if (lower.includes('challenge')) {
+      return '/member-dashboard/community';
+    }
+    if (lower.includes('announcement') || lower.includes('new announcement')) {
+      return '/member-dashboard/community';
+    }
+    
+    // Support related
+    if (lower.includes('support ticket') || lower.includes('ticket')) {
+      return '/member-dashboard/support';
+    }
+    
+    // Attendance related
+    if (lower.includes('checked in') || lower.includes('checked out')) {
+      return '/member-dashboard/attendance';
+    }
+    
+    // Account/Settings related
+    if (lower.includes('password') || lower.includes('profile') || lower.includes('account')) {
+      return '/member-dashboard/settings';
+    }
+    
+    // Membership related
+    if (lower.includes('membership') || lower.includes('renewed')) {
+      return '/member-dashboard';
+    }
+    
+    // Purchase related
+    if (lower.includes('purchase')) {
+      return '/member-dashboard';
+    }
+    
+    // Default
+    return '/member-dashboard';
+  };
+
   const getNotifIcon = (message) => {
     const lower = message.toLowerCase();
     if (lower.includes("expiring soon")) return "bx-error-circle";
@@ -136,7 +204,8 @@ function MemberHeader({ memberData, notifications, setNotifications, loading }) 
                     notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`p-3 sm:p-4 border-b border-gray-600 hover:bg-gray-700 transition-colors ${
+                        onClick={() => handleNotificationClick(notification)}
+                        className={`p-3 sm:p-4 border-b border-gray-600 hover:bg-gray-700 transition-colors cursor-pointer ${
                           !notification.is_read ? "bg-gray-700/50" : ""
                         }`}
                       >

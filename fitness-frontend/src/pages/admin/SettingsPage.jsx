@@ -13,6 +13,8 @@ import {
 } from "react-icons/fi";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import CheckInPhotoReview from "../../components/CheckInPhotoReview";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
 function AdminSettingsPage() {
   const token = localStorage.getItem("admin_access_token");
@@ -45,16 +47,30 @@ function AdminSettingsPage() {
   const [pendingMemberId, setPendingMemberId] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, id: null, title: '', message: '' });
 
   // Add state for restore functionality
   const [backupFiles, setBackupFiles] = useState([]);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState(null);
   const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreOptions, setRestoreOptions] = useState({
+    members: true,
+    trainers: true,
+    products: true,
+    stock: true,
+    community: true,
+    payments: true,
+    merge_strategy: 'replace'
+  });
+  const [availableRestoreOptions, setAvailableRestoreOptions] = useState(null);
 
   // Add state for backup inspection
   const [inspectedBackup, setInspectedBackup] = useState(null);
   const [inspectionLoading, setInspectionLoading] = useState(false);
+  
+  // Add state for photo review modal
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // Fetch all members
   const fetchMembers = async () => {
@@ -187,6 +203,36 @@ const fetchGlobalNotificationSettings = async () => {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedPassword);
     toast.success("Password copied to clipboard!");
+  };
+
+  // Reset member PIN handler
+  const handleResetPin = (memberId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'resetPin',
+      id: memberId,
+      title: 'Reset Member PIN',
+      message: `Are you sure you want to reset PIN for member ${memberId}? This will allow them to set a new PIN.`
+    });
+  };
+
+  const executeResetPin = async (memberId) => {
+    try {
+      const response = await api.post(
+        'pin/reset/',
+        { athlete_id: memberId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        toast.success(`PIN reset successfully for ${response.data.member.name}`);
+      } else {
+        toast.error(response.data.error || 'Failed to reset PIN');
+      }
+    } catch (error) {
+      toast.error('Failed to reset PIN. Please try again.');
+      console.error('PIN reset error:', error);
+    }
   };
 
   // Handle maintenance mode toggle
@@ -483,6 +529,8 @@ const fetchGlobalNotificationSettings = async () => {
     }
   };
 
+
+
   // Fetch available backup files
   const fetchBackupFiles = async () => {
     try {
@@ -508,12 +556,23 @@ const fetchGlobalNotificationSettings = async () => {
     try {
       const response = await api.post(
         '/restore-database/',
-        { backup_filename: selectedBackup.filename },
+        { 
+          backup_filename: selectedBackup.filename,
+          restore_options: restoreOptions
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       if (response.data.success) {
-        toast.success(`✅ ${response.data.message}\n📁 Restored from: ${response.data.details.restored_from}\n📊 ${response.data.details.records_restored} records restored\n🛡️ Emergency backup: ${response.data.details.emergency_backup}`);
+        const details = response.data.details;
+        toast.success(
+          `✅ ${response.data.message}\n` +
+          `📁 Strategy: ${details.strategy}\n` +
+          `👥 Members: ${details.members_restored}\n` +
+          `💪 Trainers: ${details.trainers_restored}\n` +
+          `📦 Products: ${details.products_restored}\n` +
+          `🛡️ Emergency backup: ${details.emergency_backup}`
+        );
         
         // Refresh the page after successful restore
         setTimeout(() => {
@@ -532,9 +591,27 @@ const fetchGlobalNotificationSettings = async () => {
     }
   };
 
+  // Fetch restore options
+  const fetchRestoreOptions = async () => {
+    try {
+      const response = await api.get('/restore-options/', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        setAvailableRestoreOptions(response.data);
+        setRestoreOptions(response.data.default_options);
+      }
+    } catch (error) {
+      console.error('Error fetching restore options:', error);
+    }
+  };
+
   // Open restore modal
   const openRestoreModal = async () => {
-    await fetchBackupFiles();
+    await Promise.all([
+      fetchBackupFiles(),
+      fetchRestoreOptions()
+    ]);
     setShowRestoreModal(true);
   };
 
@@ -742,29 +819,37 @@ const fetchGlobalNotificationSettings = async () => {
                               Expires in {daysRemaining} days
                             </span>
                           ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-700 text-gray-200">
                               <FiCheckCircle className="mr-1" /> Active
                             </span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() =>
-                              handleGeneratePasswordClick(memberId)
-                            }
-                            disabled={
-                              resetMemberLoading && resetMemberId === memberId
-                            }
-                            className={`px-4 py-2 rounded-md text-white ${
-                              resetMemberLoading && resetMemberId === memberId
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
-                            }`}
-                          >
-                            {resetMemberLoading && resetMemberId === memberId
-                              ? "Resetting..."
-                              : "Reset Password"}
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handleGeneratePasswordClick(memberId)
+                              }
+                              disabled={
+                                resetMemberLoading && resetMemberId === memberId
+                              }
+                              className={`px-3 py-2 rounded-md text-white text-xs ${
+                                resetMemberLoading && resetMemberId === memberId
+                                  ? "bg-gray-400 cursor-not-allowed"
+                                  : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
+                              }`}
+                            >
+                              {resetMemberLoading && resetMemberId === memberId
+                                ? "Resetting..."
+                                : "Reset Password"}
+                            </button>
+                            <button
+                              onClick={() => handleResetPin(memberId)}
+                              className="px-3 py-2 rounded-md text-white text-xs bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                            >
+                              Reset PIN
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -836,7 +921,7 @@ const fetchGlobalNotificationSettings = async () => {
                               Expires in {daysRemaining}d
                             </span>
                           ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-700 text-gray-200">
                               Active
                             </span>
                           )}
@@ -870,23 +955,31 @@ const fetchGlobalNotificationSettings = async () => {
                         </div>
                       </div>
                       
-                      <button
-                        onClick={() =>
-                          handleGeneratePasswordClick(memberId)
-                        }
-                        disabled={
-                          resetMemberLoading && resetMemberId === memberId
-                        }
-                        className={`w-full px-4 py-2 rounded-md text-white text-sm font-medium ${
-                          resetMemberLoading && resetMemberId === memberId
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
-                        }`}
-                      >
-                        {resetMemberLoading && resetMemberId === memberId
-                          ? "Resetting..."
-                          : "Reset Password"}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() =>
+                            handleGeneratePasswordClick(memberId)
+                          }
+                          disabled={
+                            resetMemberLoading && resetMemberId === memberId
+                          }
+                          className={`flex-1 px-3 py-2 rounded-md text-white text-sm font-medium ${
+                            resetMemberLoading && resetMemberId === memberId
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
+                          }`}
+                        >
+                          {resetMemberLoading && resetMemberId === memberId
+                            ? "Resetting..."
+                            : "Reset Password"}
+                        </button>
+                        <button
+                          onClick={() => handleResetPin(memberId)}
+                          className="flex-1 px-3 py-2 rounded-md text-white text-sm font-medium bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                        >
+                          Reset PIN
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -895,7 +988,6 @@ const fetchGlobalNotificationSettings = async () => {
           </div>
         </motion.div>
         
-
         {/* Admin Settings Cards */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
@@ -958,7 +1050,7 @@ const fetchGlobalNotificationSettings = async () => {
                       <button
                         onClick={handleEmailSystemTest}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        className="flex-1 px-3 py-2 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
                       >
                         {loading ? 'Testing...' : 'System Test'}
                       </button>
@@ -979,14 +1071,14 @@ const fetchGlobalNotificationSettings = async () => {
                       <button
                         onClick={handleWhatsAppSystemTest}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        className="flex-1 px-3 py-2 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
                       >
                         {loading ? 'Testing...' : 'System Test'}
                       </button>
                       <button
                         onClick={handleTestWhatsApp}
                         disabled={loading}
-                        className="flex-1 px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        className="flex-1 px-3 py-2 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors"
                       >
                         {loading ? 'Sending...' : 'Send Test'}
                       </button>
@@ -1021,10 +1113,10 @@ const fetchGlobalNotificationSettings = async () => {
                   <button
                     onClick={handleBackupSystem}
                     disabled={loading}
-                    className={`px-6 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                    className={`px-6 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 border border-gray-600 ${
                       loading
-                        ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
-                        : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-lg hover:shadow-xl"
+                        ? "bg-gray-600 cursor-not-allowed"
+                        : "bg-gray-600 hover:bg-gray-700 shadow-lg hover:shadow-xl"
                     }`}
                   >
                     <div className="flex items-center justify-center gap-3">
@@ -1036,7 +1128,7 @@ const fetchGlobalNotificationSettings = async () => {
                       ) : (
                         <>
                           <span className="text-xl">💾</span>
-                          <span className="font-semibold text-lg">Backup Database</span>
+                          <span className="font-semibold text-lg ">Backup Database</span>
                         </>
                       )}
                     </div>
@@ -1046,16 +1138,16 @@ const fetchGlobalNotificationSettings = async () => {
                   <button
                     onClick={openRestoreModal}
                     disabled={loading || restoreLoading}
-                    className={`px-6 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                    className={`px-6 py-4 text-black rounded-lg transition-all duration-300 transform hover:scale-105 ${
                       loading || restoreLoading
-                        ? "bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed"
-                        : "bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg hover:shadow-xl"
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-lg hover:shadow-xl"
                     }`}
                   >
                     <div className="flex items-center justify-center gap-3">
                       {restoreLoading ? (
                         <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
                           <span className="font-semibold">Restoring...</span>
                         </>
                       ) : (
@@ -1074,56 +1166,120 @@ const fetchGlobalNotificationSettings = async () => {
               </div>
 
               {/* Restore Modal */}
-              {showRestoreModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-gray-600">
-                    <h3 className="text-xl font-bold text-white mb-4">⚠️ Restore Database</h3>
+              <AnimatePresence>
+                {showRestoreModal && (
+                  <motion.div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <motion.div
+                      className="bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 border border-gray-600 max-h-[90vh] overflow-y-auto"
+                      initial={{ scale: 0.9, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.9, y: 20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                    <h3 className="text-xl font-bold text-white mb-4">🔄 Selective Database Restore</h3>
                     
-                    <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 mb-4">
-                      <p className="text-red-300 text-sm">
-                        <strong>Warning:</strong> This will replace your current database with the selected backup. 
+                    <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-4 mb-4">
+                      <p className="text-blue-300 text-sm">
+                        <strong>New:</strong> Choose what to restore and how to handle existing data. 
                         An emergency backup will be created automatically.
                       </p>
                     </div>
                     
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-white mb-2">
-                        Select Backup File:
-                      </label>
-                      <select
-                        value={selectedBackup?.filename || ''}
-                        onChange={(e) => {
-                          const backup = backupFiles.find(b => b.filename === e.target.value);
-                          setSelectedBackup(backup);
-                          setInspectedBackup(null);
-                          if (backup) {
-                            inspectBackupFile(backup.filename);
-                          }
-                        }}
-                        className="w-full p-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 bg-gray-700 text-white"
-                      >
-                        <option value="">Choose a backup...</option>
-                        {backupFiles.map((backup) => (
-                          <option key={backup.filename} value={backup.filename}>
-                            {backup.created} ({backup.size_kb} KB)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {/* Backup inspection results */}
-                    {inspectionLoading && (
-                      <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400"></div>
-                          <span className="text-sm text-yellow-300">Inspecting backup...</span>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Left Column - Backup Selection & Options */}
+                      <div>
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Select Backup File:
+                          </label>
+                          <select
+                            value={selectedBackup?.filename || ''}
+                            onChange={(e) => {
+                              const backup = backupFiles.find(b => b.filename === e.target.value);
+                              setSelectedBackup(backup);
+                              setInspectedBackup(null);
+                              if (backup) {
+                                inspectBackupFile(backup.filename);
+                              }
+                            }}
+                            className="w-full p-2 border border-gray-600 rounded-lg focus:outline-none bg-gray-700 text-white"
+                          >
+                            <option value="">Choose a backup...</option>
+                            {backupFiles.map((backup) => (
+                              <option key={backup.filename} value={backup.filename}>
+                                {backup.created} ({backup.size_kb} KB)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Restore Strategy */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Restore Strategy:
+                          </label>
+                          <select
+                            value={restoreOptions.merge_strategy}
+                            onChange={(e) => setRestoreOptions({...restoreOptions, merge_strategy: e.target.value})}
+                            className="w-full p-2 border border-gray-600 rounded-lg focus:outline-none bg-gray-700 text-white"
+                          >
+                            <option value="replace">🔄 Replace All - Delete existing, restore from backup</option>
+                            <option value="merge">🔀 Merge/Update - Update existing, add new records</option>
+                            <option value="skip_existing">⏭️ Skip Existing - Only add missing records</option>
+                          </select>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {restoreOptions.merge_strategy === 'replace' && '⚠️ This will delete ALL existing data in selected categories'}
+                            {restoreOptions.merge_strategy === 'merge' && '✅ Existing data will be updated, new data added'}
+                            {restoreOptions.merge_strategy === 'skip_existing' && '✅ Existing data preserved, only missing data restored'}
+                          </p>
+                        </div>
+
+                        {/* Restore Options */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-white mb-2">
+                            What to Restore:
+                          </label>
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {availableRestoreOptions && Object.entries(availableRestoreOptions.restore_options).map(([key, option]) => (
+                              <label key={key} className="flex items-center p-2 bg-gray-700 rounded-lg hover:bg-gray-600 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={restoreOptions[key] || false}
+                                  onChange={(e) => setRestoreOptions({...restoreOptions, [key]: e.target.checked})}
+                                  className="mr-3 h-4 w-4 text-yellow-500 focus:outline-none border-gray-600 rounded"
+                                />
+                                <div>
+                                  <div className="text-white font-medium">{option.label}</div>
+                                  <div className="text-xs text-gray-400">{option.description}</div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      {/* Right Column - Backup Inspection */}
+                      <div>
                     
-                    {inspectedBackup && (
-                      <div className="mb-4 p-3 bg-gray-700 border border-gray-600 rounded-lg max-h-64 overflow-y-auto">
-                        <h4 className="font-medium text-white mb-2">📋 Backup Contents:</h4>
+                        {/* Backup inspection results */}
+                        {inspectionLoading && (
+                          <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400"></div>
+                              <span className="text-sm text-yellow-300">Inspecting backup...</span>
+                            </div>
+                          </div>
+                        )}
+                    
+                        {inspectedBackup && (
+                          <div className="p-3 bg-gray-700 border border-gray-600 rounded-lg max-h-96 overflow-y-auto">
+                            <h4 className="font-medium text-white mb-2">📋 Backup Contents:</h4>
                         <div className="text-sm text-gray-300 space-y-1">
                           <div className="font-semibold text-yellow-400">📊 Total Records: {inspectedBackup.total_records}</div>
                           
@@ -1209,11 +1365,13 @@ const fetchGlobalNotificationSettings = async () => {
                               </div>
                             </div>
                           )}
-                        </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                     
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 mt-6">
                       <button
                         onClick={() => {
                           setShowRestoreModal(false);
@@ -1225,19 +1383,22 @@ const fetchGlobalNotificationSettings = async () => {
                       </button>
                       <button
                         onClick={handleRestoreSystem}
-                        disabled={!selectedBackup}
+                        disabled={!selectedBackup || Object.values(restoreOptions).filter(v => v === true).length === 0}
                         className={`flex-1 px-4 py-2 text-white rounded-lg transition ${
-                          selectedBackup
-                            ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                          selectedBackup && Object.values(restoreOptions).filter(v => v === true).length > 0
+                            ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                             : "bg-gray-500 cursor-not-allowed"
                         }`}
                       >
-                        Restore Now
+                        {restoreOptions.merge_strategy === 'replace' ? '🔄 Replace & Restore' : 
+                         restoreOptions.merge_strategy === 'merge' ? '🔀 Merge & Update' : 
+                         '⏭️ Add Missing Data'}
                       </button>
                     </div>
-                  </div>
-                </div>
-              )}
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div>
                 <h3 className="text-lg font-medium text-white mb-3">
@@ -1268,6 +1429,18 @@ const fetchGlobalNotificationSettings = async () => {
 
               <div>
                 <h3 className="text-lg font-medium text-white mb-3">
+                  Security & Monitoring
+                </h3>
+                <button
+                  onClick={() => setShowPhotoModal(true)}
+                  className="w-full px-4 py-3 mb-4 text-white rounded-lg transition bg-gray-700 hover:bg-gray-600 border border-gray-600"
+                >
+                  📷 Show All Check-in Images
+                </button>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium text-white mb-3">
                   Data Export
                 </h3>
                 <button
@@ -1275,8 +1448,8 @@ const fetchGlobalNotificationSettings = async () => {
                   disabled={loading}
                   className={`w-full px-4 py-3 text-white rounded-lg transition ${
                     loading
-                      ? "bg-green-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                      ? "bg-gray-600 cursor-not-allowed"
+                      : "bg-gray-700 hover:bg-gray-600 border border-gray-600"
                   }`}
                 >
                   {loading ? "Exporting..." : "Export All Member Data"}
@@ -1464,6 +1637,52 @@ const fetchGlobalNotificationSettings = async () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' })}
+        onConfirm={async () => {
+          const { action, id } = confirmModal;
+          setConfirmModal({ isOpen: false, action: null, id: null, title: '', message: '' });
+          if (action === 'resetPin') {
+            await executeResetPin(id);
+          }
+        }}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
+      
+      {/* Photo Review Modal */}
+      <AnimatePresence>
+        {showPhotoModal && (
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-gray-800 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-hidden border border-gray-600"
+              initial={{ scale: 0.9, y: 40 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 40 }}
+            >
+              <div className="p-6 border-b border-gray-600 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">Check-in Photo Review</h3>
+                <button
+                  onClick={() => setShowPhotoModal(false)}
+                  className="text-gray-400 hover:text-white text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+                <CheckInPhotoReview />
               </div>
             </motion.div>
           </motion.div>
