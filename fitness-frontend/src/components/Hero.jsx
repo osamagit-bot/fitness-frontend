@@ -6,10 +6,9 @@ import { useTheme } from "../contexts/ThemeContext";
 function Hero() {
   const [isVisible, setIsVisible] = useState(false);
   const [visibleWords, setVisibleWords] = useState(0);
-  const [currentText, setCurrentText] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showCursor, setShowCursor] = useState(true);
+  const [isRevealing, setIsRevealing] = useState(true);
+  const [revealProgress, setRevealProgress] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const heroRef = useRef(null);
   const { isDarkMode, classes } = useTheme();
@@ -50,54 +49,39 @@ function Hero() {
     });
   }, []);
 
-  // Enhanced typewriter effect with smoother animations
+  // Smooth reveal/hide text animation
   useEffect(() => {
-    const typeSpeed = 80;
-    const deleteSpeed = 40;
-    const pauseTime = 3000;
-    const characterPauseVariation = Math.random() * 30 + 10; // Natural typing variation
+    const currentTextFull = texts[currentIndex];
+    const totalChars = currentTextFull.length;
+    const revealDuration = 70; // Time per character reveal
+    const hideDuration = 35; // Time per character hide
+    const pauseTime = 3000; // Pause when fully revealed
 
-    const typeWriter = () => {
-      const currentTextFull = texts[currentIndex];
-
-      if (!isDeleting) {
-        // Typing with natural variation
-        if (currentText.length < currentTextFull.length) {
-          setCurrentText(currentTextFull.substring(0, currentText.length + 1));
+    const animateText = () => {
+      if (isRevealing) {
+        if (revealProgress < totalChars) {
+          setRevealProgress(prev => prev + 1);
         } else {
-          // Longer pause at end before deleting
-          setTimeout(() => setIsDeleting(true), pauseTime);
+          // Pause when fully revealed, then start hiding
+          setTimeout(() => setIsRevealing(false), pauseTime);
         }
       } else {
-        // Faster, smoother deleting
-        if (currentText.length > 0) {
-          setCurrentText(currentTextFull.substring(0, currentText.length - 1));
+        if (revealProgress > 0) {
+          setRevealProgress(prev => prev - 1);
         } else {
-          setIsDeleting(false);
+          // Move to next text and start revealing
+          setRevealProgress(0);
+          setIsRevealing(true);
           setCurrentIndex((prev) => (prev + 1) % texts.length);
         }
       }
     };
 
-    const timer = setTimeout(
-      typeWriter, 
-      isDeleting ? deleteSpeed : typeSpeed + characterPauseVariation
-    );
+    const timer = setTimeout(animateText, isRevealing ? revealDuration : hideDuration);
     return () => clearTimeout(timer);
-  }, [currentText, currentIndex, isDeleting, texts]);
+  }, [revealProgress, currentIndex, isRevealing, texts]);
 
-  // Enhanced cursor blinking with smooth transitions
-  useEffect(() => {
-    let cursorTimer;
-    if (!isDeleting && currentText.length === texts[currentIndex].length) {
-      cursorTimer = setInterval(() => {
-        setShowCursor((prev) => !prev);
-      }, 600);
-    } else {
-      setShowCursor(true);
-    }
-    return () => clearInterval(cursorTimer);
-  }, [isDeleting, currentText, currentIndex, texts]);
+
 
   useEffect(() => {
     setIsVisible(true);
@@ -185,11 +169,11 @@ function Hero() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
           }`}
         >
-          {/* Enhanced Typewriter Heading */}
-          <div className="overflow-hidden">
-            <h1 className="hero-text text-white text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold tracking-wide leading-tight mb-3 sm:mb-5">
+          {/* Smooth Reveal Text Animation */}
+          <div className="relative overflow-hidden">
+            <h1 className="hero-text text-white text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold tracking-wide leading-tight mb-3 sm:mb-5 relative">
               {texts[currentIndex].split("").map((char, index) => {
-                const isVisible = index < currentText.length;
+                const isRevealed = index < revealProgress;
                 const word = texts[currentIndex].split(" ").find(w => 
                   texts[currentIndex].indexOf(w) <= index && 
                   texts[currentIndex].indexOf(w) + w.length > index
@@ -197,40 +181,50 @@ function Hero() {
                 const isHighlighted = word && highlightWords.includes(word.toUpperCase());
                 
                 return (
-                  <span key={`${currentIndex}-${index}`} className="relative">
+                  <span key={`${currentIndex}-${index}`} className="relative inline-block">
                     <span
-                      className={`inline-block transition-all duration-500 ease-out ${
-                        isVisible 
-                          ? "opacity-100 transform translate-y-0 scale-100" 
-                          : "opacity-0 transform translate-y-4 scale-95"
+                      className={`inline-block transition-all duration-700 ease-out ${
+                        isRevealed 
+                          ? "opacity-100 transform translate-y-0 scale-100 filter-none" 
+                          : "opacity-0 transform translate-y-8 scale-90 filter blur-sm"
                       } ${
                         isHighlighted 
-                          ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]" 
-                          : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                          ? "text-yellow-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]" 
+                          : "text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
                       }`}
                       style={{
-                        transitionDelay: isVisible ? `${index * 25}ms` : '0ms',
-                        filter: isHighlighted ? 'brightness(1.1)' : 'brightness(1)',
+                        transitionDelay: isRevealed ? `${index * 50}ms` : `${(texts[currentIndex].length - index) * 30}ms`,
+                        filter: isHighlighted ? 'brightness(1.2) saturate(1.1)' : 'brightness(1)',
+                        textShadow: isHighlighted ? '0 0 20px rgba(251, 191, 36, 0.4)' : '0 4px 8px rgba(0, 0, 0, 0.8)',
                       }}
                     >
                       {char === " " ? "\u00A0" : char}
                     </span>
-                    {index === currentText.length - 1 && (
-                      <span
-                        className={`absolute text-yellow-400 text-4xl sm:text-5xl md:text-6xl lg:text-7xl ${
-                          showCursor ? "opacity-100 scale-100" : "opacity-0 scale-110"
-                        } transition-all duration-300 ease-in-out drop-shadow-[0_0_12px_rgba(251,191,36,0.6)]`}
-                        style={{ 
-                          left: '100%',
-                          animation: showCursor ? 'pulse-glow 1.5s ease-in-out infinite' : 'none'
-                        }}
-                      >
-                        |
-                      </span>
-                    )}
+                    
+                    {/* Reveal mask overlay */}
+                    <span 
+                      className={`absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent transition-all duration-300 ${
+                        isRevealed ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'
+                      }`}
+                      style={{
+                        transitionDelay: isRevealed ? `${index * 50}ms` : '0ms',
+                        width: '200%',
+                        left: '-100%',
+                      }}
+                    />
                   </span>
                 );
               })}
+              
+              {/* Animated cursor/reveal line */}
+              <span 
+                className="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-yellow-400/80 to-yellow-400/40 transition-all duration-300 ease-out shadow-[0_0_20px_rgba(251,191,36,0.8)]"
+                style={{
+                  left: `${(revealProgress / texts[currentIndex].length) * 100}%`,
+                  opacity: isRevealing ? 1 : 0,
+                  animation: 'pulse-line 1.5s ease-in-out infinite',
+                }}
+              />
             </h1>
           </div>
 
@@ -393,6 +387,19 @@ function Hero() {
             opacity: 0.7;
             filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.8));
             transform: scale(1.05);
+          }
+        }
+
+        @keyframes pulse-line {
+          0%, 100% {
+            opacity: 0.8;
+            transform: scaleY(1);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+          }
+          50% {
+            opacity: 1;
+            transform: scaleY(1.1);
+            box-shadow: 0 0 30px rgba(251, 191, 36, 1);
           }
         }
 
