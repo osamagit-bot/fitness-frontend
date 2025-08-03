@@ -186,11 +186,15 @@ export async function kioskAuthenticate(abortSignal = null) {
   }
 
   try {
-    // Enhanced options for automatic fingerprint detection without user selection
+    // For true kiosk mode, we want Windows to automatically use any available fingerprint
+    // without showing selection dialogs. We'll use an empty allowCredentials array
+    // but specify platform attachment to avoid USB key prompts
+    
     const options = {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      // Omit allowCredentials entirely to allow automatic detection
-      userVerification: 'preferred', // Preferred allows silent authentication
+      // Don't specify allowCredentials to enable discoverable credentials (resident keys)
+      // This allows automatic detection without user selection
+      userVerification: 'discouraged', // Discouraged prevents user interaction prompts
       timeout: 45000 // Longer timeout for external sensors
     };
 
