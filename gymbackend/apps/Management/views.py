@@ -1,6 +1,9 @@
 import subprocess
 import json
 import os
+import gzip
+import hashlib
+import logging
 from datetime import datetime
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
@@ -9,7 +12,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny, AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from .models import SiteSettings
 from django.db import transaction
@@ -18,11 +21,36 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 import tempfile
 
+logger = logging.getLogger(__name__)
+
 def validate_backup_file(backup_path):
-    """Validate backup file integrity and structure"""
+    """Validate backup file integrity and structure with checksum verification"""
     try:
-        with open(backup_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # Check if checksum file exists and validate integrity
+        checksum_file = backup_path + '.md5'
+        if os.path.exists(checksum_file):
+            try:
+                with open(checksum_file, 'r') as f:
+                    stored_checksum = f.read().strip().split()[0]
+                
+                # Calculate current checksum
+                is_compressed = backup_path.endswith('.gz')
+                current_checksum = calculate_file_checksum(backup_path, is_compressed)
+                
+                if stored_checksum != current_checksum:
+                    return {'valid': False, 'error': 'Backup file integrity check failed - checksums do not match'}
+                
+                logger.info(f"Backup integrity verified: {backup_path}")
+            except Exception as e:
+                logger.warning(f"Could not verify checksum for {backup_path}: {str(e)}")
+        
+        # Load and validate backup data
+        if backup_path.endswith('.gz'):
+            with gzip.open(backup_path, 'rt', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
         
         if not isinstance(data, list):
             return {'valid': False, 'error': 'Invalid backup format - not a list'}
@@ -36,13 +64,29 @@ def validate_backup_file(backup_path):
             if 'model' in item and 'fields' in item:
                 models_found.add(item['model'])
         
-        print(f"🔍 Backup validation - Found models: {models_found}")
+        logger.info(f"Backup validation - Found models: {models_found}")
         return {'valid': True, 'models': models_found, 'records': len(data)}
         
     except json.JSONDecodeError:
         return {'valid': False, 'error': 'Invalid JSON format'}
     except Exception as e:
+        logger.error(f"Backup validation failed: {str(e)}")
         return {'valid': False, 'error': str(e)}
+
+def calculate_file_checksum(filepath, is_compressed):
+    """Calculate MD5 checksum for a file"""
+    hash_md5 = hashlib.md5()
+    
+    if is_compressed:
+        with gzip.open(filepath, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+    else:
+        with open(filepath, 'rb') as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+    
+    return hash_md5.hexdigest()
 
 def clear_existing_data(restore_options):
     """Selectively clear existing data based on restore options"""
@@ -148,7 +192,7 @@ def set_global_notification_settings(request):
     })
 
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Allow access to all users (members need to check maintenance mode)
+@permission_classes([IsAuthenticated])
 def get_maintenance_mode(request):
     """
     Get maintenance mode status - accessible to all users
@@ -190,80 +234,99 @@ def set_maintenance_mode(request):
 @permission_classes([IsAuthenticated, IsAdminUser])
 def admin_backup_database(request):
     """
-    Admin endpoint to create database backup
+    Enhanced admin endpoint to create database backup with compression and integrity checking
     """
-    print(f"🔍 Backup request received from user: {request.user}")
+    logger.info(f"Backup request received from user: {request.user}")
     
     try:
-        # Generate timestamp for backup filename
+        # Check for optional compression parameter
+        compress = request.data.get('compress', False)
+        
+        # Generate timestamp for backup filename  
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_filename = f'gym_backup_{timestamp}.json'
+        file_ext = '.json.gz' if compress else '.json'
+        backup_filename = f'gym_backup_{timestamp}{file_ext}'
         backup_path = os.path.join('backups', backup_filename)
         
         # Ensure backups directory exists
         os.makedirs('backups', exist_ok=True)
         
-        print(f"🔄 Creating backup: {backup_filename}")
+        logger.info(f"Creating backup: {backup_filename}")
         
-        # Use Django serialization directly to avoid subprocess issues
-        from django.core import serializers
-        from django.apps import apps
-        
-        # Get all models to backup including Stock models
-        models_to_backup = [
-            ('Authentication', 'CustomUser'),
-            ('Member', 'Member'),
-            ('Member', 'MembershipPayment'),
-            ('Member', 'Trainer'),
-            ('Member', 'Training'),
-            ('Purchase', 'Product'),
-            ('Purchase', 'Purchase'),
-            ('Stock', 'StockIn'),
-            ('Stock', 'StockOut'),
-            ('Stock', 'PermanentlyDeletedSale'),
-            ('Stock', 'SalesSummarySnapshot'),
-            ('Attendance', 'Attendance'),
-            ('Notifications', 'Notification'),
-            ('Community', 'Post'),
-            ('Community', 'Comment'),
-            ('Community', 'Announcement'),
-            ('Community', 'Challenge'),
-            ('Community', 'ChallengeParticipant'),
-            ('Community', 'SupportTicket'),
-            ('Community', 'TicketResponse'),
-            ('Community', 'FAQCategory'),
-            ('Community', 'FAQ'),
-            ('Management', 'SiteSettings'),
-        ]
-        
-        all_data = []
-        record_count = 0
-        
-        for app_label, model_name in models_to_backup:
-            try:
-                model_class = apps.get_model(app_label, model_name)
-                objects = model_class.objects.all()
-                
-                if objects.exists():
-                    serialized_data = serializers.serialize(
-                        'json',
-                        objects,
-                        use_natural_foreign_keys=False,
-                        use_natural_primary_keys=False
-                    )
+        # Use transaction for data consistency
+        with transaction.atomic():
+            # Use Django serialization directly to avoid subprocess issues
+            from django.core import serializers
+            from django.apps import apps
+            
+            # Get all models to backup including Stock models
+            models_to_backup = [
+                ('Authentication', 'CustomUser'),
+                ('Member', 'Member'),
+                ('Member', 'MembershipPayment'),
+                ('Member', 'Trainer'),
+                ('Member', 'Training'),
+                ('Purchase', 'Product'),
+                ('Purchase', 'Purchase'),
+                ('Stock', 'StockIn'),
+                ('Stock', 'StockOut'),
+                ('Stock', 'PermanentlyDeletedSale'),
+                ('Stock', 'SalesSummarySnapshot'),
+                ('Attendance', 'Attendance'),
+                ('Notifications', 'Notification'),
+                ('Community', 'Post'),
+                ('Community', 'Comment'),
+                ('Community', 'Announcement'),
+                ('Community', 'Challenge'),
+                ('Community', 'ChallengeParticipant'),
+                ('Community', 'SupportTicket'),
+                ('Community', 'TicketResponse'),
+                ('Community', 'FAQCategory'),
+                ('Community', 'FAQ'),
+                ('Management', 'SiteSettings'),
+            ]
+            
+            all_data = []
+            record_count = 0
+            
+            for app_label, model_name in models_to_backup:
+                try:
+                    model_class = apps.get_model(app_label, model_name)
+                    objects = model_class.objects.all()
                     
-                    model_data = json.loads(serialized_data)
-                    all_data.extend(model_data)
-                    record_count += len(model_data)
-                    print(f'✅ Backed up {len(model_data)} {app_label}.{model_name} records')
-                    
-            except Exception as e:
-                print(f'⚠️ Skipping {app_label}.{model_name}: {str(e)}')
-                continue
+                    if objects.exists():
+                        serialized_data = serializers.serialize(
+                            'json',
+                            objects,
+                            use_natural_foreign_keys=False,
+                            use_natural_primary_keys=False
+                        )
+                        
+                        model_data = json.loads(serialized_data)
+                        all_data.extend(model_data)
+                        record_count += len(model_data)
+                        logger.info(f'Backed up {len(model_data)} {app_label}.{model_name} records')
+                        
+                except Exception as e:
+                    logger.warning(f'Skipping {app_label}.{model_name}: {str(e)}')
+                    continue
         
-        # Save backup to file
-        with open(backup_path, 'w', encoding='utf-8') as f:
-            json.dump(all_data, f, indent=2, ensure_ascii=False, default=str)
+        # Convert to JSON string
+        json_data = json.dumps(all_data, indent=2, ensure_ascii=False, default=str)
+        
+        # Save backup to file (compressed or uncompressed)
+        if compress:
+            with gzip.open(backup_path, 'wt', encoding='utf-8') as f:
+                f.write(json_data)
+        else:
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(json_data)
+        
+        # Generate integrity checksum
+        checksum = calculate_file_checksum(backup_path, compress)
+        checksum_file = backup_path + '.md5'
+        with open(checksum_file, 'w') as f:
+            f.write(f'{checksum}  {os.path.basename(backup_path)}\n')
         
         # Check if backup was created successfully
         if os.path.exists(backup_path):
@@ -271,20 +334,22 @@ def admin_backup_database(request):
             file_size = os.path.getsize(backup_path)
             size_kb = round(file_size / 1024, 2)
             
-            print(f"✅ Backup created successfully: {backup_filename}")
+            logger.info(f"Backup created successfully: {backup_filename}")
             return Response({
                 'success': True,
                 'message': 'Database backup created successfully!',
                 'details': {
                     'filename': backup_filename,
                     'records': record_count,
-                    'size_kb': size_kb
+                    'size_kb': size_kb,
+                    'compressed': compress,
+                    'checksum': checksum[:16] + '...'
                 }
             })
 
             
     except Exception as e:
-        print(f"❌ Backup failed with exception: {str(e)}")
+        logger.error(f"Backup failed: {str(e)}")
         return Response({
             'success': False,
             'message': f'Backup failed: {str(e)}'
@@ -293,19 +358,30 @@ def admin_backup_database(request):
 @staff_member_required
 def admin_backup_status(request):
     """
-    Get backup system status and recent backups
+    Get backup system status and recent backups with compression support
     """
     try:
         backup_files = []
         if os.path.exists('backups'):
             for filename in os.listdir('backups'):
-                if (filename.startswith('gym_backup_') or filename.startswith('comprehensive_backup_')) and filename.endswith('.json'):
+                # Support both compressed and uncompressed backups
+                is_backup = (filename.startswith('gym_backup_') or filename.startswith('comprehensive_backup_'))
+                is_valid_ext = (filename.endswith('.json') or filename.endswith('.json.gz'))
+                
+                if is_backup and is_valid_ext:
                     filepath = os.path.join('backups', filename)
                     stat = os.stat(filepath)
+                    
+                    # Check if checksum file exists
+                    checksum_file = filepath + '.md5'
+                    has_checksum = os.path.exists(checksum_file)
+                    
                     backup_files.append({
                         'filename': filename,
                         'size_kb': round(stat.st_size / 1024, 2),
-                        'created': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                        'created': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'compressed': filename.endswith('.gz'),
+                        'has_checksum': has_checksum
                     })
         
         # Sort by creation time (newest first)
@@ -396,9 +472,22 @@ def admin_restore_database(request):
         emergency_backup_path = create_emergency_backup()
         print(f"🛡️ Emergency backup created: {emergency_backup_path}")
         
-        # Load backup data to inspect it
-        with open(backup_path, 'r', encoding='utf-8') as f:
-            backup_data = json.load(f)
+        # Load backup data to inspect it (support both compressed and uncompressed)
+        try:
+            if backup_path.endswith('.gz'):
+                with gzip.open(backup_path, 'rt', encoding='utf-8') as f:
+                    backup_data = json.load(f)
+                logger.info(f"Loaded compressed backup: {backup_filename}")
+            else:
+                with open(backup_path, 'r', encoding='utf-8') as f:
+                    backup_data = json.load(f)
+                logger.info(f"Loaded uncompressed backup: {backup_filename}")
+        except Exception as e:
+            logger.error(f"Failed to load backup file: {str(e)}")
+            return Response({
+                'success': False,
+                'message': f'Failed to load backup file: {str(e)}'
+            }, status=500)
         
         print(f"🔍 Total records in backup: {len(backup_data)}")
         
@@ -1245,19 +1334,30 @@ def get_restore_options(request):
 @permission_classes([IsAuthenticated, IsAdminUser])
 def list_backup_files(request):
     """
-    List available backup files for restore
+    List available backup files for restore with compression support
     """
     try:
         backup_files = []
         if os.path.exists('backups'):
             for filename in os.listdir('backups'):
-                if (filename.startswith('gym_backup_') or filename.startswith('comprehensive_backup_')) and filename.endswith('.json'):
+                # Support both compressed and uncompressed backups
+                is_backup = (filename.startswith('gym_backup_') or filename.startswith('comprehensive_backup_'))
+                is_valid_ext = (filename.endswith('.json') or filename.endswith('.json.gz'))
+                
+                if is_backup and is_valid_ext:
                     filepath = os.path.join('backups', filename)
                     stat = os.stat(filepath)
+                    
+                    # Check if checksum file exists
+                    checksum_file = filepath + '.md5'
+                    has_checksum = os.path.exists(checksum_file)
+                    
                     backup_files.append({
                         'filename': filename,
                         'size_kb': round(stat.st_size / 1024, 2),
-                        'created': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                        'created': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'compressed': filename.endswith('.gz'),
+                        'has_checksum': has_checksum
                     })
         
         # Sort by creation time (newest first)
@@ -1286,8 +1386,13 @@ def inspect_backup(request):
         return Response({'success': False, 'message': 'Backup file not found'})
     
     try:
-        with open(backup_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # Support both compressed and uncompressed backup files
+        if backup_path.endswith('.gz'):
+            with gzip.open(backup_path, 'rt', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
         
         # Count models and debug
         model_counts = {}

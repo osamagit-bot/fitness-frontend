@@ -342,7 +342,7 @@ def member_deleted_notification(sender, instance, **kwargs):
     if os.environ.get('DJANGO_DISABLE_SIGNALS'):
         return
         
-    message = f"Member deleted: {instance.first_name} {instance.last_name}"
+    message = f"Member Deleted - {instance.first_name} {instance.last_name} (ID: {instance.athlete_id}) has been removed from the system. Revenue remains unchanged."
     
     # Create admin-only notification
     notification = Notification.objects.create(

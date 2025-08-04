@@ -142,14 +142,8 @@ class MemberViewSet(viewsets.ModelViewSet):
             # Revenue tracking is NOT affected - money already received stays in system
             response = super().destroy(request, *args, **kwargs)
             
-            # Send notification after successful deletion
-            try:
-                from apps.Notifications.services import notification_service
-                message = f"Member Deleted - {member_name} (ID: {member.athlete_id}) has been removed from the system. Revenue remains unchanged."
-                notification_service.create_notification(message)
-                print(f"📧 Member deletion notification sent")
-            except Exception as e:
-                print(f"❌ Failed to send notification: {e}")
+            # Notification is sent automatically by signal in apps/Notifications/signals.py
+            print(f"✅ Member {member_name} (ID: {member.athlete_id}) deleted successfully")
             
             return response
             

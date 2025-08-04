@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FiChevronDown, FiChevronUp, FiEdit2, FiHelpCircle, FiMessageSquare, FiPlus, FiTrash2 } from 'react-icons/fi';
 import AppToastContainer from "../../components/ui/ToastContainer";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import api from "../../utils/api";
 import { formatDate, formatDateTime } from "../../utils/dateUtils";
 import { showToast } from "../../utils/toast";
@@ -18,6 +19,7 @@ function AdminSupportManagement() {
   const [expandedCategories, setExpandedCategories] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, faqId: null, categoryId: null });
 
   const token = localStorage.getItem('access_token');
 
@@ -164,8 +166,13 @@ function AdminSupportManagement() {
     }
   };
 
-  const handleDeleteFaq = async (faqId, categoryId) => {
-    if (!window.confirm('Are you sure you want to delete this FAQ?')) return;
+  const handleDeleteFaq = (faqId, categoryId) => {
+    setConfirmModal({ isOpen: true, faqId, categoryId });
+  };
+
+  const executeDeleteFaq = async () => {
+    const { faqId, categoryId } = confirmModal;
+    setConfirmModal({ isOpen: false, faqId: null, categoryId: null });
 
     try {
       await api.delete(
@@ -181,10 +188,15 @@ function AdminSupportManagement() {
             }
           : category
       ));
+      showToast.success('FAQ deleted successfully!');
     } catch (err) {
       console.error('Error deleting FAQ:', err);
       showToast.error('Failed to delete FAQ. Please try again.');
     }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmModal({ isOpen: false, faqId: null, categoryId: null });
   };
 
   const filteredTickets = Array.isArray(tickets)
@@ -642,6 +654,15 @@ function AdminSupportManagement() {
         </div>
       )}
       </div>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCancelDelete}
+        onConfirm={executeDeleteFaq}
+        title="Delete FAQ"
+        message="Are you sure you want to delete this FAQ? This action cannot be undone."
+      />
+      
       <AppToastContainer />
     </>
   );

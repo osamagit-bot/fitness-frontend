@@ -503,20 +503,27 @@ const fetchGlobalNotificationSettings = async () => {
     }
   };
 
-  // Add backup system handler
-  const handleBackupSystem = async () => {
+  // Add backup system handler with compression option
+  const handleBackupSystem = async (compress = false) => {
     setLoading(true);
     try {
       const response = await api.post(
-        '/backup-database/',  // Updated URL with /api/ prefix
-        {},
+        '/backup-database/',
+        { compress: compress },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       console.log('Backup System Results:', response.data);
       
       if (response.data.success) {
-        toast.success(`✅ ${response.data.message}\n📁 ${response.data.details.filename}\n📊 ${response.data.details.records} records (${response.data.details.size_kb} KB)`);
+        const details = response.data.details;
+        toast.success(
+          `✅ ${response.data.message}\n` +
+          `📁 ${details.filename}\n` +
+          `📊 ${details.records} records (${details.size_kb} KB)\n` +
+          `🗜️ Compressed: ${details.compressed ? 'Yes' : 'No'}\n` +
+          `🔒 Checksum: ${details.checksum}`
+        );
       } else {
         toast.error(`❌ ${response.data.message}`);
       }
@@ -565,9 +572,11 @@ const fetchGlobalNotificationSettings = async () => {
       
       if (response.data.success) {
         const details = response.data.details;
+        const isCompressed = selectedBackup?.compressed ? ' (compressed)' : '';
         toast.success(
           `✅ ${response.data.message}\n` +
-          `📁 Strategy: ${details.strategy}\n` +
+          `📁 Source: ${details.restored_from}${isCompressed}\n` +
+          `🔧 Strategy: ${details.strategy}\n` +
           `👥 Members: ${details.members_restored}\n` +
           `💪 Trainers: ${details.trainers_restored}\n` +
           `📦 Products: ${details.products_restored}\n` +
@@ -1108,27 +1117,54 @@ const fetchGlobalNotificationSettings = async () => {
                   🗄️ Database Management
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Backup Button */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Regular Backup Button */}
                   <button
-                    onClick={handleBackupSystem}
+                    onClick={() => handleBackupSystem(false)}
                     disabled={loading}
-                    className={`px-6 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 border border-gray-600 ${
+                    className={`px-4 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 border border-gray-600 ${
                       loading
                         ? "bg-gray-600 cursor-not-allowed"
                         : "bg-gray-600 hover:bg-gray-700 shadow-lg hover:shadow-xl"
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-3">
+                    <div className="flex flex-col items-center justify-center gap-2">
                       {loading ? (
                         <>
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          <span className="font-semibold">Creating Backup...</span>
+                          <span className="font-semibold text-sm">Creating...</span>
                         </>
                       ) : (
                         <>
                           <span className="text-xl">💾</span>
-                          <span className="font-semibold text-lg ">Backup Database</span>
+                          <span className="font-semibold text-sm">Standard Backup</span>
+                          <span className="text-xs text-gray-300">JSON format</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Compressed Backup Button */}
+                  <button
+                    onClick={() => handleBackupSystem(true)}
+                    disabled={loading}
+                    className={`px-4 py-4 text-white rounded-lg transition-all duration-300 transform hover:scale-105 border border-gray-600 ${
+                      loading
+                        ? "bg-gray-600 cursor-not-allowed"
+                        : "bg-gray-600 hover:bg-gray-700 shadow-lg hover:shadow-xl"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          <span className="font-semibold text-sm">Creating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xl">🗜️</span>
+                          <span className="font-semibold text-sm">Compressed Backup</span>
+                          <span className="text-xs text-gray-300">Gzip format</span>
                         </>
                       )}
                     </div>
@@ -1138,22 +1174,23 @@ const fetchGlobalNotificationSettings = async () => {
                   <button
                     onClick={openRestoreModal}
                     disabled={loading || restoreLoading}
-                    className={`px-6 py-4 text-black rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                    className={`px-4 py-4 text-black rounded-lg transition-all duration-300 transform hover:scale-105 ${
                       loading || restoreLoading
                         ? "bg-gray-400 cursor-not-allowed"
                         : "bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-lg hover:shadow-xl"
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-3">
+                    <div className="flex flex-col items-center justify-center gap-2">
                       {restoreLoading ? (
                         <>
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
-                          <span className="font-semibold">Restoring...</span>
+                          <span className="font-semibold text-sm">Restoring...</span>
                         </>
                       ) : (
                         <>
                           <span className="text-xl">🔄</span>
-                          <span className="font-semibold text-lg">Restore Database</span>
+                          <span className="font-semibold text-sm">Restore Database</span>
+                          <span className="text-xs text-yellow-800">From backup file</span>
                         </>
                       )}
                     </div>
@@ -1161,7 +1198,7 @@ const fetchGlobalNotificationSettings = async () => {
                 </div>
                 
                 <p className="text-sm text-gray-300 mt-3 text-center">
-                  Create secure backups and restore from previous states. Emergency backup is created automatically before restore.
+                  Create secure backups with integrity checking and restore from previous states. Compressed backups save storage space. Emergency backup is created automatically before restore.
                 </p>
               </div>
 
@@ -1213,10 +1250,13 @@ const fetchGlobalNotificationSettings = async () => {
                             <option value="">Choose a backup...</option>
                             {backupFiles.map((backup) => (
                               <option key={backup.filename} value={backup.filename}>
-                                {backup.created} ({backup.size_kb} KB)
+                                {backup.created} ({backup.size_kb} KB) {backup.compressed ? '🗜️' : '📄'} {backup.has_checksum ? '🔒' : ''}
                               </option>
                             ))}
                           </select>
+                          <p className="text-xs text-gray-400 mt-1">
+                            🗜️ = Compressed • 📄 = Standard • 🔒 = Integrity verified
+                          </p>
                         </div>
 
                         {/* Restore Strategy */}
