@@ -116,69 +116,81 @@ const Training = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-          {trainings.map((training, i) => (
-            <div
-              key={training.id}
-              data-aos="fade-up"
-              data-aos-delay={i * 200}
-              data-aos-duration="800"
-              className={`group ${classes.card.primary} rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${classes.border.primary}`}
-            >
-              <div className="relative h-48 md:h-64 overflow-hidden">
-                {imageErrors.has(training.id) ? (
-                  <div className="h-full w-full bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
-                    <span className="text-yellow-600 text-5xl">🏋️</span>
+        {/* Trainings Grid */}
+        {trainings.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+            {trainings.map((training, i) => (
+              <div
+                key={training.id}
+                data-aos="fade-up"
+                data-aos-delay={i * 200}
+                data-aos-duration="800"
+                className={`group ${classes.card.primary} rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${classes.border.primary}`}
+              >
+                <div className="relative h-48 md:h-64 overflow-hidden">
+                  {imageErrors.has(training.id) ? (
+                    <div className="h-full w-full bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
+                      <span className="text-yellow-600 text-5xl">🏋️</span>
+                    </div>
+                  ) : (
+                    <img
+                      className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      src={getImageUrl(training)}
+                      alt={training.type}
+                      onError={() => handleImageError(training.id)}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-4 left-4 right-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100">
+                    <button 
+                      onClick={() => openModal(training)}
+                      className="w-full bg-yellow-400 text-black py-2 px-4 rounded-lg font-semibold hover:bg-yellow-500 transition-colors"
+                    >
+                      View Details
+                    </button>
                   </div>
-                ) : (
-                  <img
-                    className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    src={getImageUrl(training)}
-                    alt={training.type}
-                    onError={() => handleImageError(training.id)}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="absolute bottom-4 left-4 right-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100">
-                  <button 
-                    onClick={() => openModal(training)}
-                    className="w-full bg-yellow-400 text-black py-2 px-4 rounded-lg font-semibold hover:bg-yellow-500 transition-colors"
-                  >
-                    View Details
-                  </button>
+                  {/* Training Type Badge */}
+                  <div className="absolute top-4 left-4 z-20">
+                    <span className="bg-black text-yellow-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                      {training.type}
+                    </span>
+                  </div>
                 </div>
-                {/* Training Type Badge */}
-                <div className="absolute top-4 left-4 z-20">
-                  <span className="bg-black text-yellow-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                    {training.type}
-                  </span>
-                </div>
-              </div>
-              <div className={`p-4 md:p-6 ${classes.bg.card}`}>
-                <div className="text-center mb-4">
-                  <h3 className={`text-lg md:text-2xl font-bold ${classes.text.primary} mb-2 group-hover:text-yellow-600 transition-colors capitalize`}>
-                    {training.type}
-                  </h3>
-                  <p className="text-yellow-600 font-semibold text-base md:text-lg mb-3">
-                    {training.trainer_name || 'Expert Trainer'}
+                <div className={`p-4 md:p-6 ${classes.bg.card}`}>
+                  <div className="text-center mb-4">
+                    <h3 className={`text-lg md:text-2xl font-bold ${classes.text.primary} mb-2 group-hover:text-yellow-600 transition-colors capitalize`}>
+                      {training.type}
+                    </h3>
+                    <p className="text-yellow-600 font-semibold text-base md:text-lg mb-3">
+                      {training.trainer_name || 'Expert Trainer'}
+                    </p>
+                  </div>
+                  <p className={`${classes.text.secondary} text-center mb-4 leading-relaxed text-sm md:text-base`}>
+                    {training.description || `Professional ${training.type.toLowerCase()} training program.`}
                   </p>
-                </div>
-                <p className={`${classes.text.secondary} text-center mb-4 leading-relaxed text-sm md:text-base`}>
-                  {training.description || `Professional ${training.type.toLowerCase()} training program.`}
-                </p>
-                <div className={`flex items-center justify-between text-xs ${classes.text.tertiary}`}>
-                  <span className="flex items-center">
-                    <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
-                    {training.trainer_name || 'Expert Trainer'}
-                  </span>
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-semibold">
-                    {training.capacity || 'Limited'} spots
-                  </span>
+                  <div className={`flex items-center justify-between text-xs ${classes.text.tertiary}`}>
+                    <span className="flex items-center">
+                      <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                      {training.trainer_name || 'Expert Trainer'}
+                    </span>
+                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-semibold">
+                      {training.capacity || 'Limited'} spots
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {trainings.length === 0 && (
+          <div className="text-center py-20">
+            <div className="text-8xl text-yellow-400 mb-6">🏋️</div>
+            <h3 className={`text-2xl font-bold ${classes.text.primary} mb-4`}>No Training Sessions Available</h3>
+            <p className={`${classes.text.secondary} text-lg`}>Our amazing training sessions will be here soon!</p>
+          </div>
+        )}
 
 
       </div>

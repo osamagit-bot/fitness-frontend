@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { Outlet } from 'react-router-dom';
 import MemberSidebar from '../components/shared/MemberSidebar';
 import MemberHeader from '../components/shared/MemberHeader';
 import useMultiAuth from '../hooks/useMultiAuth';
 import api from '../utils/api';
+
+// Context for sidebar state
+const SidebarContext = createContext();
+export const useSidebar = () => useContext(SidebarContext);
 
 const MemberDashboard = () => {
   const { authState } = useMultiAuth();
@@ -11,6 +15,7 @@ const MemberDashboard = () => {
   const [memberData, setMemberData] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (authState.member.isAuthenticated) {
@@ -126,26 +131,28 @@ const MemberDashboard = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <MemberSidebar userData={userData} />
-      
-      {/* Main Content */}
-      <div className="flex-1 lg:ml-64 bg-gradient-to-br from-gray-800 via-gray-800 to-black">
-        {/* Header */}
-        <MemberHeader 
-          memberData={memberData}
-          notifications={notifications}
-          setNotifications={setNotifications}
-          loading={loading}
-        />
+    <SidebarContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed }}>
+      <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
+        {/* Sidebar */}
+        <MemberSidebar userData={userData} />
         
-        {/* Page Content */}
-        <div className="p-4 overflow-auto">
-          <Outlet />
+        {/* Main Content */}
+        <div className={`flex-1 transition-all duration-500 ease-in-out ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} bg-gradient-to-br from-gray-800 via-gray-800 to-black`}>
+          {/* Header */}
+          <MemberHeader 
+            memberData={memberData}
+            notifications={notifications}
+            setNotifications={setNotifications}
+            loading={loading}
+          />
+          
+          {/* Page Content */}
+          <div className="p-4 overflow-auto">
+            <Outlet />
+          </div>
         </div>
       </div>
-    </div>
+    </SidebarContext.Provider>
   );
 };
 

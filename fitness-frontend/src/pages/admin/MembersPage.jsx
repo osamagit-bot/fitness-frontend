@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
@@ -998,23 +998,24 @@ function MembersPage() {
       )}
 
       {/* Edit Member Modal */}
-      {editModal.isOpen && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={handleCloseEditModal}
-        >
+      <AnimatePresence>
+        {editModal.isOpen && (
           <motion.div 
-            initial={{ scale: 0.7, opacity: 0, y: 50 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.7, opacity: 0, y: 50 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-600"
-            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={handleCloseEditModal}
           >
+            <motion.div 
+              initial={{ scale: 0.7, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.7, opacity: 0, y: 50 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="bg-gray-800 rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-600"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">Edit Member</h2>
               <button
@@ -1038,7 +1039,7 @@ function MembersPage() {
                     name="first_name"
                     value={editFormData.first_name}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105"
                     required
                   />
                 </motion.div>
@@ -1054,7 +1055,7 @@ function MembersPage() {
                     name="last_name"
                     value={editFormData.last_name}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105"
                     required
                   />
                 </motion.div>
@@ -1069,7 +1070,7 @@ function MembersPage() {
                     name="membership_type"
                     value={editFormData.membership_type}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105"
                     required
                   >
                     <option value="">Select Type</option>
@@ -1089,7 +1090,7 @@ function MembersPage() {
                     name="box_number"
                     value={editFormData.box_number}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105"
                   />
                 </motion.div>
 
@@ -1105,7 +1106,7 @@ function MembersPage() {
                     name="monthly_fee"
                     value={editFormData.monthly_fee}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105"
                     required
                   />
                 </motion.div>
@@ -1120,7 +1121,7 @@ function MembersPage() {
                     name="time_slot"
                     value={editFormData.time_slot}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105"
                     required
                   >
                     <option value="">Select Time</option>
@@ -1142,7 +1143,7 @@ function MembersPage() {
                     name="start_date"
                     value={editFormData.start_date}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105 [color-scheme:dark]"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105 [color-scheme:dark]"
                     required
                   />
                 </motion.div>
@@ -1158,7 +1159,7 @@ function MembersPage() {
                     name="expiry_date"
                     value={editFormData.expiry_date}
                     onChange={handleEditFormChange}
-                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg outline-none transition-all duration-300 focus:ring-2 focus:ring-yellow-400 focus:bg-gray-600 focus:scale-105 [color-scheme:dark]"
+                    className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg focus:outline-none transition-all duration-300 focus:bg-gray-600 focus:scale-105 [color-scheme:dark]"
                     required
                   />
                 </motion.div>
@@ -1198,7 +1199,8 @@ function MembersPage() {
             </form>
           </motion.div>
         </motion.div>
-      )}
+        )}
+      </AnimatePresence>
       
       <AppToastContainer />
     </>

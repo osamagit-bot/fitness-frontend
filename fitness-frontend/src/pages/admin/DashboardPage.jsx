@@ -28,12 +28,14 @@ import {
   XAxis,
   YAxis
 } from "recharts";
+import { useDashboard } from "../../layouts/AdminLayout";
 import api from "../../utils/api";
-import { formatDate, formatDateTime } from "../../utils/dateUtils";
+import { formatDate } from "../../utils/dateUtils";
 import { getRelativeTime } from "../../utils/timeUtils";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const { dashboardStats, setDashboardStats } = useDashboard() || {};
   // IMPORTANT: Only use stats.monthlyRevenue for membership revenue display.
   // Do NOT add stats.outstandingPayments to stats.monthlyRevenue or totalRevenue.
   // outstandingPayments is for reference only and is already included in persistent tracking from backend.
@@ -227,8 +229,15 @@ const DashboardPage = () => {
         setRevenueData(revenueData);
         setAttendanceTrend(attendanceData);
         
-        // Force update last update time to trigger re-render
-        setLastUpdate(new Date());
+        // Update dashboard stats in header
+        const currentTime = new Date();
+        setLastUpdate(currentTime);
+        if (setDashboardStats) {
+          setDashboardStats({
+            activeMembers: newStats.activeMembers,
+            lastUpdate: currentTime
+          });
+        }
         
       } catch (error) {
         console.error("❌ Error initializing dashboard:", error);
@@ -1022,47 +1031,6 @@ const DashboardPage = () => {
 
   return (
     <div className="bg-gradient-to-br from-gray-800 via-gray-800 to-black px-2 sm:px-4 lg:px-8">
-      {/* Modern Header with Glass Effect */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gray-600/20 backdrop-blur-lg"></div>
-        <div className="relative px-2 sm:px-4 lg:px-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
-            <div className="space-y-2">
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 sm:gap-3"
-              >
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <i className="bx bx-stats text-xl sm:text-2xl text-black"></i>
-                </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-                    Atalan Fitness Dashboard
-                  </h1>
-                  <p className="text-gray-400 text-xs sm:text-sm font-medium">
-                    Real-time insights and analytics
-                  </p>
-                </div>
-              </motion.div>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="hidden sm:inline">Live • Last updated: {formatDateTime(lastUpdate)}</span>
-                <span className="sm:hidden">Live • Updated</span>
-              </div>
-            </div>
-
-            {/* Quick Stats Indicator */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-yellow-500/20">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <span className="text-sm font-medium text-gray-300">
-                {stats.activeMembers} Active
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="px-2 sm:px-4 space-y-6 sm:space-y-8">
         {/* Modern Error Banner */}
         <AnimatePresence>
@@ -1089,7 +1057,7 @@ const DashboardPage = () => {
 
         {/* Modern Stats Grid */}
         {useMemo(() => (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8 lg:mt-10">
+          <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mt-6 sm:mt-8 lg:mt-10">
             <StatCard
               title="Membership Revenue"
               value={formatCurrency(stats.monthlyRevenue)}

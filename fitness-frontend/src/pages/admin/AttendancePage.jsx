@@ -378,6 +378,11 @@ const AttendancePage = () => {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              style={{
+                colorScheme: 'dark',
+                WebkitAppearance: 'none',
+                MozAppearance: 'textfield'
+              }}
             />
           </div>
           
@@ -390,7 +395,7 @@ const AttendancePage = () => {
               placeholder="Search by name or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
+              className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none placeholder-gray-400"
             />
           </div>
           

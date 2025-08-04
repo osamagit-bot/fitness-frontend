@@ -292,7 +292,7 @@ function AdminCommunityManagement() {
                 </div>
               ))
             ) : (
-              <p>No announcements available.</p>
+              <p className="text-gray-300">No announcements available.</p>
             )}
           </div>
         </div>
